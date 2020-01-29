@@ -1,4 +1,4 @@
-package ahlib_gin_gorm
+package xgin
 
 import (
 	"github.com/gin-gonic/gin/binding"
@@ -16,7 +16,7 @@ func matchString(reg string, content string) bool {
 }
 
 // setup binding tag: regexp=xxx
-func SetupGinRegexBinding() {
+func SetupRegexBinding() {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
 		_ = val.RegisterValidation("regexp", func(fl validator.FieldLevel) bool {
@@ -27,8 +27,8 @@ func SetupGinRegexBinding() {
 
 // setup binding tag: $tag
 // example:
-//     SetupGinSpecificRegexpBinding("phone", "^(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$")
-func SetupGinSpecificRegexpBinding(tag string, re string) {
+//     SetupSpecificRegexpBinding("phone", "^(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$")
+func SetupSpecificRegexpBinding(tag string, re string) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
 		_ = val.RegisterValidation(tag, func(fl validator.FieldLevel) bool {
@@ -39,8 +39,8 @@ func SetupGinSpecificRegexpBinding(tag string, re string) {
 
 // setup binging tag for datetime
 // example:
-//     SetupGinDateTimeBinding("date", "2006-01-02", xcondition.First(time.LoadLocation("Asia/Shanghai")))
-func SetupGinDateTimeBinding(tag string, layout string, loc *time.Location) {
+//     SetupDateTimeBinding("date", "2006-01-02", xcondition.First(time.LoadLocation("Asia/Shanghai")))
+func SetupDateTimeBinding(tag string, layout string, loc *time.Location) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
 		_ = val.RegisterValidation(tag, func(fl validator.FieldLevel) bool {
@@ -51,4 +51,32 @@ func SetupGinDateTimeBinding(tag string, layout string, loc *time.Location) {
 			return true
 		})
 	}
+}
+
+// setup userDefined bind
+// example:
+//     SetupBinding("xxx", func(fl validator.FieldLevel) {
+//         return fl.Field.String() == "xxx"
+//     })
+func SetupBinding(tag string, valFunc func(fl validator.FieldLevel) bool) {
+	val, ok := binding.Validator.Engine().(*validator.Validate)
+	if ok {
+		_ = val.RegisterValidation(tag, valFunc)
+	}
+}
+
+func IsValidationFormatError(err error) bool {
+	// validator.ValidationErrors
+	// *errors.errorString
+	errs, ok := err.(validator.ValidationErrors)
+	if !ok {
+		return false
+	}
+
+	for _, field := range errs {
+		if field.Tag() == "required" {
+			return false
+		}
+	}
+	return true
 }

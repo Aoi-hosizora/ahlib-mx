@@ -1,4 +1,4 @@
-package ahlib_gin_gorm
+package xgorm
 
 import (
 	"github.com/go-sql-driver/mysql"
