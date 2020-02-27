@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	DateFormat = "2006-01-02"
+	ISO8601DateFormat = "2006-01-02"
+	LocalDateFormat = "2006-01-02"
 )
 
 type JsonDate time.Time
@@ -16,19 +17,30 @@ func NewJsonDate(t time.Time) JsonDate {
 	return JsonDate(t)
 }
 
+func (d JsonDate) Time() time.Time {
+	return time.Time(d)
+}
+
 // string
 
 func (d JsonDate) String() string {
-	return time.Time(d).Format(DateFormat)
+	return d.Time().Format(ISO8601DateFormat)
 }
 
-func (d JsonDate) Parse(dateString string, loc *time.Location) (JsonDate, error) {
-	newD, err := time.ParseInLocation(DateFormat, dateString, loc)
+func (d JsonDate) MarshalJSON() ([]byte, error) {
+	str := fmt.Sprintf("\"%s\"", d.Time().Format(ISO8601DateFormat))
+	return []byte(str), nil
+}
+
+// parse
+
+func ParseISO8601Date(dateString string) (JsonDate, error) {
+	newD, err := time.Parse(ISO8601DateFormat, dateString)
 	return JsonDate(newD), err
 }
 
-func (d JsonDate) ParseDefault(dateString string, defaultDate JsonDate, loc *time.Location) JsonDate {
-	newD, err := time.ParseInLocation(DateFormat, dateString, loc)
+func ParseISO8601DateDefault(dateString string, defaultDate JsonDate) JsonDate {
+	newD, err := time.Parse(ISO8601DateFormat, dateString)
 	if err != nil {
 		return JsonDate(newD)
 	} else {
@@ -36,11 +48,18 @@ func (d JsonDate) ParseDefault(dateString string, defaultDate JsonDate, loc *tim
 	}
 }
 
-// json
+func ParseDate(dateString string, layout string, loc *time.Location) (JsonDate, error) {
+	newD, err := time.ParseInLocation(layout, dateString, loc)
+	return JsonDate(newD), err
+}
 
-func (d JsonDate) MarshalJSON() ([]byte, error) {
-	str := fmt.Sprintf("\"%s\"", time.Time(d).Format(DateFormat))
-	return []byte(str), nil
+func ParseDateDefault(dateString string, defaultDate JsonDate, layout string, loc *time.Location) JsonDate {
+	newD, err := time.ParseInLocation(layout, dateString, loc)
+	if err != nil {
+		return JsonDate(newD)
+	} else {
+		return defaultDate
+	}
 }
 
 // gorm
@@ -58,5 +77,5 @@ func (d *JsonDate) Scan(value interface{}) error {
 }
 
 func (d JsonDate) Value() (driver.Value, error) {
-	return d.String(), nil
+	return d.Time(), nil
 }

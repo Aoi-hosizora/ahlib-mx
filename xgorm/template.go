@@ -1,7 +1,6 @@
 package xgorm
 
 import (
-	"github.com/go-sql-driver/mysql"
 	"time"
 )
 
@@ -19,12 +18,4 @@ type GormTime struct {
 type GormTimeWithoutDeletedAt struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-func IsMySqlDuplicateError(err error) bool {
-	if err == nil {
-		return false
-	}
-	mysqlErr, ok := err.(*mysql.MySQLError)
-	return ok && mysqlErr.Number == 1062
 }

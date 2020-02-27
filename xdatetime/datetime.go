@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	DateTimeFormat = "2006-01-02 15:04:05"
+	ISO8601DateTimeFormat = "2006-01-02T15:04:05Z07:00"
+	LocalDateTimeFormat   = "2006-01-02 15:04:05"
 )
 
 type JsonDateTime time.Time
@@ -16,19 +17,30 @@ func NewJsonDateTime(t time.Time) JsonDateTime {
 	return JsonDateTime(t)
 }
 
+func (dt JsonDateTime) Time() time.Time {
+	return time.Time(dt)
+}
+
 // string
 
 func (dt JsonDateTime) String() string {
-	return time.Time(dt).Format(DateTimeFormat)
+	return dt.Time().Format(ISO8601DateTimeFormat)
 }
 
-func (dt JsonDateTime) Parse(dateTimeString string, loc *time.Location) (JsonDateTime, error) {
-	newDt, err := time.ParseInLocation(DateTimeFormat, dateTimeString, loc)
+func (dt JsonDateTime) MarshalJSON() ([]byte, error) {
+	str := fmt.Sprintf("\"%s\"", dt.Time().Format(ISO8601DateTimeFormat))
+	return []byte(str), nil
+}
+
+// parse
+
+func ParseISO8601DateTime(dateTimeString string) (JsonDateTime, error) {
+	newDt, err := time.Parse(ISO8601DateTimeFormat, dateTimeString)
 	return JsonDateTime(newDt), err
 }
 
-func (dt JsonDateTime) ParseDefault(dateTimeString string, defaultDateTime JsonDateTime, loc *time.Location) JsonDateTime {
-	newDt, err := time.ParseInLocation(DateTimeFormat, dateTimeString, loc)
+func ParseISO8601DateTimeDefault(dateTimeString string, defaultDateTime JsonDateTime) JsonDateTime {
+	newDt, err := time.Parse(ISO8601DateTimeFormat, dateTimeString)
 	if err != nil {
 		return JsonDateTime(newDt)
 	} else {
@@ -36,11 +48,18 @@ func (dt JsonDateTime) ParseDefault(dateTimeString string, defaultDateTime JsonD
 	}
 }
 
-// json
+func ParseDateTime(dateTimeString string, layout string, loc *time.Location) (JsonDateTime, error) {
+	newDt, err := time.ParseInLocation(layout, dateTimeString, loc)
+	return JsonDateTime(newDt), err
+}
 
-func (dt JsonDateTime) MarshalJSON() ([]byte, error) {
-	str := fmt.Sprintf("\"%s\"", time.Time(dt).Format(DateTimeFormat))
-	return []byte(str), nil
+func ParseDateTimeDefault(dateTimeString string, defaultDateTime JsonDateTime, layout string, loc *time.Location) JsonDateTime {
+	newDt, err := time.ParseInLocation(layout, dateTimeString, loc)
+	if err != nil {
+		return JsonDateTime(newDt)
+	} else {
+		return defaultDateTime
+	}
 }
 
 // gorm
@@ -58,5 +77,5 @@ func (dt *JsonDateTime) Scan(value interface{}) error {
 }
 
 func (dt JsonDateTime) Value() (driver.Value, error) {
-	return dt.String(), nil
+	return dt.Time(), nil
 }

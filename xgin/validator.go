@@ -37,14 +37,26 @@ func SetupSpecificRegexpBinding(tag string, re string) {
 	}
 }
 
-// setup binging tag for datetime
-// example:
-//     SetupDateTimeBinding("date", "2006-01-02", xcondition.First(time.LoadLocation("Asia/Shanghai")))
-func SetupDateTimeBinding(tag string, layout string, loc *time.Location) {
+// setup binging tag for datetime with loc
+func SetupDateTimeLocBinding(tag string, layout string, loc *time.Location) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
 		_ = val.RegisterValidation(tag, func(fl validator.FieldLevel) bool {
 			_, err := time.ParseInLocation(layout, fl.Field().String(), loc)
+			if err != nil {
+				return false
+			}
+			return true
+		})
+	}
+}
+
+// setup binging tag for datetime
+func SetupDateTimeBinding(tag string, layout string) {
+	val, ok := binding.Validator.Engine().(*validator.Validate)
+	if ok {
+		_ = val.RegisterValidation(tag, func(fl validator.FieldLevel) bool {
+			_, err := time.Parse(layout, fl.Field().String())
 			if err != nil {
 				return false
 			}
