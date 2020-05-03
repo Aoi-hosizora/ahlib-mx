@@ -4,10 +4,16 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-func IsMySqlDuplicateError(err error) bool {
+// http://go-database-sql.org/errors.html
+// Reference from https://github.com/VividCortex/mysqlerr/blob/master/mysqlerr.go
+const (
+	DuplicateEntryError = 1062
+)
+
+func IsMySqlDuplicateEntryError(err error) bool {
 	if err == nil {
 		return false
 	}
 	mysqlErr, ok := err.(*mysql.MySQLError)
-	return ok && mysqlErr.Number == 1062
+	return ok && mysqlErr.Number == DuplicateEntryError
 }
