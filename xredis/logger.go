@@ -6,39 +6,41 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type RedisLogger struct {
-	conn   redis.Conn
-	logger *logrus.Logger
+// type redis.Conn interface{xxx}
+type RedisConn struct {
+	conn    redis.Conn
+	logger  *logrus.Logger
+	LogMode bool
 }
 
-func NewRedisLogger(conn redis.Conn, logger *logrus.Logger) *RedisLogger {
-	return &RedisLogger{conn: conn, logger: logger}
+func NewRedisConnWithLogger(conn redis.Conn, logger *logrus.Logger) *RedisConn {
+	return &RedisConn{conn: conn, logger: logger}
 }
 
-func (r *RedisLogger) Do(commandName string, args ...interface{}) (interface{}, error) {
+func (r *RedisConn) Do(commandName string, args ...interface{}) (interface{}, error) {
 	reply, err := r.conn.Do(commandName, args...)
-	r.print(reply, err, commandName, args...)
+	if r.LogMode {
+		r.print(reply, err, commandName, args...)
+	}
 	return reply, err
 }
 
-func (r *RedisLogger) print(reply interface{}, err error, commandName string, v ...interface{}) {
+func (r *RedisConn) print(reply interface{}, err error, commandName string, v ...interface{}) {
 	cmd := r.render(commandName, v)
+	field := r.logger.WithFields(logrus.Fields{
+		"module":  "redis",
+		"command": cmd,
+		"error":   err,
+	})
+
 	if err == nil {
-		r.logger.WithFields(logrus.Fields{
-			"Module":  "redis",
-			"Command": cmd,
-			"Error":   err,
-		}).Info(fmt.Sprintf("[Redis] return: %8T | %s", reply, cmd))
+		field.Info(fmt.Sprintf("[Redis] return: %8T | %s", reply, cmd))
 	} else {
-		r.logger.WithFields(logrus.Fields{
-			"Module":  "redis",
-			"Command": cmd,
-			"Error":   err,
-		}).Error(fmt.Sprintf("[Redis] error: %v | %s", err, cmd))
+		field.Error(fmt.Sprintf("[Redis] error: %v | %s", err, cmd))
 	}
 }
 
-func (r *RedisLogger) render(cmd string, args []interface{}) string {
+func (r *RedisConn) render(cmd string, args []interface{}) string {
 	out := cmd
 	for _, arg := range args {
 		out += " " + fmt.Sprintf("%v", arg)
@@ -46,22 +48,22 @@ func (r *RedisLogger) render(cmd string, args []interface{}) string {
 	return out
 }
 
-func (r *RedisLogger) Close() error {
+func (r *RedisConn) Close() error {
 	return r.conn.Close()
 }
 
-func (r *RedisLogger) Err() error {
+func (r *RedisConn) Err() error {
 	return r.conn.Err()
 }
 
-func (r *RedisLogger) Send(commandName string, args ...interface{}) error {
+func (r *RedisConn) Send(commandName string, args ...interface{}) error {
 	return r.conn.Send(commandName, args...)
 }
 
-func (r *RedisLogger) Flush() error {
+func (r *RedisConn) Flush() error {
 	return r.conn.Flush()
 }
 
-func (r *RedisLogger) Receive() (reply interface{}, err error) {
+func (r *RedisConn) Receive() (reply interface{}, err error) {
 	return r.conn.Receive()
 }
