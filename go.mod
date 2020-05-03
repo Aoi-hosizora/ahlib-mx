@@ -1,4 +1,4 @@
-module github.com/Aoi-hosizora/ahlib-gin-gorm
+module github.com/Aoi-hosizora/ahlib-web
 
 go 1.13
 

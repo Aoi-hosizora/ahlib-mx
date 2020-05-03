@@ -1,10 +1,11 @@
-# ahlib-gin-gorm
+# ahlib-web
 
-+ Some useful gin / gorm functions for personal use
++ Some useful functions for web development
 + Split from [Aoi-hosizora/ahlib](https://github.com/Aoi-hosizora/ahlib)
 
-### Dependence
+### Functions
 
-+ `gin` v1.5.0
-+ `validator.v9` v9.29.1
-+ `gorm` v1.9.12
++ xtime
++ xgin (`validator.v9`)
++ xgorm
++ xredis
