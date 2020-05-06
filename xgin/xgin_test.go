@@ -1,6 +1,7 @@
 package xgin
 
 import (
+	"github.com/Aoi-hosizora/ahlib-web/xgin/xroute"
 	"github.com/gin-gonic/gin"
 	"log"
 	"testing"
@@ -36,20 +37,19 @@ func TestGin(t *testing.T) {
 	testGroup := engine.Group("/test")
 	{
 		testGroup.GET("", handle)
-		testGroup.GET("/:id/:id2", MultiplePaths(
-			"id", handle, // /?/?
-			NewPrefixOption("test", handle2), // /test/?
-			NewPrefixOption("test2", MultiplePaths(
-				"id2", handle2, // /test2/?
-				NewPrefixOption("test", handle3),  // /test2/test
-				NewPrefixOption("test2", handle3), // /test2/test2
-				NewNumericOption(handle4),         // /test2/0
+		testGroup.GET("/:id/:id2", xroute.Composite("id",
+			xroute.M(handle),          // /?/?
+			xroute.P("test", handle2), // /test/?
+			xroute.P("test2", xroute.Composite("id2",
+				xroute.M(handle2),          // /test2/?
+				xroute.P("test", handle3),  // /test2/test
+				xroute.P("test2", handle3), // /test2/test2
+				xroute.N(handle4),          // /test2/0
 			)),
-			NewNumericOption(
-				handle4, // /0/?
-				MultiplePaths(
-					"id2", handle5, // /0/?
-					NewPrefixOption("test", handle6), // /0/test
+			xroute.N(handle4, // /0/?
+				xroute.Composite("id2",
+					xroute.M(handle5),         // /0/?
+					xroute.P("test", handle6), // /0/test
 				),
 			),
 		))
@@ -61,27 +61,34 @@ func TestGin(t *testing.T) {
 		}, func(c *gin.Context) {
 			log.Println(2)
 		})
-		ctxGroup.GET("/:id", MultiplePaths("id", func(c *gin.Context) {
-			log.Println(11)
-			c.Abort()
-		}, NewPrefixOption("test", func(c *gin.Context) {
-			log.Println(12)
-		}, func(c *gin.Context) {
-			log.Println(13)
-		}), NewPrefixOption("test2", func(c *gin.Context) {
-			log.Println(21)
-		}, func(c *gin.Context) {
-			log.Println(22)
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println(23)
-			c.Abort()
-		}), NewNumericOption(func(c *gin.Context) {
-			log.Println(31)
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println(32)
-		})))
+		ctxGroup.GET("/:id", xroute.Composite("id",
+			xroute.M(func(c *gin.Context) {
+				log.Println(11)
+			}, func(c *gin.Context) {
+				log.Println(12)
+				c.Abort()
+			}),
+			xroute.P("test", func(c *gin.Context) {
+				log.Println(21)
+			}, func(c *gin.Context) {
+				log.Println(22)
+			}),
+			xroute.P("test2", func(c *gin.Context) {
+				log.Println(31)
+			}, func(c *gin.Context) {
+				log.Println(32)
+				c.Abort()
+			}, func(c *gin.Context) {
+				log.Println(33)
+				c.Abort()
+			}),
+			xroute.N(func(c *gin.Context) {
+				log.Println(41)
+				c.Abort()
+			}, func(c *gin.Context) {
+				log.Println(42)
+			}),
+		))
 	}
 	_ = engine.Run(":1234")
 }

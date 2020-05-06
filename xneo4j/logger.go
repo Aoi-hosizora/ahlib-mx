@@ -4,28 +4,30 @@ import (
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
+	"log"
 )
 
-// type neo4j.Session interface{xxx}
-type Neo4jSession struct {
-	session neo4j.Session
+// logrus.Logger
+
+type Neo4jLogrus struct {
+	neo4j.Session
 	logger  *logrus.Logger
 	LogMode bool
 }
 
-func NewNeo4jSessionWithLogger(session neo4j.Session, logger *logrus.Logger) *Neo4jSession {
-	return &Neo4jSession{session: session, logger: logger}
+func NewNeo4jLogrus(session neo4j.Session, logger *logrus.Logger) *Neo4jLogrus {
+	return &Neo4jLogrus{Session: session, logger: logger}
 }
 
-func (n *Neo4jSession) Run(cypher string, params map[string]interface{}, configurers ...func(*neo4j.TransactionConfig)) (neo4j.Result, error) {
-	result, err := n.session.Run(cypher, params, configurers...)
+func (n *Neo4jLogrus) Run(cypher string, params map[string]interface{}, configurers ...func(*neo4j.TransactionConfig)) (neo4j.Result, error) {
+	result, err := n.Session.Run(cypher, params, configurers...)
 	if n.LogMode {
 		n.print(result, err)
 	}
 	return result, err
 }
 
-func (n *Neo4jSession) print(result neo4j.Result, err error) {
+func (n *Neo4jLogrus) print(result neo4j.Result, err error) {
 	if err != nil {
 		// failed to run cypher
 		n.logger.WithFields(logrus.Fields{
@@ -57,22 +59,39 @@ func (n *Neo4jSession) print(result neo4j.Result, err error) {
 	field.Infof("[Neo4j] %s <- %v\n", cypher, params)
 }
 
-func (n *Neo4jSession) Close() error {
-	return n.session.Close()
+// log.Logger
+
+type Neo4jLogger struct {
+	neo4j.Session
+	logger  *log.Logger
+	LogMode bool
 }
 
-func (n *Neo4jSession) LastBookmark() string {
-	return n.session.LastBookmark()
+func NewNeo4jLogger(session neo4j.Session, logger *log.Logger) *Neo4jLogger {
+	return &Neo4jLogger{Session: session, logger: logger}
 }
 
-func (n *Neo4jSession) BeginTransaction(configurers ...func(*neo4j.TransactionConfig)) (neo4j.Transaction, error) {
-	return n.session.BeginTransaction(configurers...)
+func (n *Neo4jLogger) Run(cypher string, params map[string]interface{}, configurers ...func(*neo4j.TransactionConfig)) (neo4j.Result, error) {
+	result, err := n.Session.Run(cypher, params, configurers...)
+	if n.LogMode {
+		n.print(result, err)
+	}
+	return result, err
 }
 
-func (n *Neo4jSession) ReadTransaction(work neo4j.TransactionWork, configurers ...func(*neo4j.TransactionConfig)) (interface{}, error) {
-	return n.session.ReadTransaction(work, configurers...)
-}
+func (n *Neo4jLogger) print(result neo4j.Result, err error) {
+	if err != nil {
+		n.logger.Printf("[Neo4j] error: %v\n", err)
+		return
+	}
+	summary, err := result.Summary()
+	if err != nil {
+		n.logger.Printf("[Neo4j] error: %v\n", err)
+		return
+	}
 
-func (n *Neo4jSession) WriteTransaction(work neo4j.TransactionWork, configurers ...func(*neo4j.TransactionConfig)) (interface{}, error) {
-	return n.session.WriteTransaction(work, configurers...)
+	stat := summary.Statement()
+	cypher := stat.Text()
+	params := stat.Params()
+	n.logger.Printf("[Neo4j] %s <- %v\n", cypher, params)
 }

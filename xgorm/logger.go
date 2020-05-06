@@ -4,22 +4,25 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"log"
 	"reflect"
 	"regexp"
 	"time"
 )
 
-type GormLogger struct {
-	logger    *logrus.Logger
-	sqlRegexp *regexp.Regexp
+var sqlRegexp = regexp.MustCompile(`(\$\d+)|\?`)
+
+// logrus.Logger
+
+type GormLogrus struct {
+	logger *logrus.Logger
 }
 
-func NewGormLogger(logger *logrus.Logger) *GormLogger {
-	re := regexp.MustCompile(`(\$\d+)|\?`)
-	return &GormLogger{logger: logger, sqlRegexp: re}
+func NewGormLogrus(logger *logrus.Logger) *GormLogrus {
+	return &GormLogrus{logger: logger}
 }
 
-func (g *GormLogger) Print(v ...interface{}) {
+func (g *GormLogrus) Print(v ...interface{}) {
 	if len(v) == 0 || len(v) == 1 {
 		g.logger.WithFields(logrus.Fields{
 			"module": "gorm",
@@ -31,22 +34,22 @@ func (g *GormLogger) Print(v ...interface{}) {
 		info := v[1]
 		g.logger.WithFields(logrus.Fields{
 			"module": "gorm",
-			"type":   level,
+			"type":   "info",
 			"info":   info,
 		}).Info(fmt.Sprintf("[Gorm] info: %s", info))
 	} else if level == "sql" {
 		source := v[1]
 		duration := v[2]
-		sql := g.render(v[3].(string), v[4])
+		sql := render(v[3].(string), v[4])
 		rows := v[5]
 		g.logger.WithFields(logrus.Fields{
 			"module":   "gorm",
-			"type":     level,
+			"type":     "sql",
 			"source":   source,
 			"duration": duration,
 			"aql":      sql,
 			"rows":     rows,
-		}).Info(fmt.Sprintf("[Gorm] rows: %3d | %10s | %s", rows, duration, sql))
+		}).Info(fmt.Sprintf("[Gorm] rows: %3d | %10s | %s | %s", rows, duration, sql, source))
 	} else {
 		g.logger.WithFields(logrus.Fields{
 			"module": "gorm",
@@ -55,8 +58,39 @@ func (g *GormLogger) Print(v ...interface{}) {
 	}
 }
 
-// referenced
-func (g *GormLogger) render(sql string, param interface{}) string {
+// log.Logger
+
+type GormLogger struct {
+	logger *log.Logger
+}
+
+func NewGormLogger(logger *log.Logger) *GormLogger {
+	return &GormLogger{logger: logger}
+}
+
+func (g *GormLogger) Print(v ...interface{}) {
+	if len(v) == 0 || len(v) == 1 {
+		g.logger.Printf("[Gorm] Unknown message: %v", v)
+		return
+	}
+
+	if level := v[0]; level == "info" {
+		info := v[1]
+		g.logger.Printf("[Gorm] info: %s", info)
+	} else if level == "sql" {
+		source := v[1]
+		duration := v[2]
+		sql := render(v[3].(string), v[4])
+		rows := v[5]
+		g.logger.Printf("[Gorm] rows: %3d | %10s | %s | %s", rows, duration, sql, source)
+	} else {
+		g.logger.Printf("[Gorm] unknown level %s: %v", level, v)
+	}
+}
+
+// render
+
+func render(sql string, param interface{}) string {
 	values := make([]interface{}, 0)
 	for _, value := range param.([]interface{}) {
 		indirectValue := reflect.Indirect(reflect.ValueOf(value))
@@ -80,5 +114,5 @@ func (g *GormLogger) render(sql string, param interface{}) string {
 		}
 	}
 
-	return fmt.Sprintf(g.sqlRegexp.ReplaceAllString(sql, "%v"), values...)
+	return fmt.Sprintf(sqlRegexp.ReplaceAllString(sql, "%v"), values...)
 }
