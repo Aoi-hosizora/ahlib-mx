@@ -6,6 +6,7 @@ require (
 	github.com/Aoi-hosizora/ahlib v0.0.0-20200506123803-c2969fb855be
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-sql-driver/mysql v1.4.1
+	github.com/gofiber/fiber v1.10.1
 	github.com/golang/mock v1.4.3 // indirect
 	github.com/gomodule/redigo/redis v0.0.0-20200429221454-e14091dffc1b
 	github.com/jinzhu/gorm v1.9.12
