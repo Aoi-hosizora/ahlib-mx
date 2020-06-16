@@ -10,16 +10,16 @@ import (
 )
 
 func LogrusForGin(logger *logrus.Logger, c *gin.Context) {
-	method := c.Request.Method
-	path := c.Request.URL.Path
 	start := time.Now()
 	c.Next()
 	stop := time.Now()
-	latency := float64(stop.Sub(start).Nanoseconds())
+	latency := stop.Sub(start).String()
 
+	method := c.Request.Method
+	path := c.Request.URL.Path
+	ip := c.ClientIP()
 	code := c.Writer.Status()
 	length := math.Abs(float64(c.Writer.Size()))
-	ip := c.ClientIP()
 
 	entry := logger.WithFields(logrus.Fields{
 		"module":   "gin",
@@ -31,9 +31,8 @@ func LogrusForGin(logger *logrus.Logger, c *gin.Context) {
 		"clientIP": ip,
 	})
 	if len(c.Errors) == 0 {
-		latencyStr := xnumber.RenderLatency(latency)
 		lengthStr := xnumber.RenderByte(length)
-		msg := fmt.Sprintf("[Gin] %3d | %12s | %15s | %8s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
+		msg := fmt.Sprintf("[Gin] %3d | %12s | %15s | %8s | %-7s %s", code, latency, ip, lengthStr, method, path)
 		if code >= 500 {
 			entry.Error(msg)
 		} else if code >= 400 {
