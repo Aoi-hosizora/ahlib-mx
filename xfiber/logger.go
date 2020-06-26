@@ -20,7 +20,7 @@ func LogrusForFiber(logger *logrus.Logger, c *fiber.Ctx) {
 	length := len(c.Fasthttp.Response.Body())
 
 	entry := logger.WithFields(logrus.Fields{
-		"module":   "gin",
+		"module":   "fiber",
 		"method":   method,
 		"path":     path,
 		"latency":  latency,

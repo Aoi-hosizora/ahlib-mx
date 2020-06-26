@@ -54,7 +54,6 @@ func (m *MainHandler) Do(c *fiber.Ctx) {
 			break
 		}
 	}
-	// c.Next(c.Error())
 }
 
 func (p *PrefixOption) Do(c *fiber.Ctx) {
@@ -64,7 +63,6 @@ func (p *PrefixOption) Do(c *fiber.Ctx) {
 			break
 		}
 	}
-	// c.Next(c.Error())
 }
 
 func (n *NumericOption) Do(c *fiber.Ctx) {
@@ -74,7 +72,6 @@ func (n *NumericOption) Do(c *fiber.Ctx) {
 			break
 		}
 	}
-	// c.Next(c.Error())
 }
 
 func Composite(key string, main *MainHandler, options ...CompositeOption) fiber.Handler {
@@ -88,6 +85,5 @@ func Composite(key string, main *MainHandler, options ...CompositeOption) fiber.
 			}
 		}
 		do(c)
-		// c.Next(c.Error())
 	}
 }
