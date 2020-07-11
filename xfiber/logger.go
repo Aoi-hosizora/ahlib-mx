@@ -28,7 +28,7 @@ func LogrusForFiber(logger *logrus.Logger, c *fiber.Ctx) {
 		"length":   length,
 		"clientIP": ip,
 	})
-	msg := fmt.Sprintf("[Gin] %3d | %12s | %15s | %6dB | %-7s %s", code, latency, ip, length, method, path)
+	msg := fmt.Sprintf("[Fiber] %3d | %12s | %15s | %6dB | %-7s %s", code, latency, ip, length, method, path)
 	if code >= 500 {
 		entry.Error(msg)
 	} else if code >= 400 {
