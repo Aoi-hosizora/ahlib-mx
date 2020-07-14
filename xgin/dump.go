@@ -8,8 +8,11 @@ import (
 
 func DumpRequest(c *gin.Context) []string {
 	request := make([]string, 0)
-	bytes, _ := httputil.DumpRequest(c.Request, false)
+	if c == nil {
+		return request
+	}
 
+	bytes, _ := httputil.DumpRequest(c.Request, false)
 	params := strings.Split(string(bytes), "\r\n")
 	for _, param := range params {
 		if strings.HasPrefix(param, "Authorization:") { // Authorization header

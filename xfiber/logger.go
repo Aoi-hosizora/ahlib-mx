@@ -8,7 +8,7 @@ import (
 )
 
 // Log request and response for fiber, no need for `c.Next()`
-func LogrusForFiber(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
+func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
 	latency := time.Now().Sub(start)
 	method := c.Method()
 	path := c.Path()

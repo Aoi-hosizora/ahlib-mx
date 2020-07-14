@@ -10,7 +10,7 @@ import (
 )
 
 // Log request and response for gin, no need for `c.Next()`
-func LogrusForGin(logger *logrus.Logger, start time.Time, c *gin.Context) {
+func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context) {
 	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
