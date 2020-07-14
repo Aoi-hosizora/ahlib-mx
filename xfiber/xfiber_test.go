@@ -35,3 +35,13 @@ func TestComposite(t *testing.T) {
 	})
 	_ = app.Listen("1234")
 }
+
+func TestDumpRequest(t *testing.T) {
+	app := fiber.New()
+	app.Get("a", func(c *fiber.Ctx) {
+		for _, s := range DumpRequest(c) {
+			log.Println(s)
+		}
+	})
+	_ = app.Listen("1234")
+}

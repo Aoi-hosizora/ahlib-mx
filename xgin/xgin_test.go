@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+func TestDumpRequest(t *testing.T) {
+	app := gin.New()
+	app.GET("a", func(c *gin.Context) {
+		for _, s := range DumpRequest(c) {
+			log.Println(s)
+		}
+	})
+	_ = app.Run(":1234")
+}
+
 func handle(c *gin.Context) {
 	log.Println(c.Request.URL.Path, "!", c.Param("id"))
 }

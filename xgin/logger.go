@@ -9,12 +9,9 @@ import (
 	"time"
 )
 
-func LogrusForGin(logger *logrus.Logger, c *gin.Context) {
-	start := time.Now()
-	c.Next()
-	stop := time.Now()
-	latency := stop.Sub(start).String()
-
+// Log request and response for gin, no need for `c.Next()`
+func LogrusForGin(logger *logrus.Logger, start time.Time, c *gin.Context) {
+	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
 	ip := c.ClientIP()
@@ -31,8 +28,9 @@ func LogrusForGin(logger *logrus.Logger, c *gin.Context) {
 		"clientIP": ip,
 	})
 	if len(c.Errors) == 0 {
+		latencyStr := latency.String()
 		lengthStr := xnumber.RenderByte(length)
-		msg := fmt.Sprintf("[Gin] %3d | %12s | %15s | %8s | %-7s %s", code, latency, ip, lengthStr, method, path)
+		msg := fmt.Sprintf("[Gin] %3d | %12s | %15s | %8s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
 		if code >= 500 {
 			entry.Error(msg)
 		} else if code >= 400 {

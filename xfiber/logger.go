@@ -7,12 +7,9 @@ import (
 	"time"
 )
 
-func LogrusForFiber(logger *logrus.Logger, c *fiber.Ctx) {
-	start := time.Now()
-	c.Next()
-	stop := time.Now()
-	latency := stop.Sub(start).String()
-
+// Log request and response for fiber, no need for `c.Next()`
+func LogrusForFiber(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
+	latency := time.Now().Sub(start)
 	method := c.Method()
 	path := c.Path()
 	ip := c.IP()
@@ -28,7 +25,7 @@ func LogrusForFiber(logger *logrus.Logger, c *fiber.Ctx) {
 		"length":   length,
 		"clientIP": ip,
 	})
-	msg := fmt.Sprintf("[Fiber] %3d | %12s | %15s | %6dB | %-7s %s", code, latency, ip, length, method, path)
+	msg := fmt.Sprintf("[Fiber] %3d | %12s | %15s | %6dB | %-7s %s", code, latency.String(), ip, length, method, path)
 	if code >= 500 {
 		entry.Error(msg)
 	} else if code >= 400 {
