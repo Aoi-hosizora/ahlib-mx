@@ -10,6 +10,7 @@ const (
 	DuplicateEntryError = 1062
 )
 
+// noinspection GoUnusedExportedFunction
 func IsMySqlDuplicateEntryError(err error) bool {
 	if err == nil {
 		return false

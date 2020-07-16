@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// noinspection GoUnusedConst
 const (
 	DefaultDeleteAtTimeStamp = "2000-01-01 00:00:00"
 )

@@ -15,6 +15,7 @@ type Neo4jLogrus struct {
 	LogMode bool
 }
 
+// noinspection GoUnusedExportedFunction
 func NewNeo4jLogrus(session neo4j.Session, logger *logrus.Logger) *Neo4jLogrus {
 	return &Neo4jLogrus{Session: session, logger: logger}
 }
@@ -67,6 +68,7 @@ type Neo4jLogger struct {
 	LogMode bool
 }
 
+// noinspection GoUnusedExportedFunction
 func NewNeo4jLogger(session neo4j.Session, logger *log.Logger) *Neo4jLogger {
 	return &Neo4jLogger{Session: session, logger: logger}
 }

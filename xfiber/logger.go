@@ -8,6 +8,7 @@ import (
 )
 
 // Log request and response for fiber, no need for `c.Next()`
+// noinspection GoUnusedExportedFunction
 func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
 	latency := time.Now().Sub(start)
 	method := c.Method()

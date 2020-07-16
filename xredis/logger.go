@@ -15,6 +15,7 @@ type RedisLogrus struct {
 	LogMode bool
 }
 
+// noinspection GoUnusedExportedFunction
 func NewRedisLogrus(conn redis.Conn, logger *logrus.Logger) *RedisLogrus {
 	return &RedisLogrus{Conn: conn, logger: logger}
 }
@@ -50,6 +51,7 @@ type RedisLogger struct {
 	LogMode bool
 }
 
+// noinspection GoUnusedExportedFunction
 func NewRedisLogger(conn redis.Conn, logger *log.Logger) *RedisLogger {
 	return &RedisLogger{Conn: conn, logger: logger}
 }

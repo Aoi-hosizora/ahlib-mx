@@ -4,6 +4,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+// noinspection GoUnusedExportedFunction
 func DeleteAll(conn redis.Conn, pattern string) (total int, del int, err error) {
 	keys, err := redis.Strings(conn.Do("KEYS", pattern))
 	if err != nil {
