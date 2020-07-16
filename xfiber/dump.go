@@ -31,5 +31,6 @@ func BuildBasicErrorDto(err interface{}, c *fiber.Ctx) *xdto.ErrorDto {
 
 // noinspection GoUnusedExportedFunction
 func BuildErrorDto(err interface{}, c *fiber.Ctx, skip int, print bool) *xdto.ErrorDto {
+	skip++
 	return xdto.BuildErrorDto(err, DumpRequest(c), skip, print)
 }

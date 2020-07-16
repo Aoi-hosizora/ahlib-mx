@@ -32,5 +32,6 @@ func BuildBasicErrorDto(err interface{}, c *gin.Context) *xdto.ErrorDto {
 
 // noinspection GoUnusedExportedFunction
 func BuildErrorDto(err interface{}, c *gin.Context, skip int, print bool) *xdto.ErrorDto {
+	skip++
 	return xdto.BuildErrorDto(err, DumpRequest(c), skip, print)
 }
