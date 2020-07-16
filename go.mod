@@ -3,7 +3,7 @@ module github.com/Aoi-hosizora/ahlib-web
 go 1.13
 
 require (
-	github.com/Aoi-hosizora/ahlib v0.0.0-20200714064339-bc07a08c46a4
+	github.com/Aoi-hosizora/ahlib v0.0.0-20200716073048-91f6c2b4cf4f
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gofiber/fiber v1.12.6

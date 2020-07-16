@@ -1,6 +1,7 @@
 package xgin
 
 import (
+	"github.com/Aoi-hosizora/ahlib-web/xdto"
 	"github.com/gin-gonic/gin"
 	"net/http/httputil"
 	"strings"
@@ -22,4 +23,14 @@ func DumpRequest(c *gin.Context) []string {
 		}
 	}
 	return request
+}
+
+// noinspection GoUnusedExportedFunction
+func BuildBasicErrorDto(err interface{}, c *gin.Context) *xdto.ErrorDto {
+	return xdto.BuildBasicErrorDto(err, DumpRequest(c))
+}
+
+// noinspection GoUnusedExportedFunction
+func BuildErrorDto(err interface{}, c *gin.Context, skip int, print bool) *xdto.ErrorDto {
+	return xdto.BuildErrorDto(err, DumpRequest(c), skip, print)
 }

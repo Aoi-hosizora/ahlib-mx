@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// noinspection GoUnusedExportedFunction
 func HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimeStamp string) {
 	db.Callback().Query().Before("gorm:query").
 		Register("new_deleted_at_before_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))
