@@ -13,6 +13,8 @@
 + xneo4j
 + **xfiber**
 + xdto
++ xtelebot
++ xserverchan
 
 ### Dependencies
 
@@ -26,3 +28,5 @@
 + `github.com/neo4j/neo4j-go-driver v1.7.4`
 + `github.com/sirupsen/logrus v1.6.0`
 + `gopkg.in/go-playground/validator.v9 v9.29.1`
++ `Aoi-hosizora/go-serverchan v0.0.0-20200728071020-c0dc5b54b079`
++ `gopkg.in/tucnak/telebot.v2 v2.3.3`
