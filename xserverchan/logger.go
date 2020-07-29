@@ -11,7 +11,7 @@ type ServerchanLogrus struct {
 }
 
 // noinspection GoUnusedExportedFunction
-func NewServerChanLogrus(logger *logrus.Logger, logMode bool) *ServerchanLogrus {
+func NewServerchanLogrus(logger *logrus.Logger, logMode bool) *ServerchanLogrus {
 	return &ServerchanLogrus{logger: logger, logMode: logMode}
 }
 
