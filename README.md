@@ -15,6 +15,7 @@
 + xdto
 + xtelebot
 + xserverchan
++ **xstatus**
 
 ### Dependencies
 
