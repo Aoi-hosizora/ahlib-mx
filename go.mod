@@ -3,8 +3,8 @@ module github.com/Aoi-hosizora/ahlib-web
 go 1.14
 
 require (
-	github.com/Aoi-hosizora/ahlib v0.0.0-20200716073048-91f6c2b4cf4f
-	github.com/Aoi-hosizora/go-serverchan v0.0.0-20200728071020-c0dc5b54b079
+	github.com/Aoi-hosizora/ahlib v1.2.4
+	github.com/Aoi-hosizora/go-serverchan v1.0.0
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gofiber/fiber v1.12.6
@@ -14,7 +14,6 @@ require (
 	github.com/neo4j-drivers/gobolt v1.7.4 // indirect
 	github.com/neo4j/neo4j-go-driver v1.7.4
 	github.com/onsi/ginkgo v1.14.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.1

@@ -20,7 +20,7 @@
 ### Dependencies
 
 + See [go.mod](./go.mod) and [go.sum](./go.sum)
-+ `github.com/Aoi-hosizora/ahlib v0.0.0-20200716073048-91f6c2b4cf4f`
++ `github.com/Aoi-hosizora/ahlib v1.2.4`
 + `github.com/gin-gonic/gin v1.6.3`
 + `github.com/go-sql-driver/mysql v1.4.1`
 + `github.com/gofiber/fiber v1.12.6`
@@ -29,5 +29,5 @@
 + `github.com/neo4j/neo4j-go-driver v1.7.4`
 + `github.com/sirupsen/logrus v1.6.0`
 + `gopkg.in/go-playground/validator.v9 v9.29.1`
-+ `Aoi-hosizora/go-serverchan v0.0.0-20200728071020-c0dc5b54b079`
++ `Aoi-hosizora/go-serverchan v1.0.0`
 + `gopkg.in/tucnak/telebot.v2 v2.3.3`

@@ -4,72 +4,50 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/tucnak/telebot.v2"
+	"log"
 )
 
 type TelebotLogrus struct {
 	logger  *logrus.Logger
-	logMode bool
+	LogMode bool
 }
 
+// noinspection GoUnusedExportedFunction
 func NewTelebotLogrus(logger *logrus.Logger, logMode bool) *TelebotLogrus {
-	return &TelebotLogrus{logger: logger, logMode: logMode}
+	return &TelebotLogrus{logger: logger, LogMode: logMode}
 }
 
 // Support endpoint type: `string` & `InlineButton` & `ReplyButton`.
 // Support handler type: `Message` & `Callback`.
 func (t *TelebotLogrus) Receive(endpoint interface{}, handle interface{}) {
-	if !t.logMode {
+	if !t.LogMode {
 		return
 	}
 
-	ep := ""
-	if s, ok := endpoint.(string); ok {
-		ep = s
-	} else if c, ok := endpoint.(telebot.CallbackEndpoint); ok {
-		if b, ok := c.(*telebot.InlineButton); ok {
-			ep = fmt.Sprintf("$inl:%s", b.Unique)
-		} else if b, ok := c.(*telebot.ReplyButton); ok {
-			ep = fmt.Sprintf("$rep:%s", b.Text)
-		} else {
-			ep = fmt.Sprintf("$cb:%T_%v", c, c)
-		}
-	} else {
-		return // unsupported endpoint
+	ep, ok := renderEndpoint(endpoint)
+	if !ok {
+		return
 	}
 
-	if len(ep) == 0 || ep == "\a" {
-		return // empty endpoint
-	} else if len(ep) >= 2 && ep[0] == '\a' {
-		ep = "$on_" + ep[1:]
-	}
-
-	var msgID int
-	var chatID int64
-	var chatName string
-
+	var m *telebot.Message
 	if msg, ok := handle.(*telebot.Message); ok {
-		msgID = msg.ID
-		chatID = msg.Chat.ID
-		chatName = msg.Chat.Username
+		m = msg
 	} else if cb, ok := handle.(*telebot.Callback); ok {
-		msgID = cb.Message.ID
-		chatID = cb.Message.Chat.ID
-		chatName = cb.Message.Chat.Username
+		m = cb.Message
 	} else {
 		return // unsupported handle
 	}
-
 	t.logger.WithFields(map[string]interface{}{
 		"module":    "telebot",
-		"messageID": msgID,
+		"messageID": m.ID,
 		"endpoint":  ep,
-		"chatID":    chatID,
-		"chatName":  chatName,
-	}).Infof("[Telebot] -> %3d | %17v | (%d %s)", msgID, ep, chatID, chatName)
+		"chatID":    m.Chat.ID,
+		"chatName":  m.Chat.Username,
+	}).Infof("[Telebot] -> %3d | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username)
 }
 
 func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error) {
-	if !t.logMode || m == nil {
+	if !t.LogMode || m == nil {
 		return
 	}
 
@@ -89,7 +67,7 @@ func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error
 }
 
 func (t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error) {
-	if !t.logMode || c == nil {
+	if !t.LogMode || c == nil {
 		return
 	}
 
@@ -103,4 +81,86 @@ func (t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error) {
 			"chatName":    to.Chat.Username,
 		}).Infof("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, "-1", -1, to.Chat.ID, to.Chat.Username)
 	}
+}
+
+type TelebotLogger struct {
+	logger  *log.Logger
+	LogMode bool
+}
+
+// noinspection GoUnusedExportedFunction
+func NewTelebotLogger(logger *log.Logger, logMode bool) *TelebotLogger {
+	return &TelebotLogger{logger: logger, LogMode: logMode}
+}
+
+func (t *TelebotLogger) Receive(endpoint interface{}, handle interface{}) {
+	if !t.LogMode {
+		return
+	}
+
+	ep, ok := renderEndpoint(endpoint)
+	if !ok {
+		return
+	}
+
+	var m *telebot.Message
+	if msg, ok := handle.(*telebot.Message); ok {
+		m = msg
+	} else if cb, ok := handle.(*telebot.Callback); ok {
+		m = cb.Message
+	} else {
+		return // unsupported handle
+	}
+	t.logger.Printf("[Telebot] -> %3d | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username)
+}
+
+func (t *TelebotLogger) Reply(m *telebot.Message, to *telebot.Message, err error) {
+	if !t.LogMode || m == nil {
+		return
+	}
+
+	if err != nil {
+		t.logger.Printf("[Telebot] failed to reply message to %d %s: %v", m.Chat.ID, m.Chat.Username, err)
+	} else if to != nil {
+		du := to.Time().Sub(m.Time()).String()
+		t.logger.Printf("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, du, m.ID, to.Chat.ID, to.Chat.Username)
+	}
+}
+
+func (t *TelebotLogger) Send(c *telebot.Chat, to *telebot.Message, err error) {
+	if !t.LogMode || c == nil {
+		return
+	}
+
+	if err != nil {
+		t.logger.Printf("[Telebot] failed to send message to %d %s: %v", c.ID, c.Username, err)
+	} else if to != nil {
+		t.logger.Printf("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, "-1", -1, to.Chat.ID, to.Chat.Username)
+	}
+}
+
+func renderEndpoint(endpoint interface{}) (string, bool) {
+	ep := ""
+	if s, ok := endpoint.(string); ok {
+		ep = s
+	} else if c, ok := endpoint.(telebot.CallbackEndpoint); ok {
+		if b, ok := c.(*telebot.InlineButton); ok {
+			ep = fmt.Sprintf("$inl:%s", b.Unique)
+		} else if b, ok := c.(*telebot.ReplyButton); ok {
+			ep = fmt.Sprintf("$rep:%s", b.Text)
+		} else {
+			ep = fmt.Sprintf("$cb:%T_%v", c, c)
+		}
+	} else {
+		return "", false // unsupported endpoint
+	}
+
+	if len(ep) == 0 || ep == "\a" {
+		return "", false // empty endpoint
+	}
+	if len(ep) >= 2 && ep[0] == '\a' {
+		ep = "$on_" + ep[1:]
+	}
+
+	return ep, true
 }
