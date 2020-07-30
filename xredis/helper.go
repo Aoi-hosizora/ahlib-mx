@@ -44,9 +44,9 @@ func (h *Helper) SetAll(keys []string, values []string) (total int, add int, err
 		key := keys[idx]
 		value := values[idx]
 
-		r, err := redis.Int(h.conn.Do("SET", key, value))
+		_, err := h.conn.Do("SET", key, value)
 		if err == nil {
-			cnt += r
+			cnt++
 		} else if someErr == nil {
 			someErr = err
 		}
@@ -67,9 +67,9 @@ func (h *Helper) SetExAll(keys []string, values []string, exs []int64) (total in
 		value := values[idx]
 		ex := exs[idx]
 
-		r, err := redis.Int(h.conn.Do("SET", key, value, ex))
+		_, err := h.conn.Do("SET", key, value, ex)
 		if err == nil {
-			cnt += r
+			cnt++
 		} else if someErr == nil {
 			someErr = err
 		}
