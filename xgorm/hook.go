@@ -9,14 +9,14 @@ import (
 
 // noinspection GoUnusedConst
 const (
-	DefaultDeleteAtTimeStamp = "2000-01-01 00:00:00"
+	DefaultDeleteAtTimeStamp = "1970-01-01 00:00:00"
 )
 
 // default deleteAt at 2000-01-01 00:00:00
 type GormTime struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt *time.Time `gorm:"default:'2000-01-01 00:00:00'"`
+	DeletedAt *time.Time `gorm:"default:'1970-01-01 00:00:00'"`
 }
 
 type GormTimeWithoutDeletedAt struct {

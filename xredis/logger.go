@@ -16,8 +16,8 @@ type RedisLogrus struct {
 }
 
 // noinspection GoUnusedExportedFunction
-func NewRedisLogrus(conn redis.Conn, logger *logrus.Logger) *RedisLogrus {
-	return &RedisLogrus{Conn: conn, logger: logger}
+func NewRedisLogrus(conn redis.Conn, logger *logrus.Logger, logMode bool) *RedisLogrus {
+	return &RedisLogrus{Conn: conn, logger: logger, LogMode: logMode}
 }
 
 func (r *RedisLogrus) Do(commandName string, args ...interface{}) (interface{}, error) {
@@ -52,8 +52,8 @@ type RedisLogger struct {
 }
 
 // noinspection GoUnusedExportedFunction
-func NewRedisLogger(conn redis.Conn, logger *log.Logger) *RedisLogger {
-	return &RedisLogger{Conn: conn, logger: logger}
+func NewRedisLogger(conn redis.Conn, logger *log.Logger, logMode bool) *RedisLogger {
+	return &RedisLogger{Conn: conn, logger: logger, LogMode: logMode}
 }
 
 func (r *RedisLogger) Do(commandName string, args ...interface{}) (interface{}, error) {

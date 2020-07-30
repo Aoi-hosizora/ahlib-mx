@@ -16,8 +16,8 @@ type Neo4jLogrus struct {
 }
 
 // noinspection GoUnusedExportedFunction
-func NewNeo4jLogrus(session neo4j.Session, logger *logrus.Logger) *Neo4jLogrus {
-	return &Neo4jLogrus{Session: session, logger: logger}
+func NewNeo4jLogrus(session neo4j.Session, logger *logrus.Logger, logMode bool) *Neo4jLogrus {
+	return &Neo4jLogrus{Session: session, logger: logger, LogMode: logMode}
 }
 
 func (n *Neo4jLogrus) Run(cypher string, params map[string]interface{}, configurers ...func(*neo4j.TransactionConfig)) (neo4j.Result, error) {
@@ -69,8 +69,8 @@ type Neo4jLogger struct {
 }
 
 // noinspection GoUnusedExportedFunction
-func NewNeo4jLogger(session neo4j.Session, logger *log.Logger) *Neo4jLogger {
-	return &Neo4jLogger{Session: session, logger: logger}
+func NewNeo4jLogger(session neo4j.Session, logger *log.Logger, logMode bool) *Neo4jLogger {
+	return &Neo4jLogger{Session: session, logger: logger, LogMode: logMode}
 }
 
 func (n *Neo4jLogger) Run(cypher string, params map[string]interface{}, configurers ...func(*neo4j.TransactionConfig)) (neo4j.Result, error) {
