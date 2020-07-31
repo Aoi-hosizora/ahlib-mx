@@ -8,7 +8,7 @@ import (
 
 // noinspection GoUnusedConst
 const (
-	RFC3339Date = "2006-01-02T15:04:05Z07:00"
+	RFC3339Date = "2006-01-02"
 	LocalDate   = "2006-01-02"
 )
 
