@@ -7,7 +7,6 @@
 
 + xtime
 + **xgin**
-+ xvalidator (`validator.v9`)
 + **xgorm**
 + xredis (`redigo/redis`)
 + xneo4j

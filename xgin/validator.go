@@ -1,4 +1,4 @@
-package xvalidator
+package xgin
 
 import (
 	"github.com/gin-gonic/gin/binding"
