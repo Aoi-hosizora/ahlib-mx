@@ -7,6 +7,9 @@ const (
 	DbNotFound
 	DbExisted
 	DbFailed
+	DbTagA
+	DbTagB
+	DbTagC
 )
 
 func (d DbStatus) String() string {
@@ -19,6 +22,12 @@ func (d DbStatus) String() string {
 		return "db-existed"
 	case DbFailed:
 		return "db-failed"
+	case DbTagA:
+		return "db-tag-a"
+	case DbTagB:
+		return "db-tag-b"
+	case DbTagC:
+		return "db-tag-c"
 	default:
 		return "db-?"
 	}
