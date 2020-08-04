@@ -7,6 +7,7 @@
 + `DbNotFound`
 + `DbExisted`
 + `DbFailed`
++ `(d DbStatus) String() string`
 
 ### FsmStatus
 
@@ -14,3 +15,4 @@
 + `FsmNone`
 + `FsmInState`
 + `FsmFinal`
++ `(f FsmStatus) String() string`
