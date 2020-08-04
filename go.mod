@@ -6,6 +6,7 @@ require (
 	github.com/Aoi-hosizora/ahlib v1.2.4
 	github.com/Aoi-hosizora/go-serverchan v1.0.0
 	github.com/gin-gonic/gin v1.6.3
+	github.com/go-playground/assert/v2 v2.0.1
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gofiber/fiber v1.12.6
 	github.com/golang/mock v1.4.3 // indirect
