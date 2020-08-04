@@ -25,12 +25,10 @@ func DumpRequest(c *gin.Context) []string {
 	return request
 }
 
-// noinspection GoUnusedExportedFunction
 func BuildBasicErrorDto(err interface{}, c *gin.Context) *xdto.ErrorDto {
 	return xdto.BuildBasicErrorDto(err, DumpRequest(c))
 }
 
-// noinspection GoUnusedExportedFunction
 func BuildErrorDto(err interface{}, c *gin.Context, skip int, print bool) *xdto.ErrorDto {
 	skip++
 	return xdto.BuildErrorDto(err, DumpRequest(c), skip, print)

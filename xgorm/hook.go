@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// noinspection GoUnusedConst
 const (
 	DefaultDeleteAtTimeStamp = "1970-01-01 00:00:00"
 )
@@ -24,7 +23,6 @@ type GormTimeWithoutDeletedAt struct {
 	UpdatedAt time.Time
 }
 
-// noinspection GoUnusedExportedFunction
 func HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimeStamp string) {
 	db.Callback().Query().Before("gorm:query").
 		Register("new_deleted_at_before_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))

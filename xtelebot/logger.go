@@ -12,7 +12,6 @@ type TelebotLogrus struct {
 	LogMode bool
 }
 
-// noinspection GoUnusedExportedFunction
 func NewTelebotLogrus(logger *logrus.Logger, logMode bool) *TelebotLogrus {
 	return &TelebotLogrus{logger: logger, LogMode: logMode}
 }
@@ -88,7 +87,6 @@ type TelebotLogger struct {
 	LogMode bool
 }
 
-// noinspection GoUnusedExportedFunction
 func NewTelebotLogger(logger *log.Logger, logMode bool) *TelebotLogger {
 	return &TelebotLogger{logger: logger, LogMode: logMode}
 }

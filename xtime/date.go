@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// noinspection GoUnusedConst
 const (
 	RFC3339Date = "2006-01-02"
 	LocalDate   = "2006-01-02"
@@ -14,7 +13,6 @@ const (
 
 type JsonDate time.Time
 
-// noinspection GoUnusedExportedFunction
 func NewJsonDate(t time.Time) JsonDate {
 	return JsonDate(t)
 }
@@ -54,13 +52,11 @@ func (d JsonDate) Value() (driver.Value, error) {
 
 // parse
 
-// noinspection GoUnusedExportedFunction
 func ParseRFC3339Date(dateString string) (JsonDate, error) {
 	n, err := time.Parse(RFC3339Date, dateString)
 	return JsonDate(n), err
 }
 
-// noinspection GoUnusedExportedFunction
 func ParseRFC3339DateDefault(dateString string, defaultDate JsonDate) JsonDate {
 	n, err := ParseRFC3339Date(dateString)
 	if err != nil {
@@ -69,13 +65,11 @@ func ParseRFC3339DateDefault(dateString string, defaultDate JsonDate) JsonDate {
 	return defaultDate
 }
 
-// noinspection GoUnusedExportedFunction
 func ParseDateInLocation(dateString string, layout string, loc *time.Location) (JsonDate, error) {
 	n, err := time.ParseInLocation(layout, dateString, loc)
 	return JsonDate(n), err
 }
 
-// noinspection GoUnusedExportedFunction
 func ParseDateInLocationDefault(dateString string, layout string, loc *time.Location, defaultDate JsonDate) JsonDate {
 	n, err := ParseDateInLocation(layout, dateString, loc)
 	if err != nil {

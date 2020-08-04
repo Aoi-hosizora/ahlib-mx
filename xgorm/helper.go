@@ -9,7 +9,6 @@ type Helper struct {
 	db *gorm.DB
 }
 
-// noinspection GoUnusedExportedFunction
 func WithDB(db *gorm.DB) *Helper {
 	return &Helper{db: db}
 }

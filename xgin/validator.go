@@ -16,7 +16,6 @@ func matchString(reg string, content string) bool {
 }
 
 // setup binding tag: regexp=xxx
-// noinspection GoUnusedExportedFunction
 func SetupRegexBinding() {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -29,7 +28,6 @@ func SetupRegexBinding() {
 // setup binding tag: $tag
 // example:
 //     SetupSpecificRegexpBinding("phone", "^(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$")
-// noinspection GoUnusedExportedFunction
 func SetupSpecificRegexpBinding(tag string, re string) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -40,7 +38,6 @@ func SetupSpecificRegexpBinding(tag string, re string) {
 }
 
 // setup binging tag for datetime with loc
-// noinspection GoUnusedExportedFunction
 func SetupDateTimeLocBinding(tag string, layout string, loc *time.Location) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -55,7 +52,6 @@ func SetupDateTimeLocBinding(tag string, layout string, loc *time.Location) {
 }
 
 // setup binging tag for datetime
-// noinspection GoUnusedExportedFunction
 func SetupDateTimeBinding(tag string, layout string) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -74,7 +70,6 @@ func SetupDateTimeBinding(tag string, layout string) {
 //     SetupBinding("xxx", func(fl validator.FieldLevel) {
 //         return fl.Field.String() == "xxx"
 //     })
-// noinspection GoUnusedExportedFunction
 func SetupBinding(tag string, valFunc func(fl validator.FieldLevel) bool) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -82,7 +77,6 @@ func SetupBinding(tag string, valFunc func(fl validator.FieldLevel) bool) {
 	}
 }
 
-// noinspection GoUnusedExportedFunction
 func IsValidationFormatError(err error) bool {
 	// validator.ValidationErrors
 	// *errors.errorString

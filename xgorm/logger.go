@@ -18,7 +18,6 @@ type GormLogrus struct {
 	logger *logrus.Logger
 }
 
-// noinspection GoUnusedExportedFunction
 func NewGormLogrus(logger *logrus.Logger) *GormLogrus {
 	return &GormLogrus{logger: logger}
 }
@@ -65,7 +64,6 @@ type GormLogger struct {
 	logger *log.Logger
 }
 
-// noinspection GoUnusedExportedFunction
 func NewGormLogger(logger *log.Logger) *GormLogger {
 	return &GormLogger{logger: logger}
 }

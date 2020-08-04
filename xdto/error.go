@@ -22,13 +22,11 @@ type ErrorDto struct {
 }
 
 // Build a basic dto (only include time, type, detail, request)
-// noinspection GoUnusedExportedFunction
 func BuildBasicErrorDto(err interface{}, requests []string) *ErrorDto {
 	return BuildErrorDto(err, requests, -2, false)
 }
 
 // Build a complete dto (also include runtime parameters)
-// noinspection GoUnusedExportedFunction
 func BuildErrorDto(err interface{}, requests []string, skip int, print bool) *ErrorDto {
 	skip++
 

@@ -9,7 +9,6 @@ type Helper struct {
 	conn redis.Conn
 }
 
-// noinspection GoUnusedExportedFunction
 func WithConn(conn redis.Conn) *Helper {
 	return &Helper{conn: conn}
 }

@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// noinspection GoUnusedConst
 const (
 	RFC3339DateTime = "2006-01-02T15:04:05Z07:00"
 	LocalDateTime   = "2006-01-02 15:04:05"
@@ -14,7 +13,6 @@ const (
 
 type JsonDateTime time.Time
 
-// noinspection GoUnusedExportedFunction
 func NewJsonDateTime(t time.Time) JsonDateTime {
 	return JsonDateTime(t)
 }
@@ -54,13 +52,11 @@ func (dt JsonDateTime) Value() (driver.Value, error) {
 
 // parse
 
-// noinspection GoUnusedExportedFunction
 func ParseRFC3339DateTime(dateTimeString string) (JsonDateTime, error) {
 	n, err := time.Parse(RFC3339DateTime, dateTimeString)
 	return JsonDateTime(n), err
 }
 
-// noinspection GoUnusedExportedFunction
 func ParseRFC3339DateTimeDefault(dateTimeString string, defaultDateTime JsonDateTime) JsonDateTime {
 	n, err := ParseRFC3339DateTime(dateTimeString)
 	if err != nil {
@@ -69,13 +65,11 @@ func ParseRFC3339DateTimeDefault(dateTimeString string, defaultDateTime JsonDate
 	return defaultDateTime
 }
 
-// noinspection GoUnusedExportedFunction
 func ParseDateTimeInLocation(dateTimeString string, layout string, loc *time.Location) (JsonDateTime, error) {
 	n, err := time.ParseInLocation(layout, dateTimeString, loc)
 	return JsonDateTime(n), err
 }
 
-// noinspection GoUnusedExportedFunction
 func ParseDateTimeInLocationDefault(dateTimeString string, layout string, loc *time.Location, defaultDateTime JsonDateTime) JsonDateTime {
 	n, err := ParseDateTimeInLocation(layout, dateTimeString, loc)
 	if err != nil {
