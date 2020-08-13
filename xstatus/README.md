@@ -7,6 +7,9 @@
 + `DbNotFound`
 + `DbExisted`
 + `DbFailed`
++ `DbTagA`
++ `DbTagB`
++ `DbTagC`
 + `(d DbStatus) String() string`
 
 ### FsmStatus

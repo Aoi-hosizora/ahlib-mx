@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-var sqlRegexp = regexp.MustCompile(`(\$\d+)|\?`)
-
 // logrus.Logger
 
 type GormLogrus struct {
@@ -96,6 +94,8 @@ func (g *GormLogger) Print(v ...interface{}) {
 }
 
 // render
+
+var sqlRegexp = regexp.MustCompile(`(\$\d+)|\?`)
 
 func render(sql string, param interface{}) string {
 	values := make([]interface{}, 0)

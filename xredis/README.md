@@ -2,10 +2,12 @@
 
 ### Functions
 
-+ `type RedisLogrus struct {}`
-+ `NewRedisLogrus(conn redis.Conn, logger *logrus.Logger, logMode bool) *RedisLogrus`
-+ `type RedisLogger struct {}`
-+ `NewRedisLogger(conn redis.Conn, logger *log.Logger, logMode bool) *RedisLogger`
++ `type LogrusRedis struct {}`
++ `NewLogrusRedis(conn redis.Conn, logger *logrus.Logger, logMode bool) *LogrusRedis`
++ `type LoggerRedis struct {}`
++ `NewLoggerRedis(conn redis.Conn, logger *log.Logger, logMode bool) *LoggerRedis`
++ `type MutexRedis struct {}`
++ `NewMutexRedis(conn redis.Conn) *MutexRedis`
 
 ### Helper functions
 

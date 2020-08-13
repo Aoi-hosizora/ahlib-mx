@@ -7,6 +7,8 @@ import (
 	"log"
 )
 
+// logrus
+
 type TelebotLogrus struct {
 	logger  *logrus.Logger
 	LogMode bool
@@ -81,6 +83,8 @@ func (t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error) {
 		}).Infof("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, "-1", -1, to.Chat.ID, to.Chat.Username)
 	}
 }
+
+// logger
 
 type TelebotLogger struct {
 	logger  *log.Logger

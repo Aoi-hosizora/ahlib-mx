@@ -10,19 +10,19 @@ import (
 	"time"
 )
 
-// logrus.Logger
+// logrus
 
-type RedisLogrus struct {
+type LogrusLogger struct {
 	redis.Conn
 	logger  *logrus.Logger
 	LogMode bool
 }
 
-func NewRedisLogrus(conn redis.Conn, logger *logrus.Logger, logMode bool) *RedisLogrus {
-	return &RedisLogrus{Conn: conn, logger: logger, LogMode: logMode}
+func NewLogrusLogger(conn redis.Conn, logger *logrus.Logger, logMode bool) *LogrusLogger {
+	return &LogrusLogger{Conn: conn, logger: logger, LogMode: logMode}
 }
 
-func (r *RedisLogrus) Do(commandName string, args ...interface{}) (interface{}, error) {
+func (r *LogrusLogger) Do(commandName string, args ...interface{}) (interface{}, error) {
 	s := time.Now()
 	reply, err := r.Conn.Do(commandName, args...)
 	e := time.Now()
@@ -32,7 +32,7 @@ func (r *RedisLogrus) Do(commandName string, args ...interface{}) (interface{}, 
 	return reply, err
 }
 
-func (r *RedisLogrus) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
+func (r *LogrusLogger) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
 	cmd := renderCommand(commandName, v)
 
 	if err != nil {
@@ -53,38 +53,38 @@ func (r *RedisLogrus) print(reply interface{}, err error, commandName string, du
 	}).Info(fmt.Sprintf("[Redis] #: %2d | %10s | %12s | %s", cnt, du, t, cmd))
 }
 
-// logrus.Logger
+// logger
 
-type RedisLogger struct {
+type LoggerRedis struct {
 	redis.Conn
 	logger  *log.Logger
 	LogMode bool
 }
 
-func NewRedisLogger(conn redis.Conn, logger *log.Logger, logMode bool) *RedisLogger {
-	return &RedisLogger{Conn: conn, logger: logger, LogMode: logMode}
+func NewLoggerRedis(conn redis.Conn, logger *log.Logger, logMode bool) *LoggerRedis {
+	return &LoggerRedis{Conn: conn, logger: logger, LogMode: logMode}
 }
 
-func (r *RedisLogger) Do(commandName string, args ...interface{}) (interface{}, error) {
+func (l *LoggerRedis) Do(commandName string, args ...interface{}) (interface{}, error) {
 	s := time.Now()
-	reply, err := r.Conn.Do(commandName, args...)
+	reply, err := l.Conn.Do(commandName, args...)
 	e := time.Now()
-	if r.LogMode {
-		r.print(reply, err, commandName, e.Sub(s).String(), args...)
+	if l.LogMode {
+		l.print(reply, err, commandName, e.Sub(s).String(), args...)
 	}
 	return reply, err
 }
 
-func (r *RedisLogger) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
+func (l *LoggerRedis) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
 	cmd := renderCommand(commandName, v)
 
 	if err != nil {
-		r.logger.Printf("[Redis] %v | %s", err, cmd)
+		l.logger.Printf("[Redis] %v | %s", err, cmd)
 		return
 	}
 
 	cnt, t := renderReply(reply)
-	r.logger.Printf("[Redis] #: %2d | %10s | %12s | %s", cnt, du, t, cmd)
+	l.logger.Printf("[Redis] #: %2d | %10s | %12s | %s", cnt, du, t, cmd)
 }
 
 // render
