@@ -1,5 +1,6 @@
 github.com/Aoi-hosizora/ahlib v1.2.4 h1:33lGxwrY1tbjFrGGz9skSnZ2rJd3aZqdBxpHb1udPCg=
 github.com/Aoi-hosizora/ahlib v1.2.4/go.mod h1:wIMHkzMHi8SVAYiH7khSmLLJl2DygP5sRwpu10FzOxU=
+github.com/Aoi-hosizora/ahlib v1.2.8 h1:a3S+AW8tboChQpGCW09Z4hF5+LJYKgKEfgbzPvvd2NQ=
 github.com/Aoi-hosizora/ahlib v1.2.8/go.mod h1:eEKG46B/pXMlv35xEAsU5bQiIdR+Mu9v03mxKSHvV8Q=
 github.com/Aoi-hosizora/go-serverchan v1.0.0 h1:Hrk4P3h9LRqvdvSTKR6waG+gN1hFrRBLZ4DWWTjp9DA=
 github.com/Aoi-hosizora/go-serverchan v1.0.0/go.mod h1:xje3libEmHAI+GXwuundHgp/PC8NuuLUJfnuoGADUu4=
@@ -82,7 +83,9 @@ github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxv
 github.com/leodido/go-urn v1.2.0 h1:hpXL4XnriNwQ/ABnpepYM/1vCLWNDfUNts8dX3xTG6Y=
 github.com/leodido/go-urn v1.2.0/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
 github.com/lestrrat-go/envload v0.0.0-20180220234015-a3eb8ddeffcc/go.mod h1:kopuH9ugFRkIXf3YoqHKyrJ9YfUFsckUU9S7B+XP+is=
+github.com/lestrrat-go/file-rotatelogs v2.3.0+incompatible h1:4mNlp+/SvALIPFpbXV3kxNJJno9iKFWGxSDE13Kl66Q=
 github.com/lestrrat-go/file-rotatelogs v2.3.0+incompatible/go.mod h1:ZQnN8lSECaebrkQytbHj4xNgtg8CR7RYXnPok8e0EHA=
+github.com/lestrrat-go/strftime v1.0.3 h1:qqOPU7y+TM8Y803I8fG9c/DyKG3xH/xkng6keC1015Q=
 github.com/lestrrat-go/strftime v1.0.3/go.mod h1:E1nN3pCbtMSu1yjSVeyuRFVm/U0xoR76fd03sz+Qz4g=
 github.com/lib/pq v1.1.1 h1:sJZmqHoEaY7f+NPP8pgLB/WxulyR3fewgCM2qaSlBb4=
 github.com/lib/pq v1.1.1/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
@@ -193,6 +196,7 @@ gopkg.in/go-playground/assert.v1 v1.2.1 h1:xoYuJVE7KT85PYWrN730RguIQO0ePzVRfFMXa
 gopkg.in/go-playground/assert.v1 v1.2.1/go.mod h1:9RXL0bg/zibRAgZUYszZSwO/z8Y/a8bDuhia5mkpMnE=
 gopkg.in/go-playground/validator.v9 v9.29.1 h1:SvGtYmN60a5CVKTOzMSyfzWDeZRxRuGvRQyEAKbw1xc=
 gopkg.in/go-playground/validator.v9 v9.29.1/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWdVbfP1avr/N00E2vyQ=
+gopkg.in/natefinch/lumberjack.v2 v2.0.0 h1:1Lc07Kr7qY4U2YPouBjpCLxpiyxIVoxqXgkXLknAOE8=
 gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=

@@ -24,13 +24,24 @@ type GormTimeWithoutDeletedAt struct {
 }
 
 func HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimeStamp string) {
-	db.Callback().Query().Before("gorm:query").
+	// query
+	db.Callback().Query().
+		Before("gorm:query").
 		Register("new_deleted_at_before_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))
-	db.Callback().RowQuery().Before("gorm:row_query").
+
+	// row query
+	db.Callback().RowQuery().
+		Before("gorm:row_query").
 		Register("new_deleted_at_before_row_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))
-	db.Callback().Update().Before("gorm:update").
+
+	// update
+	db.Callback().Update().
+		Before("gorm:update").
 		Register("new_deleted_at_before_update_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))
-	db.Callback().Delete().Replace("gorm:delete", newDeleteCallback(defaultDeleteAtTimeStamp))
+
+	// delete !!!
+	db.Callback().Delete().
+		Replace("gorm:delete", newDeleteCallback(defaultDeleteAtTimeStamp))
 }
 
 func newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp string) func(scope *gorm.Scope) {
