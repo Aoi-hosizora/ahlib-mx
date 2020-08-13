@@ -2,10 +2,10 @@
 
 ### Logger Functions
 
-+ `type Neo4jLogrus struct {}`
-+ `NewNeo4jLogrus(session neo4j.Session, logger *logrus.Logger, logMode bool) *Neo4jLogrus`
-+ `type Neo4jLogger struct {}`
-+ `NewNeo4jLogger(session neo4j.Session, logger *log.Logger, logMode bool) *Neo4jLogger`
++ `type LogrusNeo4j struct {}`
++ `NewLogrusNeo4j(session neo4j.Session, logger *logrus.Logger, logMode bool) *LogrusNeo4j`
++ `type LoggerNeo4j struct {}`
++ `NewLoggerNeo4j(session neo4j.Session, logger *log.Logger, logMode bool) *LoggerNeo4j`
 
 ### Functions
 

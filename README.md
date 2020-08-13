@@ -26,7 +26,7 @@
 + `github.com/jinzhu/gorm v1.9.12`
 + `gopkg.in/go-playground/validator.v9 v9.29.1`
 + `github.com/gomodule/redigo/redis v0.0.0-20200429221454-e14091dffc1b`
-+ `github.com/neo4j/neo4j-go-driver v1.7.4`
++ `github.com/neo4j/neo4j-go-driver v1.8.1`
 + `github.com/sirupsen/logrus v1.6.0`
 + `gopkg.in/tucnak/telebot.v2 v2.3.3`
 + `Aoi-hosizora/go-serverchan v1.0.0`

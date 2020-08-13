@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/consul/api v1.6.0
 	github.com/jinzhu/gorm v1.9.15
 	github.com/neo4j-drivers/gobolt v1.7.4 // indirect
-	github.com/neo4j/neo4j-go-driver v1.7.4
+	github.com/neo4j/neo4j-go-driver v1.8.1
 	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	google.golang.org/grpc v1.31.0

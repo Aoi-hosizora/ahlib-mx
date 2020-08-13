@@ -4,17 +4,31 @@ import (
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
-// get records from run result
-// result: array of record
-// record: array of columns value -> Get(key) / GetByIndex(index)
-func GetRecords(result neo4j.Result) ([]neo4j.Record, error) {
+// Get records from run result, see neo4j.Collect.
+//
+// 1. result: array of neo4j.Record;
+//
+// 2. record: array of columns value -> Get(key) / GetByIndex(index);
+//
+// Example:
+//	cypher := "MATCH p = ()-[r :FRIEND]->(n) RETURN r, n"
+//	rec, _ := xneo4j.GetRecords(session.Run(cypher, nil)) // slice of neo4j.Record
+//	for _, r := range rec { // slice of value (interface{})
+//		rel := xneo4j.GetRel(r.Values()[0]) // neo4j.Node
+//		node := xneo4j.GetNode(r.Values()[1]) // neo4j.Relationship
+//		log.Println(rel.Id(), rel.Type(), node.Id(), node.Props())
+//	}
+func GetRecords(result neo4j.Result, err error) ([]neo4j.Record, error) {
+	if err != nil {
+		return nil, err
+	}
+
 	rec := make([]neo4j.Record, 0)
 	for result.Next() {
-		if result.Err() != nil {
-			// ??? Get result record error
-			continue
-		}
 		rec = append(rec, result.Record())
+	}
+	if err := result.Err(); err != nil {
+		return nil, err
 	}
 
 	return rec, nil
