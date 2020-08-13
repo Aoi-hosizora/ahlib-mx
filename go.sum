@@ -1,5 +1,6 @@
 github.com/Aoi-hosizora/ahlib v1.2.4 h1:33lGxwrY1tbjFrGGz9skSnZ2rJd3aZqdBxpHb1udPCg=
 github.com/Aoi-hosizora/ahlib v1.2.4/go.mod h1:wIMHkzMHi8SVAYiH7khSmLLJl2DygP5sRwpu10FzOxU=
+github.com/Aoi-hosizora/ahlib v1.2.8/go.mod h1:eEKG46B/pXMlv35xEAsU5bQiIdR+Mu9v03mxKSHvV8Q=
 github.com/Aoi-hosizora/go-serverchan v1.0.0 h1:Hrk4P3h9LRqvdvSTKR6waG+gN1hFrRBLZ4DWWTjp9DA=
 github.com/Aoi-hosizora/go-serverchan v1.0.0/go.mod h1:xje3libEmHAI+GXwuundHgp/PC8NuuLUJfnuoGADUu4=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=

@@ -31,7 +31,8 @@ func (n *Neo4jLogrus) print(result neo4j.Result, err error) {
 	if err != nil {
 		// failed to run cypher
 		n.logger.WithFields(logrus.Fields{
-			"module": "neo4j", "error": err,
+			"module": "neo4j",
+			"error":  err,
 		}).Infoln(fmt.Printf("[Neo4j] error: %v\n", err))
 		return
 	}
@@ -42,7 +43,8 @@ func (n *Neo4jLogrus) print(result neo4j.Result, err error) {
 		// Neo.ClientError.Schema.ConstraintValidationFailed
 		// ...
 		n.logger.WithFields(logrus.Fields{
-			"module": "neo4j", "error": err,
+			"module": "neo4j",
+			"error":  err,
 		}).Infoln(fmt.Printf("[Neo4j] error: %v\n", err))
 		return
 	}

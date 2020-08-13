@@ -13,8 +13,13 @@ const (
 
 type JsonDate time.Time
 
+// ToDate will remove time's hour, minute, second, nanosecond and location
+func ToDate(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+}
+
 func NewJsonDate(t time.Time) JsonDate {
-	return JsonDate(t)
+	return JsonDate(ToDate(t))
 }
 
 func (d JsonDate) Time() time.Time {
@@ -52,28 +57,15 @@ func (d JsonDate) Value() (driver.Value, error) {
 
 // parse
 
-func ParseRFC3339Date(dateString string) (JsonDate, error) {
-	n, err := time.Parse(RFC3339Date, dateString)
+func ParseRFC3339Date(s string) (JsonDate, error) {
+	n, err := time.Parse(RFC3339Date, s)
 	return JsonDate(n), err
 }
 
-func ParseRFC3339DateDefault(dateString string, defaultDate JsonDate) JsonDate {
-	n, err := ParseRFC3339Date(dateString)
+func ParseRFC3339DateDefault(s string, d JsonDate) JsonDate {
+	n, err := ParseRFC3339Date(s)
 	if err != nil {
 		return n
 	}
-	return defaultDate
-}
-
-func ParseDateInLocation(dateString string, layout string, loc *time.Location) (JsonDate, error) {
-	n, err := time.ParseInLocation(layout, dateString, loc)
-	return JsonDate(n), err
-}
-
-func ParseDateInLocationDefault(dateString string, layout string, loc *time.Location, defaultDate JsonDate) JsonDate {
-	n, err := ParseDateInLocation(layout, dateString, loc)
-	if err != nil {
-		return n
-	}
-	return defaultDate
+	return d
 }

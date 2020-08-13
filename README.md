@@ -12,14 +12,14 @@
 + xneo4j
 + **xfiber**
 + xdto
-+ xtelebot
++ **xtelebot**
 + xserverchan
 + **xstatus**
 
 ### Dependencies
 
 + See [go.mod](./go.mod) and [go.sum](./go.sum)
-+ `github.com/Aoi-hosizora/ahlib v1.2.4`
++ `github.com/Aoi-hosizora/ahlib v1.2.8`
 + `github.com/gin-gonic/gin v1.6.3`
 + `github.com/go-sql-driver/mysql v1.4.1`
 + `github.com/gofiber/fiber v1.12.6`

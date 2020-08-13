@@ -13,8 +13,13 @@ const (
 
 type JsonDateTime time.Time
 
+// ToDateTime will remove time's nanosecond and location
+func ToDateTime(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, t.Location())
+}
+
 func NewJsonDateTime(t time.Time) JsonDateTime {
-	return JsonDateTime(t)
+	return JsonDateTime(ToDateTime(t))
 }
 
 func (dt JsonDateTime) Time() time.Time {
@@ -52,28 +57,15 @@ func (dt JsonDateTime) Value() (driver.Value, error) {
 
 // parse
 
-func ParseRFC3339DateTime(dateTimeString string) (JsonDateTime, error) {
-	n, err := time.Parse(RFC3339DateTime, dateTimeString)
+func ParseRFC3339DateTime(s string) (JsonDateTime, error) {
+	n, err := time.Parse(RFC3339DateTime, s)
 	return JsonDateTime(n), err
 }
 
-func ParseRFC3339DateTimeDefault(dateTimeString string, defaultDateTime JsonDateTime) JsonDateTime {
-	n, err := ParseRFC3339DateTime(dateTimeString)
+func ParseRFC3339DateTimeDefault(s string, d JsonDateTime) JsonDateTime {
+	n, err := ParseRFC3339DateTime(s)
 	if err != nil {
 		return n
 	}
-	return defaultDateTime
-}
-
-func ParseDateTimeInLocation(dateTimeString string, layout string, loc *time.Location) (JsonDateTime, error) {
-	n, err := time.ParseInLocation(layout, dateTimeString, loc)
-	return JsonDateTime(n), err
-}
-
-func ParseDateTimeInLocationDefault(dateTimeString string, layout string, loc *time.Location, defaultDateTime JsonDateTime) JsonDateTime {
-	n, err := ParseDateTimeInLocation(layout, dateTimeString, loc)
-	if err != nil {
-		return n
-	}
-	return defaultDateTime
+	return d
 }

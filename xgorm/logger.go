@@ -47,7 +47,7 @@ func (g *GormLogrus) Print(v ...interface{}) {
 			"type":     "sql",
 			"source":   source,
 			"duration": duration,
-			"aql":      sql,
+			"sql":      sql,
 			"rows":     rows,
 		}).Info(fmt.Sprintf("[Gorm] rows: %3d | %10s | %s | %s", rows, duration, sql, source))
 	} else {
