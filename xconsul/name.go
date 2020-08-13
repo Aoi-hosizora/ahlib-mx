@@ -6,7 +6,8 @@ import (
 	"regexp"
 )
 
-type NameHandler struct {
+// nameHandler Include some handler used for grpc and consul.
+type nameHandler struct {
 	// Used in api.AgentServiceRegistration `ID` field.
 	GetConsulID func(ip string, port int, name string) string
 
@@ -14,33 +15,43 @@ type NameHandler struct {
 	GetGrpcTarget func(ip string, port int, name string) string
 
 	// Used to parse api.AgentServiceCheck `GRPC` field in ConsulBuilder.Build.
-	ParseGrpcTarget func(schema string) (ip string, port int, name string, err error)
+	ParseGrpcTarget func(target string) (host string, port int, name string, err error)
 }
 
-var defaultNameHandler = &NameHandler{
-	GetConsulID:     getConsulIDDefault,
-	GetGrpcTarget:   getGrpcTargetDefault,
-	ParseGrpcTarget: parseGrpcTargetDefault,
+// Default nameHandler used for inner.
+var defaultNameHandler = &nameHandler{
+	GetConsulID:     _defaultGetConsulID,
+	GetGrpcTarget:   _defaultGetGrpcTarget,
+	ParseGrpcTarget: _defaultParseGrpcTarget,
 }
 
-// Change default NameHandler.
-func SetDefaultNameHandler(hdr *NameHandler) {
-	if hdr == nil || hdr.GetConsulID == nil || hdr.GetGrpcTarget == nil || hdr.ParseGrpcTarget == nil {
-		panic("invalid name handler, could not be nil")
-	}
-
-	defaultNameHandler = hdr
+// Change default implement of nameHandler.GetConsulID.
+func SetDefaultGetConsulIDHandler(f func(ip string, port int, name string) string) {
+	defaultNameHandler.GetConsulID = f
 }
 
-func getConsulIDDefault(ip string, port int, name string) string {
+// Change default implement of nameHandler.GetGrpcTarget.
+func SetDefaultGetGrpcTargetHandler(f func(ip string, port int, name string) string) {
+	defaultNameHandler.GetGrpcTarget = f
+}
+
+// Change default implement of nameHandler.ParseGrpcTarget.
+func SetDefaultParseGrpcTargetHandler(f func(target string) (host string, port int, name string, err error)) {
+	defaultNameHandler.ParseGrpcTarget = f
+}
+
+// Default nameHandler.GetConsulID.
+func _defaultGetConsulID(ip string, port int, name string) string {
 	return fmt.Sprintf("%s-%d-%s", ip, port, name)
 }
 
-func getGrpcTargetDefault(ip string, port int, name string) string {
+// Default nameHandler.GetGrpcTarget.
+func _defaultGetGrpcTarget(ip string, port int, name string) string {
 	return fmt.Sprintf("%s:%d/%s", ip, port, name)
 }
 
-func parseGrpcTargetDefault(target string) (host string, port int, name string, err error) {
+// Default nameHandler.ParseGrpcTarget.
+func _defaultParseGrpcTarget(target string) (host string, port int, name string, err error) {
 	if target == "" {
 		return "", 0, "", fmt.Errorf("consul resolver: missing address")
 	}

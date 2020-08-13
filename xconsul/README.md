@@ -7,10 +7,12 @@
 
 ### Client
 
++ `type ConsulBuilder struct {}`
 + `RegisterConsulResolver()`
 + `NewConsulBuilder() resolver.Builder`
 
 ### Name
 
-+ `type NameHandler struct {}`
-+ `SetDefaultNameHandler(hdr *NameHandler)`
++ `SetDefaultGetConsulIDHandler(f func(ip string, port int, name string) string)`
++ `SetDefaultGetGrpcTargetHandler(f func(ip string, port int, name string) string)`
++ `SetDefaultParseGrpcTargetHandler(f func(schema string) (ip string, port int, name string, err error))`

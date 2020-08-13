@@ -20,6 +20,7 @@ func NewConsulBuilder() resolver.Builder {
 }
 
 func (cb *ConsulBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
+	// 127.0.0.1:8500/xxx
 	ta := fmt.Sprintf("%s/%s", target.Authority, target.Endpoint)
 	host, port, name, err := defaultNameHandler.ParseGrpcTarget(ta)
 	if err != nil {
