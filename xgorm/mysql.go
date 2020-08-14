@@ -4,8 +4,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-// http://go-database-sql.org/errors.html
-// Reference from https://github.com/VividCortex/mysqlerr/blob/master/mysqlerr.go
+// Reference from http://go-database-sql.org/errors.html and
+// https://github.com/VividCortex/mysqlerr/blob/master/mysqlerr.go.
 const (
 	DuplicateEntryError = 1062
 )

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Log request and response for gin, no need for `c.Next()`
+// Log request and response for gin, no need for `c.Next()`.
 func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context) {
 	latency := time.Now().Sub(start)
 	method := c.Request.Method

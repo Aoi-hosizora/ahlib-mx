@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// An error response model for fiber and gin
+// An error response model for fiber and gin.
 // Request: Need to dump gin.Request or fiber.Fasthttp
 // Filename... need for runtime stack, need to provide skip
 type ErrorDto struct {
@@ -21,12 +21,12 @@ type ErrorDto struct {
 	Line      string `json:"line,omitempty"`
 }
 
-// Build a basic dto (only include time, type, detail, request)
+// Build a basic dto (only include time, type, detail, request).
 func BuildBasicErrorDto(err interface{}, requests []string) *ErrorDto {
 	return BuildErrorDto(err, requests, -2, false)
 }
 
-// Build a complete dto (also include runtime parameters)
+// Build a complete dto (also include runtime parameters).
 func BuildErrorDto(err interface{}, requests []string, skip int, print bool) *ErrorDto {
 	skip++
 

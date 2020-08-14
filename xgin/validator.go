@@ -15,7 +15,7 @@ func matchString(reg string, content string) bool {
 	return re.MatchString(content)
 }
 
-// setup binding tag: regexp=xxx
+// Setup binding tag: `regexp=xxx`.
 func SetupRegexBinding() {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -25,9 +25,9 @@ func SetupRegexBinding() {
 	}
 }
 
-// setup binding tag: $tag
+// Setup binding tag: $tag.
 // example:
-//     SetupSpecificRegexpBinding("phone", "^(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$")
+// 	SetupSpecificRegexpBinding("phone", "^(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$")
 func SetupSpecificRegexpBinding(tag string, re string) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -37,7 +37,7 @@ func SetupSpecificRegexpBinding(tag string, re string) {
 	}
 }
 
-// setup binging tag for datetime with loc
+// Setup binging tag for datetime with loc.
 func SetupDateTimeLocBinding(tag string, layout string, loc *time.Location) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -51,7 +51,7 @@ func SetupDateTimeLocBinding(tag string, layout string, loc *time.Location) {
 	}
 }
 
-// setup binging tag for datetime
+// Setup binging tag for datetime.
 func SetupDateTimeBinding(tag string, layout string) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
@@ -65,11 +65,11 @@ func SetupDateTimeBinding(tag string, layout string) {
 	}
 }
 
-// setup userDefined bind
+// Setup userDefined bind.
 // example:
-//     SetupBinding("xxx", func(fl validator.FieldLevel) {
-//         return fl.Field.String() == "xxx"
-//     })
+// 	SetupBinding("xxx", func(fl validator.FieldLevel) {
+// 	    return fl.Field.String() == "xxx"
+// 	})
 func SetupBinding(tag string, valFunc func(fl validator.FieldLevel) bool) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if ok {
