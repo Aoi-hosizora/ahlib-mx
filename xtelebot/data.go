@@ -7,22 +7,18 @@ import (
 type UserStatus uint64
 
 type UsersData struct {
-	mus       sync.Mutex
-	muc       sync.Mutex
-	noneState UserStatus
-
-	status map[int64]UserStatus
-	cache  map[int64]map[string]interface{}
+	defState UserStatus
+	mus      sync.Mutex
+	status   map[int64]UserStatus
+	muc      sync.Mutex
+	cache    map[int64]map[string]interface{}
 }
 
-func NewUsersData(noneStatus UserStatus) *UsersData {
+func NewUsersData(defState UserStatus) *UsersData {
 	return &UsersData{
-		mus:       sync.Mutex{},
-		muc:       sync.Mutex{},
-		noneState: noneStatus,
-
-		status: make(map[int64]UserStatus),
-		cache:  map[int64]map[string]interface{}{},
+		defState: defState,
+		status:   make(map[int64]UserStatus),
+		cache:    map[int64]map[string]interface{}{},
 	}
 }
 
@@ -36,7 +32,7 @@ func (u *UsersData) GetStatus(chatID int64) UserStatus {
 	u.mus.Lock()
 	s, ok := u.status[chatID]
 	if !ok {
-		s = u.noneState
+		s = u.defState
 		u.status[chatID] = s
 	}
 	u.mus.Unlock()
@@ -45,7 +41,7 @@ func (u *UsersData) GetStatus(chatID int64) UserStatus {
 
 func (u *UsersData) ResetStatus(chatID int64) {
 	u.mus.Lock()
-	u.status[chatID] = u.noneState
+	u.status[chatID] = u.defState
 	u.mus.Unlock()
 }
 

@@ -50,6 +50,8 @@ func _defaultGetGrpcTarget(ip string, port int, name string) string {
 	return fmt.Sprintf("%s:%d/%s", ip, port, name)
 }
 
+var consulRegexp = regexp.MustCompile(`^([A-z0-9.]+)(?::([0-9]{1,5}))?/([A-z_-]+)$`)
+
 // Default nameHandler.ParseGrpcTarget.
 func _defaultParseGrpcTarget(target string) (host string, port int, name string, err error) {
 	if target == "" {
@@ -57,15 +59,11 @@ func _defaultParseGrpcTarget(target string) (host string, port int, name string,
 	}
 
 	// localhost:8500/xxx
-	regexConsul, err := regexp.Compile(`^([A-z0-9.]+)(?::([0-9]{1,5}))?/([A-z_-]+)$`)
-	if err != nil {
-		return "", 0, "", err
-	}
-	if !regexConsul.MatchString(target) {
+	if !consulRegexp.MatchString(target) {
 		return "", 0, "", fmt.Errorf("consul resolver: invalid uri")
 	}
 
-	groups := regexConsul.FindStringSubmatch(target)
+	groups := consulRegexp.FindStringSubmatch(target)
 	host = groups[1]                    // localhost
 	name = groups[3]                    // xxx
 	port, err = xnumber.Atoi(groups[2]) // 8500

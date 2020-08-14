@@ -9,7 +9,7 @@ import (
 )
 
 func TestConsul(t *testing.T) {
-	RegisterConsulResolver()
+	RegisterConsulResolver(true)
 
 	for i := 0; i < 5; i++ {
 		err := RegisterConsulService("127.0.0.1:8500", &ConsulService{

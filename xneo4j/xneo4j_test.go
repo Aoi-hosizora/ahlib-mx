@@ -1,7 +1,7 @@
 package xneo4j
 
 import (
-	"github.com/Aoi-hosizora/ahlib/xlogger"
+	"github.com/Aoi-hosizora/ahlib-more/xlogrus"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -22,7 +22,7 @@ func TestLogrus(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	logger.SetFormatter(&xlogger.CustomFormatter{ForceColor: true})
+	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
 	session = NewLogrusNeo4j(session, logger, true)
 
 	cypher := "MATCH p = ()-[r :FRIEND]->(n) RETURN r, n"
@@ -45,7 +45,7 @@ func TestLogrus(t *testing.T) {
 
 func TestLogger(t *testing.T) {
 	authParam := neo4j.BasicAuth("neo4j", "123", "")
-	driver, err := neo4j.NewDriver("bolt://localhost:7687", authParam)
+	driver, err := neo4j.NewDriver(" ", authParam)
 	if err != nil {
 		log.Fatalln("Failed to connect neo4j: ", err)
 	}

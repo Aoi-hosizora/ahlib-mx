@@ -9,14 +9,16 @@ import (
 )
 
 // RegisterConsulResolver will register consul build to grpc resolver, used in client.
-func RegisterConsulResolver() {
-	resolver.Register(NewConsulBuilder())
+func RegisterConsulResolver(doLog bool) {
+	resolver.Register(NewConsulBuilder(doLog))
 }
 
-type ConsulBuilder struct{}
+type ConsulBuilder struct {
+	doLog bool
+}
 
-func NewConsulBuilder() resolver.Builder {
-	return &ConsulBuilder{}
+func NewConsulBuilder(doLog bool) resolver.Builder {
+	return &ConsulBuilder{doLog: doLog}
 }
 
 func (cb *ConsulBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
@@ -37,7 +39,7 @@ func (cb *ConsulBuilder) Build(target resolver.Target, cc resolver.ClientConn, o
 	}
 
 	cr.wg.Add(1)
-	go cr.watcher()
+	go cr.watcher(cb.doLog)
 	return cr, nil
 }
 
@@ -53,24 +55,27 @@ type consulResolver struct {
 	name                 string
 	disableServiceConfig bool
 	lastIndex            uint64
+	lastAddrCount        int
 }
 
 func (cr *consulResolver) ResolveNow(resolver.ResolveNowOptions) {}
 
 func (cr *consulResolver) Close() {}
 
-func (cr *consulResolver) watcher() {
+func (cr *consulResolver) watcher(doLog bool) {
 	config := api.DefaultConfig()
 	config.Address = fmt.Sprintf("%s:%d", cr.host, cr.port)
 	client, err := api.NewClient(config)
 	if err != nil {
-		log.Println("Failed to create consul client:", err)
+		if doLog {
+			log.Println("Failed to create consul client:", err)
+		}
 		return
 	}
 
 	for {
 		services, metaInfo, err := client.Health().Service(cr.name, cr.name, true, &api.QueryOptions{WaitIndex: cr.lastIndex})
-		if err != nil {
+		if err != nil && doLog {
 			log.Println("Failed to retrieve instances from consul:", err)
 		}
 
@@ -81,7 +86,13 @@ func (cr *consulResolver) watcher() {
 			addresses[idx] = resolver.Address{Addr: addr}
 		}
 
-		log.Println("Update service addresses:", len(addresses))
+		if l := len(addresses); cr.lastAddrCount != l {
+			if doLog {
+				log.Printf("Addresses updated: #%d", len(addresses))
+			}
+			cr.lastAddrCount = l
+		}
+
 		cr.cc.UpdateState(resolver.State{Addresses: addresses})
 	}
 }

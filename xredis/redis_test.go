@@ -1,11 +1,11 @@
 package xredis
 
 import (
-	"github.com/Aoi-hosizora/ahlib/xlogger"
+	"github.com/Aoi-hosizora/ahlib-more/xlogger"
+	"github.com/Aoi-hosizora/ahlib-more/xlogrus"
 	"github.com/gomodule/redigo/redis"
 	"github.com/sirupsen/logrus"
 	"log"
-	"os"
 	"sync"
 	"testing"
 )
@@ -13,11 +13,12 @@ import (
 func TestLogrus(t *testing.T) {
 	conn, err := redis.Dial("tcp", "localhost:6379", redis.DialPassword("123"), redis.DialDatabase(1))
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		return
 	}
 
 	logger := logrus.New()
-	logger.SetFormatter(&xlogger.CustomFormatter{ForceColor: true})
+	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
 	conn = NewLogrusLogger(conn, logger, true)
 
 	_, _ = conn.Do("GET", "aaaaa-a")
@@ -31,11 +32,11 @@ func TestLogrus(t *testing.T) {
 func TestLogger(t *testing.T) {
 	conn, err := redis.Dial("tcp", "localhost:6379", redis.DialPassword("123"), redis.DialDatabase(1))
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		return
 	}
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-	conn = NewLoggerRedis(conn, logger, true)
+	conn = NewLoggerRedis(conn, xlogger.StdLogger, true)
 
 	_, _ = conn.Do("GET", "aaaaa-a")
 	_, _ = conn.Do("SET", "aaaaa-a", "abc")
@@ -50,9 +51,10 @@ func TestMutex(t *testing.T) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 	conn = NewMutexRedis(conn)
 	logger := logrus.New()
-	logger.SetFormatter(&xlogger.CustomFormatter{ForceColor: true})
+	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
 	conn = NewLogrusLogger(conn, logger, true)
 
 	wg := sync.WaitGroup{}
