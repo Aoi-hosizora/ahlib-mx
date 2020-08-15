@@ -2,81 +2,67 @@ package xgin
 
 import (
 	"github.com/gin-gonic/gin/binding"
-	"gopkg.in/go-playground/validator.v9"
+	"github.com/go-playground/validator/v10"
 	"regexp"
 	"time"
 )
 
-func matchString(reg string, content string) bool {
-	re, err := regexp.Compile(reg)
-	if err != nil {
-		return true // error reg default to match success
+// Setup userDefined bind.
+func SetupBinding(tag string, fn func(fl validator.FieldLevel) bool) {
+	val, ok := binding.Validator.Engine().(*validator.Validate)
+	if ok {
+		_ = val.RegisterValidation(tag, fn)
 	}
-	return re.MatchString(content)
 }
 
 // Setup binding tag: `regexp=xxx`.
-func SetupRegexBinding() {
-	val, ok := binding.Validator.Engine().(*validator.Validate)
-	if ok {
-		_ = val.RegisterValidation("regexp", func(fl validator.FieldLevel) bool {
-			return matchString(fl.Param(), fl.Field().String())
-		})
-	}
+func EnableRegexpBinding() {
+	SetupBinding("regexp", func(fl validator.FieldLevel) bool {
+		re := regexp.MustCompile(fl.Param())
+		return re.MatchString(fl.Field().String())
+	})
 }
 
-// Setup binding tag: $tag.
-// example:
-// 	SetupSpecificRegexpBinding("phone", "^(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$")
-func SetupSpecificRegexpBinding(tag string, re string) {
-	val, ok := binding.Validator.Engine().(*validator.Validate)
-	if ok {
-		_ = val.RegisterValidation(tag, func(fl validator.FieldLevel) bool {
-			return matchString(re, fl.Field().String())
-		})
-	}
-}
-
-// Setup binging tag for datetime with loc.
-func SetupDateTimeLocBinding(tag string, layout string, loc *time.Location) {
-	val, ok := binding.Validator.Engine().(*validator.Validate)
-	if ok {
-		_ = val.RegisterValidation(tag, func(fl validator.FieldLevel) bool {
-			_, err := time.ParseInLocation(layout, fl.Field().String(), loc)
-			if err != nil {
-				return false
-			}
-			return true
-		})
-	}
+// Setup binding tag: `$tag·.
+func SetupRegexpBinding(tag string, re *regexp.Regexp) {
+	SetupBinding(tag, func(fl validator.FieldLevel) bool {
+		return re.MatchString(fl.Field().String())
+	})
 }
 
 // Setup binging tag for datetime.
 func SetupDateTimeBinding(tag string, layout string) {
-	val, ok := binding.Validator.Engine().(*validator.Validate)
-	if ok {
-		_ = val.RegisterValidation(tag, func(fl validator.FieldLevel) bool {
-			_, err := time.Parse(layout, fl.Field().String())
-			if err != nil {
-				return false
+	SetupBinding(tag, func(fl validator.FieldLevel) bool {
+		_, err := time.Parse(layout, fl.Field().String())
+		if err != nil {
+			return false
+		}
+		return true
+	})
+}
+
+// Setup length binding tag: $tag.
+func SetupLengthBinding(tag string, min, max int) {
+	SetupBinding(tag, func(fl validator.FieldLevel) bool {
+		f := fl.Field().String()
+		return len(f) >= min && len(f) <= max
+	})
+}
+
+// Setup oneof binding tag: $tag.
+func SetupOneofBinding(tag string, fields ...interface{}) {
+	SetupBinding(tag, func(fl validator.FieldLevel) bool {
+		f := fl.Field().String()
+		for _, ff := range fields {
+			if f == ff {
+				return true
 			}
-			return true
-		})
-	}
+		}
+		return false
+	})
 }
 
-// Setup userDefined bind.
-// example:
-// 	SetupBinding("xxx", func(fl validator.FieldLevel) {
-// 	    return fl.Field.String() == "xxx"
-// 	})
-func SetupBinding(tag string, valFunc func(fl validator.FieldLevel) bool) {
-	val, ok := binding.Validator.Engine().(*validator.Validate)
-	if ok {
-		_ = val.RegisterValidation(tag, valFunc)
-	}
-}
-
+// Check is err is validator.ValidationErrors and is required error.
 func IsValidationFormatError(err error) bool {
 	// validator.ValidationErrors
 	// *errors.errorString
