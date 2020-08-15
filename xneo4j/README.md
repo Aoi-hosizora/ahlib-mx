@@ -9,6 +9,9 @@
 
 ### Functions
 
++ `type DialFunc func(driver neo4j.Driver) (neo4j.Session, error)`
++ `NewNeo4jPool(driver neo4j.Driver, dial DialFunc) *Neo4jPool`
++ `(n *Neo4jPool) Get() (neo4j.Session, error)`
 + `GetRecords(result neo4j.Result) ([]neo4j.Record, error)`
 + `GetInteger(data interface{}) int64`
 + `GetFloat(data interface{}) float64`

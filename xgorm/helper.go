@@ -67,3 +67,8 @@ func (h *Helper) Delete(model interface{}, where interface{}, object interface{}
 	}
 	return xstatus.DbSuccess
 }
+
+// Allow model to use map to update or query.
+type ModelMapper interface {
+	ToMap() map[string]interface{}
+}
