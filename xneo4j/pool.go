@@ -5,7 +5,7 @@ import (
 )
 
 // DialFunc is used to get a session from neo4j.Driver.
-type DialFunc func(driver neo4j.Driver) (neo4j.Session, error)
+type DialFunc func(driver neo4j.Driver, accessMode neo4j.AccessMode, bookmarks ...string) (neo4j.Session, error)
 
 type Pool struct {
 	neo4j.Driver
@@ -26,6 +26,6 @@ func NewPool(driver neo4j.Driver, dial DialFunc) *Pool {
 }
 
 // Get a session from neo4j.Driver.
-func (n *Pool) Get() (neo4j.Session, error) {
-	return n.Dial(n.Driver)
+func (n *Pool) Get(accessMode neo4j.AccessMode, bookmarks ...string) (neo4j.Session, error) {
+	return n.Dial(n.Driver, accessMode, bookmarks...)
 }
