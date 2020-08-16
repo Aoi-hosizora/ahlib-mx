@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"reflect"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -16,41 +17,53 @@ type LogrusLogger struct {
 	redis.Conn
 	logger  *logrus.Logger
 	LogMode bool
+	Skip    int
 }
 
 func NewLogrusLogger(conn redis.Conn, logger *logrus.Logger, logMode bool) *LogrusLogger {
-	return &LogrusLogger{Conn: conn, logger: logger, LogMode: logMode}
+	return &LogrusLogger{Conn: conn, logger: logger, LogMode: logMode, Skip: 2}
 }
 
-func (r *LogrusLogger) Do(commandName string, args ...interface{}) (interface{}, error) {
+func (l *LogrusLogger) WithSkip(skip int) *LogrusLogger {
+	l.Skip = skip
+	return l
+}
+
+func (l *LogrusLogger) Do(commandName string, args ...interface{}) (interface{}, error) {
 	s := time.Now()
-	reply, err := r.Conn.Do(commandName, args...)
+	reply, err := l.Conn.Do(commandName, args...)
 	e := time.Now()
-	if r.LogMode {
-		r.print(reply, err, commandName, e.Sub(s).String(), args...)
+	if l.LogMode {
+		l.print(reply, err, commandName, e.Sub(s).String(), args...)
 	}
 	return reply, err
 }
 
-func (r *LogrusLogger) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
+func (l *LogrusLogger) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
 	cmd := renderCommand(commandName, v)
 
 	if err != nil {
-		r.logger.WithFields(logrus.Fields{
+		l.logger.WithFields(logrus.Fields{
 			"module":  "redis",
 			"command": cmd,
 			"error":   err,
 		}).Error(fmt.Sprintf("[Redis] %v | %s", err, cmd))
 		return
 	}
+	if reply == nil {
+		return
+	}
 
 	cnt, t := renderReply(reply)
-	r.logger.WithFields(logrus.Fields{
+	_, file, line, _ := runtime.Caller(l.Skip)
+	source := fmt.Sprintf("%s:%d", file, line)
+	l.logger.WithFields(logrus.Fields{
 		"module":   "redis",
 		"command":  cmd,
 		"count":    cnt,
 		"duration": du,
-	}).Info(fmt.Sprintf("[Redis] #: %2d | %10s | %12s | %s", cnt, du, t, cmd))
+		"source":   source,
+	}).Info(fmt.Sprintf("[Redis] #: %3d | %12s | %15s | %s | %s", cnt, du, t, cmd, source))
 }
 
 // logger
@@ -59,10 +72,16 @@ type LoggerRedis struct {
 	redis.Conn
 	logger  *log.Logger
 	LogMode bool
+	Skip    int
 }
 
 func NewLoggerRedis(conn redis.Conn, logger *log.Logger, logMode bool) *LoggerRedis {
-	return &LoggerRedis{Conn: conn, logger: logger, LogMode: logMode}
+	return &LoggerRedis{Conn: conn, logger: logger, LogMode: logMode, Skip: 2}
+}
+
+func (l *LoggerRedis) WithSkip(skip int) *LoggerRedis {
+	l.Skip = skip
+	return l
 }
 
 func (l *LoggerRedis) Do(commandName string, args ...interface{}) (interface{}, error) {
@@ -82,9 +101,14 @@ func (l *LoggerRedis) print(reply interface{}, err error, commandName string, du
 		l.logger.Printf("[Redis] %v | %s", err, cmd)
 		return
 	}
+	if reply == nil {
+		return
+	}
 
 	cnt, t := renderReply(reply)
-	l.logger.Printf("[Redis] #: %2d | %10s | %12s | %s", cnt, du, t, cmd)
+	_, file, line, _ := runtime.Caller(l.Skip)
+	source := fmt.Sprintf("%s:%d", file, line)
+	l.logger.Printf("[Redis] #: %3d | %12s | %15s | %s | %s", cnt, du, t, cmd, source)
 }
 
 // render

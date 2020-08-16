@@ -11,7 +11,9 @@
 
 + `type DialFunc func(driver neo4j.Driver) (neo4j.Session, error)`
 + `NewNeo4jPool(driver neo4j.Driver, dial DialFunc) *Neo4jPool`
-+ `(n *Neo4jPool) Get() (neo4j.Session, error)`
++ `(n *Pool) Get(mode neo4j.AccessMode, bookmarks ...string) (neo4j.Session, error)`
++ `(n *Pool) GetWriteMode(bookmarks ...string) (neo4j.Session, error)`
++ `(n *Pool) GetReadMode(bookmarks ...string) (neo4j.Session, error)`
 + `GetRecords(result neo4j.Result) ([]neo4j.Record, error)`
 + `GetInteger(data interface{}) int64`
 + `GetFloat(data interface{}) float64`

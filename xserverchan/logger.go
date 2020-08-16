@@ -1,6 +1,7 @@
 package xserverchan
 
 import (
+	"fmt"
 	"github.com/Aoi-hosizora/go-serverchan"
 	"github.com/sirupsen/logrus"
 )
@@ -24,13 +25,13 @@ func (s *ServerchanLogrus) Log(sckey string, title string, code int32, err error
 
 	if err != nil {
 		if !serverchan.IsResponseError(err) {
-			s.logger.Errorf("[Serverchan] failed to send message to %s: %v", sckey, err)
+			s.logger.Error(fmt.Sprintf("[Serverchan] Send to %s error: %v", sckey, err))
 		} else {
 			s.logger.WithFields(map[string]interface{}{
 				"module":    "serverchan",
 				"sckeyMask": sckey,
 				"code":      code,
-			}).Errorf("[Serverchan] failed to send message to %s: %v", sckey, err)
+			}).Error(fmt.Sprintf("[Serverchan] Send to %s error: %v", sckey, err))
 		}
 	} else {
 		s.logger.WithFields(map[string]interface{}{
@@ -38,6 +39,6 @@ func (s *ServerchanLogrus) Log(sckey string, title string, code int32, err error
 			"sckeyMask": sckey,
 			"titleMask": title,
 			"code":      0,
-		}).Infof("[Serverchan] <- %s | %s", sckey, title)
+		}).Info(fmt.Sprintf("[Serverchan] < | %s | %s", sckey, title))
 	}
 }

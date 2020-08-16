@@ -13,13 +13,13 @@ import (
 func TestLogrus(t *testing.T) {
 	conn, err := redis.Dial("tcp", "localhost:6379", redis.DialPassword("123"), redis.DialDatabase(1))
 	if err != nil {
-		log.Println(err)
-		return
+		log.Fatalln(err)
 	}
 
 	logger := logrus.New()
 	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
-	conn = NewLogrusLogger(conn, logger, true)
+	conn = NewLogrusLogger(conn, logger, true).WithSkip(3)
+	conn = NewMutexRedis(conn)
 
 	_, _ = conn.Do("GET", "aaaaa-a")
 	_, _ = conn.Do("SET", "aaaaa-a", "abc")
@@ -32,11 +32,11 @@ func TestLogrus(t *testing.T) {
 func TestLogger(t *testing.T) {
 	conn, err := redis.Dial("tcp", "localhost:6379", redis.DialPassword("123"), redis.DialDatabase(1))
 	if err != nil {
-		log.Println(err)
-		return
+		log.Fatalln(err)
 	}
 
-	conn = NewLoggerRedis(conn, xlogger.StdLogger, true)
+	conn = NewLoggerRedis(conn, xlogger.StdLogger, true).WithSkip(3)
+	conn = NewMutexRedis(conn)
 
 	_, _ = conn.Do("GET", "aaaaa-a")
 	_, _ = conn.Do("SET", "aaaaa-a", "abc")
@@ -52,10 +52,10 @@ func TestMutex(t *testing.T) {
 		log.Fatalln(err)
 	}
 
-	conn = NewMutexRedis(conn)
 	logger := logrus.New()
 	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
-	conn = NewLogrusLogger(conn, logger, true)
+	conn = NewLogrusLogger(conn, logger, true).WithSkip(3)
+	conn = NewMutexRedis(conn)
 
 	wg := sync.WaitGroup{}
 	wg.Add(10)

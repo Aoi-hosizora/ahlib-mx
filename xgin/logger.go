@@ -30,7 +30,7 @@ func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context) {
 	if len(c.Errors) == 0 {
 		latencyStr := latency.String()
 		lengthStr := xnumber.RenderByte(length)
-		msg := fmt.Sprintf("[Gin] %3d | %12s | %15s | %8s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
+		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
 		if code >= 500 {
 			entry.Error(msg)
 		} else if code >= 400 {

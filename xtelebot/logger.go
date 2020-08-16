@@ -38,13 +38,14 @@ func (t *TelebotLogrus) Receive(endpoint interface{}, handle interface{}) {
 	} else {
 		return // unsupported handle
 	}
+
 	t.logger.WithFields(map[string]interface{}{
 		"module":    "telebot",
 		"messageID": m.ID,
 		"endpoint":  ep,
 		"chatID":    m.Chat.ID,
 		"chatName":  m.Chat.Username,
-	}).Infof("[Telebot] -> %3d | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username)
+	}).Info(fmt.Sprintf("[Telebot] %4d | -> | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username))
 }
 
 func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error) {
@@ -53,7 +54,7 @@ func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error
 	}
 
 	if err != nil {
-		t.logger.Errorf("[Telebot] failed to reply message to %d %s: %v", m.Chat.ID, m.Chat.Username, err)
+		t.logger.Error(fmt.Sprintf("[Telebot] Reply to %d %s error: %v", m.Chat.ID, m.Chat.Username, err))
 	} else if to != nil {
 		du := to.Time().Sub(m.Time()).String()
 		t.logger.WithFields(map[string]interface{}{
@@ -63,7 +64,7 @@ func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error
 			"duration":      du,
 			"chatID":        to.Chat.ID,
 			"chatName":      to.Chat.Username,
-		}).Infof("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, du, m.ID, to.Chat.ID, to.Chat.Username)
+		}).Info(fmt.Sprintf("[Telebot] %4d | %12s | %4d | (%d %s)", to.ID, du, m.ID, to.Chat.ID, to.Chat.Username))
 	}
 }
 
@@ -73,14 +74,14 @@ func (t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error) {
 	}
 
 	if err != nil {
-		t.logger.Errorf("[Telebot] failed to send message to %d %s: %v", c.ID, c.Username, err)
+		t.logger.Error(fmt.Sprintf("[Telebot] Send to %d %s error: %v", c.ID, c.Username, err))
 	} else if to != nil {
 		t.logger.WithFields(map[string]interface{}{
 			"module":      "telebot",
 			"toMessageId": to.ID,
 			"chatID":      to.Chat.ID,
 			"chatName":    to.Chat.Username,
-		}).Infof("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, "-1", -1, to.Chat.ID, to.Chat.Username)
+		}).Info(fmt.Sprintf("[Telebot] %4d | %12s | %4d | (%d %s)", to.ID, "-1", -1, to.Chat.ID, to.Chat.Username))
 	}
 }
 
@@ -113,7 +114,8 @@ func (t *TelebotLogger) Receive(endpoint interface{}, handle interface{}) {
 	} else {
 		return // unsupported handle
 	}
-	t.logger.Printf("[Telebot] -> %3d | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username)
+
+	t.logger.Printf("[Telebot] %4d | -> | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username)
 }
 
 func (t *TelebotLogger) Reply(m *telebot.Message, to *telebot.Message, err error) {
@@ -122,10 +124,10 @@ func (t *TelebotLogger) Reply(m *telebot.Message, to *telebot.Message, err error
 	}
 
 	if err != nil {
-		t.logger.Printf("[Telebot] failed to reply message to %d %s: %v", m.Chat.ID, m.Chat.Username, err)
+		t.logger.Printf("[Telebot] Reply to %d %s error: %v", m.Chat.ID, m.Chat.Username, err)
 	} else if to != nil {
 		du := to.Time().Sub(m.Time()).String()
-		t.logger.Printf("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, du, m.ID, to.Chat.ID, to.Chat.Username)
+		t.logger.Printf("[Telebot] %4d | %12s | %4d | (%d %s)", to.ID, du, m.ID, to.Chat.ID, to.Chat.Username)
 	}
 }
 
@@ -135,9 +137,9 @@ func (t *TelebotLogger) Send(c *telebot.Chat, to *telebot.Message, err error) {
 	}
 
 	if err != nil {
-		t.logger.Printf("[Telebot] failed to send message to %d %s: %v", c.ID, c.Username, err)
+		t.logger.Printf("[Telebot] Send to %d %s error: %v", c.ID, c.Username, err)
 	} else if to != nil {
-		t.logger.Printf("[Telebot] <- %3d | %10s | %4d | (%d %s)", to.ID, "-1", -1, to.Chat.ID, to.Chat.Username)
+		t.logger.Printf("[Telebot] %4d | %12s | %4d | (%d %s)", to.ID, "-1", -1, to.Chat.ID, to.Chat.Username)
 	}
 }
 

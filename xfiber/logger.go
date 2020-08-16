@@ -2,6 +2,7 @@ package xfiber
 
 import (
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/gofiber/fiber"
 	"github.com/sirupsen/logrus"
 	"time"
@@ -15,6 +16,7 @@ func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
 	ip := c.IP()
 	code := c.Fasthttp.Response.StatusCode()
 	length := len(c.Fasthttp.Response.Body())
+	lengthStr := xnumber.RenderByte(float64(length))
 
 	entry := logger.WithFields(logrus.Fields{
 		"module":   "fiber",
@@ -25,7 +27,7 @@ func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
 		"length":   length,
 		"clientIP": ip,
 	})
-	msg := fmt.Sprintf("[Fiber] %3d | %12s | %15s | %6dB | %-7s %s", code, latency.String(), ip, length, method, path)
+	msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
 	if code >= 500 {
 		entry.Error(msg)
 	} else if code >= 400 {

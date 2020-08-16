@@ -45,7 +45,7 @@ func TestLogrus(t *testing.T) {
 
 func TestLogger(t *testing.T) {
 	authParam := neo4j.BasicAuth("neo4j", "123", "")
-	driver, err := neo4j.NewDriver(" ", authParam)
+	driver, err := neo4j.NewDriver("bolt://localhost:7687", authParam)
 	if err != nil {
 		log.Fatalln("Failed to connect neo4j: ", err)
 	}

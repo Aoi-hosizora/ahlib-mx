@@ -26,6 +26,16 @@ func NewPool(driver neo4j.Driver, dial DialFunc) *Pool {
 }
 
 // Get a session from neo4j.Driver.
-func (n *Pool) Get(accessMode neo4j.AccessMode, bookmarks ...string) (neo4j.Session, error) {
-	return n.Dial(n.Driver, accessMode, bookmarks...)
+func (n *Pool) Get(mode neo4j.AccessMode, bookmarks ...string) (neo4j.Session, error) {
+	return n.Dial(n.Driver, mode, bookmarks...)
+}
+
+// Get a session (neo4j.AccessModeWrite) from neo4j.Driver.
+func (n *Pool) GetWriteMode(bookmarks ...string) (neo4j.Session, error) {
+	return n.Dial(n.Driver, neo4j.AccessModeWrite, bookmarks...)
+}
+
+// Get a session (neo4j.AccessModeRead) from neo4j.Driver.
+func (n *Pool) GetReadMode(bookmarks ...string) (neo4j.Session, error) {
+	return n.Dial(n.Driver, neo4j.AccessModeRead, bookmarks...)
 }

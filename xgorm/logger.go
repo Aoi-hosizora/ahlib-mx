@@ -50,7 +50,7 @@ func (g *GormLogrus) Print(v ...interface{}) {
 			"duration": duration,
 			"sql":      sql,
 			"rows":     rows,
-		}).Info(fmt.Sprintf("[Gorm] #: %3d | %10s | %s | %s", rows, duration, sql, source))
+		}).Info(fmt.Sprintf("[Gorm] #: %4d | %12s | %s | %s", rows, duration, sql, source))
 		return
 	}
 
@@ -86,7 +86,7 @@ func (g *GormLogger) Print(v ...interface{}) {
 		duration := v[2]
 		sql := render(v[3].(string), v[4])
 		rows := v[5]
-		g.logger.Printf("[Gorm] #: %3d | %10s | %s | %s", rows, duration, sql, source)
+		g.logger.Printf("[Gorm] #: %4d | %12s | %s | %s", rows, duration, sql, source)
 		return
 	}
 
