@@ -41,22 +41,23 @@ func (l *LogrusLogger) Do(commandName string, args ...interface{}) (interface{},
 
 func (l *LogrusLogger) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
 	cmd := renderCommand(commandName, v)
+	_, file, line, _ := runtime.Caller(l.Skip)
+	source := fmt.Sprintf("%s:%d", file, line)
 
 	if err != nil {
 		l.logger.WithFields(logrus.Fields{
 			"module":  "redis",
 			"command": cmd,
 			"error":   err,
-		}).Error(fmt.Sprintf("[Redis] %v | %s", err, cmd))
+			"source":  source,
+		}).Error(fmt.Sprintf("[Redis] %v | %s | %s", err, cmd, source))
 		return
 	}
-	if reply == nil {
+	if cmd == "" {
 		return
 	}
 
 	cnt, t := renderReply(reply)
-	_, file, line, _ := runtime.Caller(l.Skip)
-	source := fmt.Sprintf("%s:%d", file, line)
 	l.logger.WithFields(logrus.Fields{
 		"module":   "redis",
 		"command":  cmd,
@@ -96,18 +97,18 @@ func (l *LoggerRedis) Do(commandName string, args ...interface{}) (interface{}, 
 
 func (l *LoggerRedis) print(reply interface{}, err error, commandName string, du string, v ...interface{}) {
 	cmd := renderCommand(commandName, v)
+	_, file, line, _ := runtime.Caller(l.Skip)
+	source := fmt.Sprintf("%s:%d", file, line)
 
 	if err != nil {
-		l.logger.Printf("[Redis] %v | %s", err, cmd)
+		l.logger.Printf("[Redis] %v | %s | %s", err, cmd, source)
 		return
 	}
-	if reply == nil {
+	if cmd == "" {
 		return
 	}
 
 	cnt, t := renderReply(reply)
-	_, file, line, _ := runtime.Caller(l.Skip)
-	source := fmt.Sprintf("%s:%d", file, line)
 	l.logger.Printf("[Redis] #: %3d | %12s | %15s | %s | %s", cnt, du, t, cmd, source)
 }
 

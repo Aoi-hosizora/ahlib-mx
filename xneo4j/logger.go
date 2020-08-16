@@ -40,11 +40,15 @@ func (l *LogrusNeo4j) Run(cypher string, params map[string]interface{}, configur
 }
 
 func (l *LogrusNeo4j) print(result neo4j.Result, du string, err error) {
+	_, file, line, _ := runtime.Caller(l.Skip)
+	source := fmt.Sprintf("%s:%d", file, line)
+
 	if err != nil { // Failed to run cypher.
 		l.logger.WithFields(logrus.Fields{
 			"module": "neo4j",
 			"error":  err,
-		}).Error(fmt.Sprintf("[Neo4j] error: %v", err))
+			"source": source,
+		}).Error(fmt.Sprintf("[Neo4j] error: %v | %s", err, source))
 		return
 	}
 
@@ -56,7 +60,8 @@ func (l *LogrusNeo4j) print(result neo4j.Result, du string, err error) {
 		l.logger.WithFields(logrus.Fields{
 			"module": "neo4j",
 			"error":  err,
-		}).Error(fmt.Sprintf("[Neo4j] error: %v", err))
+			"source": source,
+		}).Error(fmt.Sprintf("[Neo4j] error: %v | %s", err, source))
 		return
 	}
 
@@ -65,7 +70,8 @@ func (l *LogrusNeo4j) print(result neo4j.Result, du string, err error) {
 		l.logger.WithFields(logrus.Fields{
 			"module": "neo4j",
 			"error":  err,
-		}).Error(fmt.Sprintf("[Neo4j] error: %v", err))
+			"source": source,
+		}).Error(fmt.Sprintf("[Neo4j] error: %v | %s", err, source))
 		return
 	}
 
@@ -73,8 +79,6 @@ func (l *LogrusNeo4j) print(result neo4j.Result, du string, err error) {
 	stat := summary.Statement()
 	cypher := stat.Text()
 	params := stat.Params()
-	_, file, line, _ := runtime.Caller(l.Skip)
-	source := fmt.Sprintf("%s:%d", file, line)
 	cypher = render(cypher, params)
 
 	l.logger.WithFields(logrus.Fields{
@@ -116,18 +120,21 @@ func (l *LoggerNeo4j) Run(cypher string, params map[string]interface{}, configur
 }
 
 func (l *LoggerNeo4j) print(result neo4j.Result, du string, err error) {
+	_, file, line, _ := runtime.Caller(l.Skip)
+	source := fmt.Sprintf("%s:%d", file, line)
+
 	if err != nil {
-		l.logger.Printf("[Neo4j] error: %v\n", err)
+		l.logger.Printf("[Neo4j] error: %v | %s", err, source)
 		return
 	}
 	summary, err := result.Summary()
 	if err != nil {
-		l.logger.Printf("[Neo4j] error: %v\n", err)
+		l.logger.Printf("[Neo4j] error: %v | %s", err, source)
 		return
 	}
 	keys, err := result.Keys()
 	if err != nil {
-		l.logger.Printf("[Neo4j] error: %v\n", err)
+		l.logger.Printf("[Neo4j] error: %v | %s", err, source)
 		return
 	}
 
@@ -135,8 +142,6 @@ func (l *LoggerNeo4j) print(result neo4j.Result, du string, err error) {
 	cypher := stat.Text()
 	params := stat.Params()
 	cypher = render(cypher, params)
-	_, file, line, _ := runtime.Caller(l.Skip)
-	source := fmt.Sprintf("%s:%d", file, line)
 
 	l.logger.Printf("[Neo4j] #C: %2d | %12s | %s | %s", len(keys), du, cypher, source)
 }
