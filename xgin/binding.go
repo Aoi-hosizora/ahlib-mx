@@ -3,6 +3,7 @@ package xgin
 import (
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 )
@@ -34,8 +35,7 @@ import (
 // Example:
 // 	Email    string `binding:"l_email,email"` // can not be nil, and ""
 // 	Username string `binding:""`              // can be nil, but also be ""
-//
-func AddBinding(tag string, fn func(fl validator.FieldLevel) bool) error {
+func AddBinding(tag string, fn validator.Func) error {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if !ok {
 		return fmt.Errorf("gin's validator is not validator.Validate")
@@ -43,7 +43,17 @@ func AddBinding(tag string, fn func(fl validator.FieldLevel) bool) error {
 	return val.RegisterValidation(tag, fn)
 }
 
-// Enable regexp binding: `regexp=xxx`.
+// Enable regexp binding: `regexp`.
 func EnableRegexpBinding() error {
 	return AddBinding("regexp", xvalidator.DefaultRegexpValidator())
+}
+
+// Enable rfc3339 date binding: `date`.
+func EnableRFC3339DateBinding() error {
+	return AddBinding("date", xvalidator.DateTimeValidator(xtime.RFC3339Date))
+}
+
+// Enable rfc3339 regexp binding: `datetime`.
+func EnableRFC3339DateTimeBinding() error {
+	return AddBinding("datetime", xvalidator.DateTimeValidator(xtime.RFC3339DateTime))
 }

@@ -13,7 +13,7 @@
 + **xstatus**
 + **xtelebot**
 + xserverchan
-+ xconsul
++ xvalidator
 
 ### Dependencies
 
