@@ -55,10 +55,12 @@ func (g *GormLogrus) Print(v ...interface{}) {
 	}
 
 	// other
+	msg := fmt.Sprint(v[2:]...)
 	g.logger.WithFields(logrus.Fields{
-		"module": "gorm",
-		"type":   v[0],
-	}).Info(fmt.Sprintf("[Gorm] %s", fmt.Sprint(v[2:]...)))
+		"module":  "gorm",
+		"type":    v[0],
+		"message": msg,
+	}).Info(fmt.Sprintf("[Gorm] [%s] %s", v[0], msg))
 }
 
 // log.Logger

@@ -1,7 +1,6 @@
 package xneo4j
 
 import (
-	"github.com/Aoi-hosizora/ahlib-more/xlogrus"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -21,9 +20,7 @@ func TestLogrus(t *testing.T) {
 		log.Fatalln("Failed to create neo4j session: ", err)
 	}
 
-	logger := logrus.New()
-	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
-	session = NewLogrusNeo4j(session, logger, true)
+	session = NewLogrusNeo4j(session, logrus.New(), true)
 
 	cypher := "MATCH p = ()-[r :FRIEND]->(n) RETURN r, n"
 	rec, _ := GetRecords(session.Run(cypher, nil))

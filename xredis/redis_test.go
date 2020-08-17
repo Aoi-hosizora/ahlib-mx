@@ -1,11 +1,10 @@
 package xredis
 
 import (
-	"github.com/Aoi-hosizora/ahlib-more/xlogger"
-	"github.com/Aoi-hosizora/ahlib-more/xlogrus"
 	"github.com/gomodule/redigo/redis"
 	"github.com/sirupsen/logrus"
 	"log"
+	"os"
 	"sync"
 	"testing"
 )
@@ -16,9 +15,7 @@ func TestLogrus(t *testing.T) {
 		log.Fatalln(err)
 	}
 
-	logger := logrus.New()
-	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
-	conn = NewLogrusLogger(conn, logger, true).WithSkip(3)
+	conn = NewLogrusLogger(conn, logrus.New(), true).WithSkip(3)
 	conn = NewMutexRedis(conn)
 
 	_, _ = conn.Do("GET", "aaaaa-a")
@@ -35,7 +32,7 @@ func TestLogger(t *testing.T) {
 		log.Fatalln(err)
 	}
 
-	conn = NewLoggerRedis(conn, xlogger.StdLogger, true).WithSkip(3)
+	conn = NewLoggerRedis(conn, log.New(os.Stderr, "", log.LstdFlags), true).WithSkip(3)
 	conn = NewMutexRedis(conn)
 
 	_, _ = conn.Do("GET", "aaaaa-a")
@@ -53,7 +50,7 @@ func TestMutex(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
+	logger.SetFormatter(&logrus.TextFormatter{})
 	conn = NewLogrusLogger(conn, logger, true).WithSkip(3)
 	conn = NewMutexRedis(conn)
 

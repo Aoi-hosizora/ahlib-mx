@@ -1,11 +1,10 @@
 package xgorm
 
 import (
-	"github.com/Aoi-hosizora/ahlib-more/xlogger"
-	"github.com/Aoi-hosizora/ahlib-more/xlogrus"
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 	"log"
+	"os"
 	"testing"
 )
 
@@ -23,9 +22,7 @@ func TestLogrus(t *testing.T) {
 	db.SingularTable(true)
 	db.LogMode(true)
 
-	logger := logrus.New()
-	logger.SetFormatter(&xlogrus.CustomFormatter{ForceColor: true})
-	db.SetLogger(NewGormLogrus(logger))
+	db.SetLogger(NewGormLogrus(logrus.New()))
 	HookDeleteAtField(db, DefaultDeleteAtTimeStamp)
 
 	test := &TblTest{}
@@ -33,6 +30,8 @@ func TestLogrus(t *testing.T) {
 	log.Println(test)
 	tests := make([]*TblTest, 0)
 	db.Model(&TblTest{}).Find(&tests)
+	log.Println(tests)
+	db.Model(test).Related(test)
 	log.Println(tests)
 }
 
@@ -46,7 +45,7 @@ func TestLogger(t *testing.T) {
 	db.LogMode(true)
 
 	// logger
-	db.SetLogger(NewGormLogger(xlogger.StdLogger))
+	db.SetLogger(NewGormLogger(log.New(os.Stderr, "", log.LstdFlags)))
 	HookDeleteAtField(db, DefaultDeleteAtTimeStamp)
 
 	test := &TblTest{}
