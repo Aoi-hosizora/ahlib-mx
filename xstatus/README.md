@@ -10,6 +10,8 @@
 + `DbTagA`
 + `DbTagB`
 + `DbTagC`
++ `DbTagD`
++ `DbTagE`
 + `(d DbStatus) String() string`
 
 ### FsmStatus

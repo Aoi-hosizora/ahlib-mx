@@ -10,6 +10,8 @@ const (
 	DbTagA
 	DbTagB
 	DbTagC
+	DbTagD
+	DbTagE
 )
 
 func (d DbStatus) String() string {
@@ -28,6 +30,10 @@ func (d DbStatus) String() string {
 		return "db-tag-b"
 	case DbTagC:
 		return "db-tag-c"
+	case DbTagD:
+		return "db-tag-d"
+	case DbTagE:
+		return "db-tag-e"
 	default:
 		return "db-?"
 	}

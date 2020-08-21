@@ -27,51 +27,55 @@ func (h *Helper) Exist(model interface{}, where interface{}) bool {
 	return h.Count(model, where) > 0
 }
 
-func (h *Helper) Insert(model interface{}, object interface{}) xstatus.DbStatus {
+func (h *Helper) Create(model interface{}, object interface{}) (xstatus.DbStatus, error) {
 	rdb := h.db.Model(model).Create(object)
-
-	if IsMySqlDuplicateEntryError(rdb.Error) {
-		return xstatus.DbExisted
-	} else if rdb.Error != nil || rdb.RowsAffected == 0 {
-		return xstatus.DbFailed
-	}
-	return xstatus.DbSuccess
+	return CreateDB(rdb)
 }
 
-func (h *Helper) Update(model interface{}, where interface{}, object interface{}) xstatus.DbStatus {
+func (h *Helper) Update(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
 	}
 	rdb := h.db.Model(model).Where(where).Update(object)
-
-	if IsMySqlDuplicateEntryError(rdb.Error) {
-		return xstatus.DbExisted
-	} else if rdb.Error != nil {
-		return xstatus.DbFailed
-	} else if rdb.RowsAffected == 0 {
-		return xstatus.DbNotFound
-	}
-	return xstatus.DbSuccess
+	return UpdateDB(rdb)
 }
 
-func (h *Helper) Delete(model interface{}, where interface{}, object interface{}) xstatus.DbStatus {
+func (h *Helper) Delete(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
 	}
 	rdb := h.db.Model(model).Where(where).Delete(object)
+	return DeleteDB(rdb)
+}
 
-	if rdb.Error != nil {
-		return xstatus.DbFailed
-	} else if rdb.RowsAffected == 0 {
-		return xstatus.DbNotFound
+func CreateDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
+	if IsMySqlDuplicateEntryError(rdb.Error) {
+		return xstatus.DbExisted, nil
+	} else if rdb.Error != nil || rdb.RowsAffected == 0 {
+		return xstatus.DbFailed, rdb.Error
 	}
-	return xstatus.DbSuccess
+
+	return xstatus.DbSuccess, nil
 }
 
-// Allow model to use map to update or query.
-type ModelMapper interface {
-	ToMap() map[string]interface{}
+func UpdateDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
+	if IsMySqlDuplicateEntryError(rdb.Error) {
+		return xstatus.DbExisted, nil
+	} else if rdb.Error != nil {
+		return xstatus.DbFailed, rdb.Error
+	} else if rdb.RowsAffected == 0 {
+		return xstatus.DbNotFound, nil
+	}
+
+	return xstatus.DbSuccess, nil
 }
 
-// Exp used to simplify the map type.
-type Exp map[string]interface{}
+func DeleteDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
+	if rdb.Error != nil {
+		return xstatus.DbFailed, rdb.Error
+	} else if rdb.RowsAffected == 0 {
+		return xstatus.DbNotFound, nil
+	}
+
+	return xstatus.DbSuccess, nil
+}
