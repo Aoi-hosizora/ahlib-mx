@@ -18,7 +18,7 @@
 ### Dependencies
 
 + See [go.mod](./go.mod) and [go.sum](./go.sum)
-+ `github.com/Aoi-hosizora/ahlib v1.3.8`
++ `github.com/Aoi-hosizora/ahlib v1.3.9`
 + `github.com/Aoi-hosizora/ahlib-more v1.0.0`
 + `github.com/gin-gonic/gin v1.6.3`
 + `github.com/go-playground/validator/v10 v10.2.0`

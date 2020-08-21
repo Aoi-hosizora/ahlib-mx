@@ -2,8 +2,11 @@ package xneo4j
 
 import (
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib/xcondition"
+	"github.com/Aoi-hosizora/ahlib/xproperty"
 	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"strings"
 	"time"
 )
 
@@ -136,4 +139,50 @@ func GetLocalDateTime(data interface{}) neo4j.LocalDateTime {
 
 func GetDuration(data interface{}) neo4j.Duration {
 	return data.(neo4j.Duration)
+}
+
+// Setup cypher orderBy's parent, index starts from 1.
+type OrderByPair map[string]int
+
+// Apply cypher orderBy string through PropertyDict and OrderByPair (using parent pair).
+func ApplyCypherOrderBy(p xproperty.PropertyDict, pairs OrderByPair) func(source string, parents ...string) string {
+	return func(source string, parents ...string) string {
+		result := make([]string, 0)
+		if source == "" {
+			return ""
+		}
+
+		sources := strings.Split(source, ",")
+		for _, src := range sources {
+			src = strings.TrimSpace(src)
+			reverse := strings.HasSuffix(src, " desc")
+			src = strings.Split(src, " ")[0]
+
+			dest, ok := p[src]
+			if !ok || dest == nil || len(dest.Destinations) == 0 {
+				continue
+			}
+
+			if dest.Revert {
+				reverse = !reverse
+			}
+			for _, prop := range dest.Destinations {
+				idx, ok := pairs[prop]
+				if !ok {
+					idx = 0
+				} else {
+					idx--
+				}
+
+				if len(parents) < idx {
+					panic("parents length is too short.")
+				}
+
+				prop = parents[idx] + "." + prop + xcondition.IfThenElse(reverse, " DESC", " ASC").(string) // P.XXX ASC
+				result = append(result, prop)
+			}
+		}
+
+		return strings.Join(result, ", ")
+	}
 }

@@ -1,6 +1,8 @@
 package xneo4j
 
 import (
+	"github.com/Aoi-hosizora/ahlib/xproperty"
+	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -71,4 +73,17 @@ func TestLogger(t *testing.T) {
 		// log.Println(node.Id(), node.Props())
 		_ = node
 	}
+}
+
+func TestApplyCypherOrderBy(t *testing.T) {
+	m := xproperty.PropertyDict{
+		"a": xproperty.NewValue(false, "at"),
+		"b": xproperty.NewValue(false, "bt1", "bt2"),
+		"c": xproperty.NewValue(true, "ct"),
+	}
+	p := OrderByPair{"at": 1, "bt1": 2, "bt2": 1, "ct": 2}
+
+	f := ApplyCypherOrderBy(m, p)("a asc, b desc, c asc", "r1", "n1")
+	log.Println(f)
+	xtesting.Equal(t, f, "r1.at ASC, n1.bt1 DESC, r1.bt2 DESC, n1.ct DESC")
 }
