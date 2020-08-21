@@ -1,17 +1,17 @@
 package xstatus
 
-type DbStatus uint8
+type DbStatus int8
 
 const (
-	DbSuccess DbStatus = iota
-	DbNotFound
-	DbExisted
-	DbFailed
-	DbTagA
-	DbTagB
-	DbTagC
-	DbTagD
-	DbTagE
+	DbSuccess  DbStatus = iota // success (CRUD)
+	DbNotFound                 // not found (retrieve, update, delete)
+	DbExisted                  // existed (create update)
+	DbFailed                   // failed (CRUD)
+	DbTagA                     // tag a
+	DbTagB                     // tag b
+	DbTagC                     // tag c
+	DbTagD                     // tag d
+	DbTagE                     // tag e
 )
 
 func (d DbStatus) String() string {

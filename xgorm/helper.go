@@ -17,14 +17,18 @@ func (h *Helper) Pagination(limit int32, page int32) *gorm.DB {
 	return h.db.Limit(limit).Offset((page - 1) * limit)
 }
 
-func (h *Helper) Count(model interface{}, where interface{}) uint64 {
+func (h *Helper) Count(model interface{}, where interface{}) (int, error) {
 	cnt := 0
-	h.db.Model(model).Where(where).Count(&cnt)
-	return uint64(cnt)
+	rdb := h.db.Model(model).Where(where).Count(&cnt)
+	return cnt, rdb.Error
 }
 
-func (h *Helper) Exist(model interface{}, where interface{}) bool {
-	return h.Count(model, where) > 0
+func (h *Helper) Exist(model interface{}, where interface{}) (bool, error) {
+	cnt, err := h.Count(model, where)
+	if err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
 }
 
 func (h *Helper) Create(model interface{}, object interface{}) (xstatus.DbStatus, error) {

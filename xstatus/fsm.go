@@ -1,6 +1,6 @@
 package xstatus
 
-type FsmStatus uint8
+type FsmStatus int8
 
 const (
 	FsmNone FsmStatus = iota

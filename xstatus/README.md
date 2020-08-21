@@ -2,7 +2,7 @@
 
 ### DbStatus
 
-+ `type DbStatus uint8`
++ `type DbStatus int8`
 + `DbSuccess`
 + `DbNotFound`
 + `DbExisted`
@@ -16,8 +16,26 @@
 
 ### FsmStatus
 
-+ `type FsmStatus uint8`
++ `type FsmStatus int8`
 + `FsmNone`
 + `FsmInState`
 + `FsmFinal`
 + `(f FsmStatus) String() string`
+
+### JwtStatus
+
++ `type JwtStatus int8`
++ `JwtSuccess`
++ `JwtExpired`
++ `JwtNotIssued`
++ `JwtNotValid`
++ `JwtIssuer`
++ `JwtSubject`
++ `JwtAudience`
++ `JwtInvalid`
++ `JwtUserErr`
++ `JwtFailed`
++ `JwtTagA`
++ `JwtTagB`
++ `JwtTagC`
++ `(j JwtStatus) String() string`
