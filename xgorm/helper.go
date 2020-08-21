@@ -72,3 +72,6 @@ func (h *Helper) Delete(model interface{}, where interface{}, object interface{}
 type ModelMapper interface {
 	ToMap() map[string]interface{}
 }
+
+// Exp used to simplify the map type.
+type Exp map[string]interface{}

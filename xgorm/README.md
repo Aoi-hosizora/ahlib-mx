@@ -21,3 +21,5 @@
 + `(h *Helper) Insert(model interface{}, object interface{}) xstatus.DbStatus`
 + `(h *Helper) Update(model interface{}, where interface{}, object interface{}) xstatus.DbStatus`
 + `(h *Helper) Delete(model interface{}, where interface{}, object interface{}) xstatus.DbStatus`
++ `type ModelMapper interface {}`
++ `type Exp map[string]interface{}`

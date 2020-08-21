@@ -1,7 +1,10 @@
 package xneo4j
 
 import (
+	"fmt"
+	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"time"
 )
 
 // Get records from run result, see neo4j.Collect.
@@ -19,8 +22,21 @@ import (
 //		log.Println(rel.Id(), rel.Type(), node.Id(), node.Props())
 //	}
 func GetRecords(result neo4j.Result, err error) ([]neo4j.Record, error) {
+	records, _, err := GetRecordsWithSummary(result, err)
+	return records, err
+}
+
+// Get neo4j.Record slice and neo4j.ResultSummary.
+func GetRecordsWithSummary(result neo4j.Result, err error) ([]neo4j.Record, neo4j.ResultSummary, error) {
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	} else if result == nil {
+		return nil, nil, fmt.Errorf("nil neo4j result")
+	}
+
+	summary, err := result.Summary()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	rec := make([]neo4j.Record, 0)
@@ -28,10 +44,30 @@ func GetRecords(result neo4j.Result, err error) ([]neo4j.Record, error) {
 		rec = append(rec, result.Record())
 	}
 	if err := result.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return rec, nil
+	return rec, summary, nil
+}
+
+func NowLocalDateTime() neo4j.LocalDateTime {
+	return neo4j.LocalDateTimeOf(xtime.ToDateTime(time.Now()))
+}
+
+func NowLocalTime() neo4j.LocalTime {
+	return neo4j.LocalTimeOf(xtime.ToDateTime(time.Now()))
+}
+
+func NowDate() neo4j.Date {
+	return neo4j.DateOf(xtime.ToDate(time.Now()))
+}
+
+func NowTime() neo4j.OffsetTime {
+	return neo4j.OffsetTimeOf(xtime.ToDateTime(time.Now()))
+}
+
+func GetData(records []neo4j.Record, column int, row int) interface{} {
+	return records[column].GetByIndex(row)
 }
 
 func GetInteger(data interface{}) int64 {
@@ -72,4 +108,32 @@ func GetRel(data interface{}) neo4j.Relationship {
 
 func GetPath(data interface{}) neo4j.Path {
 	return data.(neo4j.Path)
+}
+
+func GetPoint(data interface{}) neo4j.Point {
+	return data.(neo4j.Point)
+}
+
+func GetDate(data interface{}) neo4j.Date {
+	return data.(neo4j.Date)
+}
+
+func GetTime(data interface{}) neo4j.OffsetTime {
+	return data.(neo4j.OffsetTime)
+}
+
+func GetLocalTime(data interface{}) neo4j.LocalTime {
+	return data.(neo4j.LocalTime)
+}
+
+func GetDateTime(data interface{}) time.Time {
+	return data.(time.Time)
+}
+
+func GetLocalDateTime(data interface{}) neo4j.LocalDateTime {
+	return data.(neo4j.LocalDateTime)
+}
+
+func GetDuration(data interface{}) neo4j.Duration {
+	return data.(neo4j.Duration)
 }
