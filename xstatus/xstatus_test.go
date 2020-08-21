@@ -15,6 +15,8 @@ func TestDbStatus(t *testing.T) {
 	xtesting.Equal(t, DbTagA.String(), "db-tag-a")
 	xtesting.Equal(t, DbTagB.String(), "db-tag-b")
 	xtesting.Equal(t, DbTagC.String(), "db-tag-c")
+	xtesting.Equal(t, DbTagD.String(), "db-tag-d")
+	xtesting.Equal(t, DbTagE.String(), "db-tag-e")
 	xtesting.Equal(t, DbStatus(20).String(), "db-?")
 }
 
