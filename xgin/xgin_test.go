@@ -35,14 +35,3 @@ func TestBuildErrorDto(t *testing.T) {
 	})
 	_ = app.Run(":1234")
 }
-
-func TestW(t *testing.T) {
-	app := gin.New()
-	app.GET("json", JsonW(func(c *gin.Context) (int, interface{}) {
-		return 200, &gin.H{"test": "hello world"}
-	}))
-	app.GET("xml", XmlW(func(c *gin.Context) (int, interface{}) {
-		return 200, &gin.H{"test": "hello world"}
-	}))
-	_ = app.Run(":1234")
-}

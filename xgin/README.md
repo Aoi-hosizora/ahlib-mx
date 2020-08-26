@@ -11,6 +11,3 @@
 + `EnableRegexpBinding() error`
 + `EnableRFC3339DateBinding() error`
 + `EnableRFC3339DateTimeBinding() error`
-+ `type HandlerFuncW func(c *gin.Context) (int, interface{})`
-+ `JsonW(fn HandlerFuncW) gin.HandlerFunc`
-+ `XmlW(fn HandlerFuncW) gin.HandlerFunc`

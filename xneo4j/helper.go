@@ -144,7 +144,7 @@ func GetDuration(data interface{}) neo4j.Duration {
 // Setup cypher orderBy's parent, index starts from 1.
 type OrderByPair map[string]int
 
-// Apply cypher orderBy string through PropertyDict and OrderByPair (using parent pair).
+// Apply cypher orderBy string through xproperty.PropertyDict and xneo4j.OrderByPair (using parent pair).
 func ApplyCypherOrderBy(p xproperty.PropertyDict, pairs OrderByPair) func(source string, parents ...string) string {
 	return func(source string, parents ...string) string {
 		result := make([]string, 0)

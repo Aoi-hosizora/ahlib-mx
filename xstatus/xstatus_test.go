@@ -31,11 +31,9 @@ func TestFsmStatus(t *testing.T) {
 func TestJwtStatus(t *testing.T) {
 	xtesting.Equal(t, JwtSuccess.String(), "jwt-success")
 	xtesting.Equal(t, JwtExpired.String(), "jwt-expired")
-	xtesting.Equal(t, JwtNotIssued.String(), "jwt-not-issued")
 	xtesting.Equal(t, JwtNotValid.String(), "jwt-not-valid")
 	xtesting.Equal(t, JwtIssuer.String(), "jwt-issuer")
 	xtesting.Equal(t, JwtSubject.String(), "jwt-subject")
-	xtesting.Equal(t, JwtAudience.String(), "jwt-audience")
 	xtesting.Equal(t, JwtInvalid.String(), "jwt-invalid")
 	xtesting.Equal(t, JwtBlank.String(), "jwt-blank")
 	xtesting.Equal(t, JwtNotFound.String(), "jwt-not-found")
@@ -44,4 +42,5 @@ func TestJwtStatus(t *testing.T) {
 	xtesting.Equal(t, JwtTagA.String(), "jwt-tag-a")
 	xtesting.Equal(t, JwtTagB.String(), "jwt-tag-b")
 	xtesting.Equal(t, JwtTagC.String(), "jwt-tag-c")
+	xtesting.Equal(t, JwtStatus(20).String(), "jwt-?")
 }

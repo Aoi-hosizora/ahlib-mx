@@ -23,6 +23,7 @@
 + `(h *Helper) Create(model interface{}, object interface{}) (xstatus.DbStatus, error)`
 + `(h *Helper) Update(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error)`
 + `(h *Helper) Delete(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error)`
++ `QueryErr(rdb *gorm.DB) (bool, error)`
 + `CreateDB(rdb *gorm.DB) (xstatus.DbStatus, error)`
 + `UpdateDB(rdb *gorm.DB) (xstatus.DbStatus, error)`
 + `DeleteDB(rdb *gorm.DB) (xstatus.DbStatus, error)`

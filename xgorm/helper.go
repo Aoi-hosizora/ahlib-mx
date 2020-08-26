@@ -31,28 +31,40 @@ func (h *Helper) Exist(model interface{}, where interface{}) (bool, error) {
 	return cnt > 0, nil
 }
 
+// Through db.Model(model).Create(object).
 func (h *Helper) Create(model interface{}, object interface{}) (xstatus.DbStatus, error) {
 	rdb := h.db.Model(model).Create(object)
-	return CreateDB(rdb)
+	return CreateErr(rdb)
 }
 
+// Through db.Model(model).Where(where).Update(object).
 func (h *Helper) Update(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
 	}
 	rdb := h.db.Model(model).Where(where).Update(object)
-	return UpdateDB(rdb)
+	return UpdateErr(rdb)
 }
 
+// Through db.Model(model).Where(where).Delete(object).
 func (h *Helper) Delete(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
 	}
 	rdb := h.db.Model(model).Where(where).Delete(object)
-	return DeleteDB(rdb)
+	return DeleteErr(rdb)
 }
 
-func CreateDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
+func QueryErr(rdb *gorm.DB) (bool, error) {
+	if rdb.RecordNotFound() {
+		return false, nil
+	} else if rdb.Error != nil {
+		return false, rdb.Error
+	}
+	return true, nil
+}
+
+func CreateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
 	if IsMySqlDuplicateEntryError(rdb.Error) {
 		return xstatus.DbExisted, nil
 	} else if rdb.Error != nil || rdb.RowsAffected == 0 {
@@ -62,7 +74,7 @@ func CreateDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
 	return xstatus.DbSuccess, nil
 }
 
-func UpdateDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
+func UpdateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
 	if IsMySqlDuplicateEntryError(rdb.Error) {
 		return xstatus.DbExisted, nil
 	} else if rdb.Error != nil {
@@ -74,7 +86,7 @@ func UpdateDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
 	return xstatus.DbSuccess, nil
 }
 
-func DeleteDB(rdb *gorm.DB) (xstatus.DbStatus, error) {
+func DeleteErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
 	if rdb.Error != nil {
 		return xstatus.DbFailed, rdb.Error
 	} else if rdb.RowsAffected == 0 {

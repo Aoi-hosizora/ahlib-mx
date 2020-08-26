@@ -27,11 +27,9 @@
 + `type JwtStatus int8`
 + `JwtSuccess`
 + `JwtExpired`
-+ `JwtNotIssued`
 + `JwtNotValid`
 + `JwtIssuer`
 + `JwtSubject`
-+ `JwtAudience`
 + `JwtInvalid`
 + `JwtUserErr`
 + `JwtFailed`

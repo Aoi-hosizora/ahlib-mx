@@ -13,8 +13,8 @@ func DumpRequest(c *gin.Context) []string {
 		return request
 	}
 
-	bytes, _ := httputil.DumpRequest(c.Request, false)
-	params := strings.Split(string(bytes), "\r\n")
+	bs, _ := httputil.DumpRequest(c.Request, false)
+	params := strings.Split(string(bs), "\r\n")
 	for _, param := range params {
 		if strings.HasPrefix(param, "Authorization:") { // Authorization header
 			request = append(request, "Authorization: *")

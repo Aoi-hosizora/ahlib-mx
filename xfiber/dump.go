@@ -12,8 +12,8 @@ func DumpRequest(c *fiber.Ctx) []string {
 		return request
 	}
 
-	bytes := c.Fasthttp.Request.String()
-	params := strings.Split(bytes, "\r\n")
+	str := c.Fasthttp.Request.String()
+	params := strings.Split(str, "\r\n")
 	for _, param := range params {
 		if strings.HasPrefix(param, "Authorization:") { // Authorization header
 			request = append(request, "Authorization: *")
