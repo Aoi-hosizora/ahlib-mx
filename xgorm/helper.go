@@ -1,7 +1,7 @@
 package xgorm
 
 import (
-	"github.com/Aoi-hosizora/ahlib-web/xstatus"
+	"github.com/Aoi-hosizora/ahlib/xstatus"
 	"github.com/jinzhu/gorm"
 )
 
