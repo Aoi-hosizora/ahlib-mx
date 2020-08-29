@@ -1,8 +1,10 @@
 package xgorm
 
 import (
+	"github.com/Aoi-hosizora/ahlib/xproperty"
 	"github.com/Aoi-hosizora/ahlib/xstatus"
 	"github.com/jinzhu/gorm"
+	"strings"
 )
 
 type Helper struct {
@@ -99,4 +101,43 @@ func DeleteErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
 	}
 
 	return xstatus.DbSuccess, nil
+}
+
+func OrderByFunc(p xproperty.PropertyDict) func(source string) string {
+	return func(source string) string {
+		result := make([]string, 0)
+		if source == "" {
+			return ""
+		}
+
+		sources := strings.Split(source, ",")
+		for _, src := range sources {
+			if src == "" {
+				continue
+			}
+
+			src = strings.TrimSpace(src)
+			reverse := strings.HasSuffix(src, " desc") || strings.HasSuffix(src, " DESC")
+			src = strings.Split(src, " ")[0]
+
+			dest, ok := p[src]
+			if !ok || dest == nil || len(dest.Destinations) == 0 {
+				continue
+			}
+
+			if dest.Revert {
+				reverse = !reverse
+			}
+			for _, prop := range dest.Destinations {
+				if !reverse {
+					prop += " ASC"
+				} else {
+					prop += " DESC"
+				}
+				result = append(result, prop)
+			}
+		}
+
+		return strings.Join(result, ", ")
+	}
 }

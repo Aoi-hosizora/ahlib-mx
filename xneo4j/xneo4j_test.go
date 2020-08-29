@@ -75,15 +75,22 @@ func TestLogger(t *testing.T) {
 	}
 }
 
-func TestApplyCypherOrderBy(t *testing.T) {
+func TestOrderBy(t *testing.T) {
 	m := xproperty.PropertyDict{
 		"a": xproperty.NewValue(false, "at"),
 		"b": xproperty.NewValue(false, "bt1", "bt2"),
 		"c": xproperty.NewValue(true, "ct"),
 	}
-	p := OrderByPair{"at": 1, "bt1": 2, "bt2": 1, "ct": 2}
+	p := xproperty.VariableDict{"at": 1, "bt1": 2, "bt2": 1, "ct": 2}
 
-	f := ApplyCypherOrderBy(m, p)("a asc, b desc, c asc", "r1", "n1")
-	log.Println(f)
-	xtesting.Equal(t, f, "r1.at ASC, n1.bt1 DESC, r1.bt2 DESC, n1.ct DESC")
+	xtesting.Equal(t, OrderByFunc(m)("a asc, b desc, c asc", "o"), "o.at ASC, o.bt1 DESC, o.bt2 DESC, o.ct DESC")
+	xtesting.Equal(t, OrderByFunc(m)("", ""), "")
+	xtesting.Equal(t, OrderByFunc(m)("h", ""), "")
+	xtesting.Equal(t, OrderByFunc(xproperty.PropertyDict{})("", ""), "")
+
+	xtesting.Equal(t, OrderByFunc2(m, p)("a asc, b desc, c asc", "r1", "n1"), "r1.at ASC, n1.bt1 DESC, r1.bt2 DESC, n1.ct DESC")
+	xtesting.Equal(t, OrderByFunc2(m, p)(""), "")
+	xtesting.Equal(t, OrderByFunc2(m, p)("h"), "")
+	xtesting.Equal(t, OrderByFunc2(xproperty.PropertyDict{}, xproperty.VariableDict{})(""), "")
+
 }

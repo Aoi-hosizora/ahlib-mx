@@ -28,3 +28,4 @@
 + `CreateDB(rdb *gorm.DB) (xstatus.DbStatus, error)`
 + `UpdateDB(rdb *gorm.DB) (xstatus.DbStatus, error)`
 + `DeleteDB(rdb *gorm.DB) (xstatus.DbStatus, error)`
++ `OrderByFunc(p xproperty.PropertyDict) func(source string) string`
