@@ -6,8 +6,8 @@
 
 + `HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimeStamp string)`
 + `type GormTime struct {}`
-+ `type GormTimeWithoutDeletedAt struct {}`
-+ `IsMySqlDuplicateEntryError(err error) bool`
++ `type GormCUTime struct {}`
++ `IsMySQLDuplicateEntryError(err error) bool`
 + `type GormLogrus struct {}`
 + `NewGormLogrus(logger *logrus.Logger) *GormLogrus`
 + `type GormLogger struct {}`
@@ -23,6 +23,7 @@
 + `(h *Helper) Create(model interface{}, object interface{}) (xstatus.DbStatus, error)`
 + `(h *Helper) Update(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error)`
 + `(h *Helper) Delete(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error)`
++ `IsMySQL(db *gorm.DB) bool`
 + `QueryErr(rdb *gorm.DB) (bool, error)`
 + `CreateDB(rdb *gorm.DB) (xstatus.DbStatus, error)`
 + `UpdateDB(rdb *gorm.DB) (xstatus.DbStatus, error)`

@@ -19,7 +19,7 @@ type GormTime struct {
 }
 
 // `GormTime` without `DeleteAt`.
-type GormTimeWithoutDeletedAt struct {
+type GormCUTime struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

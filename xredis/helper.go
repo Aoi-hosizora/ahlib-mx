@@ -29,6 +29,7 @@ func (h *Helper) DeleteAll(pattern string) (total int, del int, err error) {
 			someErr = err
 		}
 	}
+
 	return len(keys), cnt, someErr
 }
 

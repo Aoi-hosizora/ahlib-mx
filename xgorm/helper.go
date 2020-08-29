@@ -31,13 +31,13 @@ func (h *Helper) Exist(model interface{}, where interface{}) (bool, error) {
 	return cnt > 0, nil
 }
 
-// Through db.Model(model).Create(object).
+// db.Model(model).Create(object).
 func (h *Helper) Create(model interface{}, object interface{}) (xstatus.DbStatus, error) {
 	rdb := h.db.Model(model).Create(object)
 	return CreateErr(rdb)
 }
 
-// Through db.Model(model).Where(where).Update(object).
+// db.Model(model).Where(where).Update(object).
 func (h *Helper) Update(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
@@ -46,7 +46,7 @@ func (h *Helper) Update(model interface{}, where interface{}, object interface{}
 	return UpdateErr(rdb)
 }
 
-// Through db.Model(model).Where(where).Delete(object).
+// db.Model(model).Where(where).Delete(object).
 func (h *Helper) Delete(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
@@ -55,17 +55,22 @@ func (h *Helper) Delete(model interface{}, where interface{}, object interface{}
 	return DeleteErr(rdb)
 }
 
+func IsMySQL(db *gorm.DB) bool {
+	return db.Dialect().GetName() == "mysql"
+}
+
 func QueryErr(rdb *gorm.DB) (bool, error) {
 	if rdb.RecordNotFound() {
 		return false, nil
 	} else if rdb.Error != nil {
 		return false, rdb.Error
 	}
+
 	return true, nil
 }
 
 func CreateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
-	if IsMySqlDuplicateEntryError(rdb.Error) {
+	if IsMySQL(rdb) && IsMySQLDuplicateEntryError(rdb.Error) {
 		return xstatus.DbExisted, nil
 	} else if rdb.Error != nil || rdb.RowsAffected == 0 {
 		return xstatus.DbFailed, rdb.Error
@@ -75,7 +80,7 @@ func CreateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
 }
 
 func UpdateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
-	if IsMySqlDuplicateEntryError(rdb.Error) {
+	if IsMySQL(rdb) && IsMySQLDuplicateEntryError(rdb.Error) {
 		return xstatus.DbExisted, nil
 	} else if rdb.Error != nil {
 		return xstatus.DbFailed, rdb.Error
