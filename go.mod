@@ -13,5 +13,6 @@ require (
 	github.com/jinzhu/gorm v1.9.15
 	github.com/neo4j/neo4j-go-driver v1.8.1
 	github.com/sirupsen/logrus v1.6.0
+	github.com/valyala/fasthttp v1.14.0
 	gopkg.in/tucnak/telebot.v2 v2.3.3
 )
