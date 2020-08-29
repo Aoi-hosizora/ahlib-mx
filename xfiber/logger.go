@@ -5,11 +5,11 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/gofiber/fiber"
 	"github.com/sirupsen/logrus"
+	"log"
 	"time"
 )
 
-// Log request and response for fiber, no need for `c.Next()`.
-func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
+func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
 	latency := time.Now().Sub(start)
 	method := c.Method()
 	path := c.Path()
@@ -27,12 +27,36 @@ func LoggerWithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx) {
 		"length":   length,
 		"clientIP": ip,
 	})
-	msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
-	if code >= 500 {
-		entry.Error(msg)
-	} else if code >= 400 {
-		entry.Warn(msg)
+
+	if c.Error() != nil {
+		msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
+		if code >= 500 {
+			entry.Error(msg)
+		} else if code >= 400 {
+			entry.Warn(msg)
+		} else {
+			entry.Info(msg)
+		}
 	} else {
-		entry.Info(msg)
+		msg := fmt.Sprintf("[Fiber] %s", c.Error().Error())
+		entry.Error(msg)
+	}
+}
+
+func WithLogger(logger *log.Logger, start time.Time, c *fiber.Ctx) {
+	latency := time.Now().Sub(start)
+	method := c.Method()
+	path := c.Path()
+	ip := c.IP()
+	code := c.Fasthttp.Response.StatusCode()
+	length := len(c.Fasthttp.Response.Body())
+	lengthStr := xnumber.RenderByte(float64(length))
+
+	if c.Error() != nil {
+		msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
+		logger.Println(msg)
+	} else {
+		msg := fmt.Sprintf("[Fiber] %s", c.Error().Error())
+		logger.Println(msg)
 	}
 }

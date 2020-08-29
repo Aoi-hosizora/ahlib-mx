@@ -6,7 +6,7 @@ import (
 )
 
 // PprofWrap adds several routes from package `net/http/pprof` to *gin.Engine object.
-// Reference see https://github.com/DeanThompson/ginpprof.
+// Reference to https://github.com/DeanThompson/ginpprof.
 func PprofWrap(router *gin.Engine) {
 	for _, r := range []struct {
 		Method  string

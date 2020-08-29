@@ -40,5 +40,5 @@
 + `GetDateTime(data interface{}) time.Time`
 + `GetLocalDateTime(data interface{}) neo4j.LocalDateTime`
 + `GetDuration(data interface{}) neo4j.Duration`
-+ `type OrderByPair map[string]int`
-+ `ApplyCypherOrderBy(p xproperty.PropertyDict, pairs OrderByPair) func(source string, parents ...string) string`
++ `OrderByFunc(p xproperty.PropertyDict) func(source, parent string) string`
++ `OrderByFunc2(p xproperty.PropertyDict, v xproperty.VariableDict) func(source string, parents ...string) string`

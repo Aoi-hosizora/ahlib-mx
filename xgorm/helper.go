@@ -1,8 +1,10 @@
 package xgorm
 
 import (
-	"github.com/Aoi-hosizora/ahlib-web/xstatus"
+	"github.com/Aoi-hosizora/ahlib/xproperty"
+	"github.com/Aoi-hosizora/ahlib/xstatus"
 	"github.com/jinzhu/gorm"
+	"strings"
 )
 
 type Helper struct {
@@ -31,13 +33,13 @@ func (h *Helper) Exist(model interface{}, where interface{}) (bool, error) {
 	return cnt > 0, nil
 }
 
-// Through db.Model(model).Create(object).
+// db.Model(model).Create(object).
 func (h *Helper) Create(model interface{}, object interface{}) (xstatus.DbStatus, error) {
 	rdb := h.db.Model(model).Create(object)
 	return CreateErr(rdb)
 }
 
-// Through db.Model(model).Where(where).Update(object).
+// db.Model(model).Where(where).Update(object).
 func (h *Helper) Update(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
@@ -46,7 +48,7 @@ func (h *Helper) Update(model interface{}, where interface{}, object interface{}
 	return UpdateErr(rdb)
 }
 
-// Through db.Model(model).Where(where).Delete(object).
+// db.Model(model).Where(where).Delete(object).
 func (h *Helper) Delete(model interface{}, where interface{}, object interface{}) (xstatus.DbStatus, error) {
 	if where == nil {
 		where = object
@@ -55,17 +57,22 @@ func (h *Helper) Delete(model interface{}, where interface{}, object interface{}
 	return DeleteErr(rdb)
 }
 
+func IsMySQL(db *gorm.DB) bool {
+	return db.Dialect().GetName() == "mysql"
+}
+
 func QueryErr(rdb *gorm.DB) (bool, error) {
 	if rdb.RecordNotFound() {
 		return false, nil
 	} else if rdb.Error != nil {
 		return false, rdb.Error
 	}
+
 	return true, nil
 }
 
 func CreateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
-	if IsMySqlDuplicateEntryError(rdb.Error) {
+	if IsMySQL(rdb) && IsMySQLDuplicateEntryError(rdb.Error) {
 		return xstatus.DbExisted, nil
 	} else if rdb.Error != nil || rdb.RowsAffected == 0 {
 		return xstatus.DbFailed, rdb.Error
@@ -75,7 +82,7 @@ func CreateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
 }
 
 func UpdateErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
-	if IsMySqlDuplicateEntryError(rdb.Error) {
+	if IsMySQL(rdb) && IsMySQLDuplicateEntryError(rdb.Error) {
 		return xstatus.DbExisted, nil
 	} else if rdb.Error != nil {
 		return xstatus.DbFailed, rdb.Error
@@ -94,4 +101,43 @@ func DeleteErr(rdb *gorm.DB) (xstatus.DbStatus, error) {
 	}
 
 	return xstatus.DbSuccess, nil
+}
+
+func OrderByFunc(p xproperty.PropertyDict) func(source string) string {
+	return func(source string) string {
+		result := make([]string, 0)
+		if source == "" {
+			return ""
+		}
+
+		sources := strings.Split(source, ",")
+		for _, src := range sources {
+			if src == "" {
+				continue
+			}
+
+			src = strings.TrimSpace(src)
+			reverse := strings.HasSuffix(src, " desc") || strings.HasSuffix(src, " DESC")
+			src = strings.Split(src, " ")[0]
+
+			dest, ok := p[src]
+			if !ok || dest == nil || len(dest.Destinations) == 0 {
+				continue
+			}
+
+			if dest.Revert {
+				reverse = !reverse
+			}
+			for _, prop := range dest.Destinations {
+				if !reverse {
+					prop += " ASC"
+				} else {
+					prop += " DESC"
+				}
+				result = append(result, prop)
+			}
+		}
+
+		return strings.Join(result, ", ")
+	}
 }
