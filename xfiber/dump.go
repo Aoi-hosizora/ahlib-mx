@@ -24,11 +24,11 @@ func DumpRequest(c *fiber.Ctx) []string {
 	return request
 }
 
-func BuildBasicErrorDto(err interface{}, c *fiber.Ctx) *xdto.ErrorDto {
-	return xdto.BuildBasicErrorDto(err, DumpRequest(c))
+func BuildBasicErrorDto(err interface{}, c *fiber.Ctx, others map[string]interface{}) *xdto.ErrorDto {
+	return xdto.BuildBasicErrorDto(err, DumpRequest(c), others)
 }
 
-func BuildErrorDto(err interface{}, c *fiber.Ctx, skip int, print bool) *xdto.ErrorDto {
+func BuildErrorDto(err interface{}, c *fiber.Ctx, others map[string]interface{}, skip int, print bool) *xdto.ErrorDto {
 	skip++
-	return xdto.BuildErrorDto(err, DumpRequest(c), skip, print)
+	return xdto.BuildErrorDto(err, DumpRequest(c), others, skip, print)
 }

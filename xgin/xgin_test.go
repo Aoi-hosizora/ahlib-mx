@@ -25,7 +25,7 @@ func TestBuildErrorDto(t *testing.T) {
 	app.Use(func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				c.JSON(200, BuildErrorDto(err, c, 2, true))
+				c.JSON(200, BuildErrorDto(err, c, nil, 2, true))
 			}
 		}()
 		c.Next()
@@ -34,7 +34,7 @@ func TestBuildErrorDto(t *testing.T) {
 		panic("test panic")
 	})
 	app.GET("error", func(c *gin.Context) {
-		c.JSON(200, BuildBasicErrorDto(fmt.Errorf("test error"), c))
+		c.JSON(200, BuildBasicErrorDto(fmt.Errorf("test error"), c, nil))
 	})
 	_ = app.Run(":1234")
 }
@@ -58,8 +58,8 @@ func TestBinding(t *testing.T) {
 	app.Use(func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
-		WithLogger(logger, start, c)
-		WithLogrus(logrus, start, c)
+		WithLogger(logger, start, c, "")
+		WithLogrus(logrus, start, c, "", nil)
 	})
 
 	app.GET("", func(ctx *gin.Context) {

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context) {
+func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, other string, otherFields map[string]interface{}) {
 	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
@@ -19,7 +19,7 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context) {
 	length := math.Abs(float64(c.Writer.Size()))
 	lengthStr := xnumber.RenderByte(length)
 
-	entry := logger.WithFields(logrus.Fields{
+	fields := logrus.Fields{
 		"module":   "gin",
 		"method":   method,
 		"path":     path,
@@ -27,10 +27,20 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context) {
 		"code":     code,
 		"length":   length,
 		"clientIP": ip,
-	})
+	}
+	if otherFields != nil {
+		for k, v := range otherFields {
+			fields[k] = v
+		}
+	}
+	entry := logger.WithFields(fields)
 
 	if len(c.Errors) == 0 {
 		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
+		if other != "" {
+			msg += fmt.Sprintf(" | %s", other)
+		}
+
 		if code >= 500 {
 			entry.Error(msg)
 		} else if code >= 400 {
@@ -44,7 +54,7 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context) {
 	}
 }
 
-func WithLogger(logger *log.Logger, start time.Time, c *gin.Context) {
+func WithLogger(logger *log.Logger, start time.Time, c *gin.Context, other string) {
 	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
@@ -56,6 +66,9 @@ func WithLogger(logger *log.Logger, start time.Time, c *gin.Context) {
 
 	if len(c.Errors) == 0 {
 		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
+		if other != "" {
+			msg += fmt.Sprintf(" | %s", other)
+		}
 		logger.Println(msg)
 	} else {
 		msg := c.Errors.ByType(gin.ErrorTypePrivate).String()
