@@ -4,10 +4,13 @@
 
 #### Normal
 
-+ `HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimeStamp string)`
++ `const DefaultDeleteAtTimestamp string`
++ `HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimestamp string)`
 + `type GormTime struct {}`
-+ `type GormCUTime struct {}`
++ `type GormTimeWithoutDeleteAt struct {}`
 + `IsMySQLDuplicateEntryError(err error) bool`
++ `type GormSilenceLogger struct{}`
++ `NewGormSilenceLogger() *GormSilenceLogger`
 + `type GormLogrus struct {}`
 + `NewGormLogrus(logger *logrus.Logger) *GormLogrus`
 + `type GormLogger struct {}`

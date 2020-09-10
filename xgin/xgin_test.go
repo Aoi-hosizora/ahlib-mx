@@ -25,7 +25,11 @@ func TestBuildErrorDto(t *testing.T) {
 	app.Use(func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				c.JSON(200, BuildErrorDto(err, c, nil, 2, true))
+				e := BuildErrorDto(err, c, 2, true)
+				e.Others = map[string]interface{}{"a": "b"}
+
+				log.Println(BuildFullErrorDto(err, c, e.Others, 2, false))
+				c.JSON(200, e)
 			}
 		}()
 		c.Next()
@@ -34,8 +38,28 @@ func TestBuildErrorDto(t *testing.T) {
 		panic("test panic")
 	})
 	app.GET("error", func(c *gin.Context) {
-		c.JSON(200, BuildBasicErrorDto(fmt.Errorf("test error"), c, nil))
+		c.JSON(200, BuildBasicErrorDto(fmt.Errorf("test error"), c))
 	})
+	_ = app.Run(":1234")
+}
+
+func TestLogger(t *testing.T) {
+	app := gin.New()
+
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logrus := logrus2.New()
+
+	PprofWrap(app)
+	app.Use(func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		WithLogger(logger, start, c, "12345")
+		WithLogrus(logrus, start, c, &LoggerExtra{
+			OtherString: "12345",
+			OtherFields: nil,
+		})
+	})
+
 	_ = app.Run(":1234")
 }
 
@@ -50,17 +74,6 @@ func TestBinding(t *testing.T) {
 		B string `binding:"date"`
 		C string `binding:"datetime"`
 	}
-
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-	logrus := logrus2.New()
-
-	PprofWrap(app)
-	app.Use(func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
-		WithLogger(logger, start, c, "")
-		WithLogrus(logrus, start, c, "", nil)
-	})
 
 	app.GET("", func(ctx *gin.Context) {
 		st := &st{}

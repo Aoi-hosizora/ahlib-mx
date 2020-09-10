@@ -6,7 +6,7 @@ import (
 )
 
 // MutexRedis will add a mutex lock to redis.Conn, to solve the concurrent problem:
-// `short write` and `use of closed network connection`.
+// `short write` or `use of closed network connection`.
 type MutexRedis struct {
 	redis.Conn
 	mu sync.Mutex

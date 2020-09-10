@@ -30,7 +30,7 @@ func TestLogrus(t *testing.T) {
 	db.LogMode(true)
 
 	db.SetLogger(NewGormLogrus(logrus.New()))
-	HookDeleteAtField(db, DefaultDeleteAtTimeStamp)
+	HookDeleteAtField(db, DefaultDeleteAtTimestamp)
 
 	test := &TblTest{}
 	db.Model(&TblTest{}).First(test)
@@ -51,9 +51,9 @@ func TestLogger(t *testing.T) {
 	db.SingularTable(true)
 	db.LogMode(true)
 
-	// logger
+	db.SetLogger(NewGormSilenceLogger())
 	db.SetLogger(NewGormLogger(log.New(os.Stderr, "", log.LstdFlags)))
-	HookDeleteAtField(db, DefaultDeleteAtTimeStamp)
+	HookDeleteAtField(db, DefaultDeleteAtTimestamp)
 
 	test := &TblTest{}
 	db.Model(&TblTest{}).First(test)

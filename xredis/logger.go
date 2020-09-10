@@ -33,9 +33,11 @@ func (l *LogrusLogger) Do(commandName string, args ...interface{}) (interface{},
 	s := time.Now()
 	reply, err := l.Conn.Do(commandName, args...)
 	e := time.Now()
+
 	if l.LogMode {
 		l.print(reply, err, commandName, e.Sub(s).String(), args...)
 	}
+
 	return reply, err
 }
 
@@ -89,9 +91,11 @@ func (l *LoggerRedis) Do(commandName string, args ...interface{}) (interface{}, 
 	s := time.Now()
 	reply, err := l.Conn.Do(commandName, args...)
 	e := time.Now()
+
 	if l.LogMode {
 		l.print(reply, err, commandName, e.Sub(s).String(), args...)
 	}
+
 	return reply, err
 }
 

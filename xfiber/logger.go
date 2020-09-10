@@ -9,7 +9,12 @@ import (
 	"time"
 )
 
-func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx, other string, otherFields map[string]interface{}) {
+type LoggerExtra struct {
+	OtherString string
+	OtherFields map[string]interface{}
+}
+
+func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx, extra *LoggerExtra) {
 	latency := time.Now().Sub(start)
 	method := c.Method()
 	path := c.Path()
@@ -27,8 +32,8 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx, other stri
 		"length":   length,
 		"clientIP": ip,
 	}
-	if otherFields != nil {
-		for k, v := range otherFields {
+	if extra != nil && extra.OtherFields != nil {
+		for k, v := range extra.OtherFields {
 			fields[k] = v
 		}
 	}
@@ -36,8 +41,8 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx, other stri
 
 	if c.Error() != nil {
 		msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
-		if other != "" {
-			msg += fmt.Sprintf(" | %s", other)
+		if extra != nil && extra.OtherString != "" {
+			msg += fmt.Sprintf(" | %s", extra.OtherString)
 		}
 
 		if code >= 500 {

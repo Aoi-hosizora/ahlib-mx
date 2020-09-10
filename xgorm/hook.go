@@ -8,41 +8,41 @@ import (
 )
 
 const (
-	DefaultDeleteAtTimeStamp = "1970-01-01 00:00:00"
+	DefaultDeleteAtTimestamp = "1970-01-01 00:00:00"
 )
 
 // Default GormTime with `DeleteAt` at 1970-01-01 00:00:00.
 type GormTime struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt *time.Time `gorm:"default:'1970-01-01 00:00:00'"`
+	DeletedAt *time.Time `sql:"index" gorm:"default:'1970-01-01 00:00:00'"`
 }
 
-// `GormTime` without `DeleteAt`.
-type GormCUTime struct {
+// GormTime without DeleteAt which can be customized.
+type GormTimeWithoutDeleteAt struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-func HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimeStamp string) {
+func HookDeleteAtField(db *gorm.DB, defaultDeleteAtTimestamp string) {
 	// query
 	db.Callback().Query().
 		Before("gorm:query").
-		Register("new_deleted_at_before_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))
+		Register("new_deleted_at_before_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimestamp))
 
 	// row query
 	db.Callback().RowQuery().
 		Before("gorm:row_query").
-		Register("new_deleted_at_before_row_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))
+		Register("new_deleted_at_before_row_query_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimestamp))
 
 	// update
 	db.Callback().Update().
 		Before("gorm:update").
-		Register("new_deleted_at_before_update_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp))
+		Register("new_deleted_at_before_update_callback", newBeforeQueryUpdateCallback(defaultDeleteAtTimestamp))
 
 	// delete !!!
 	db.Callback().Delete().
-		Replace("gorm:delete", newDeleteCallback(defaultDeleteAtTimeStamp))
+		Replace("gorm:delete", newDeleteCallback(defaultDeleteAtTimestamp))
 }
 
 func newBeforeQueryUpdateCallback(defaultDeleteAtTimeStamp string) func(scope *gorm.Scope) {
