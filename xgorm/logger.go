@@ -11,6 +11,18 @@ import (
 	"time"
 )
 
+// silence
+
+// GormSilenceLogger can also hide not only SQL log, but INFO log.
+// Default `SetLogMode(false)` will hide only SQL log.
+type GormSilenceLogger struct{}
+
+func NewGormSilenceLogger() *GormSilenceLogger {
+	return &GormSilenceLogger{}
+}
+
+func (g *GormSilenceLogger) Print(...interface{}) {}
+
 // logrus.Logger
 
 type GormLogrus struct {

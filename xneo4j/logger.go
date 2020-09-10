@@ -33,9 +33,11 @@ func (l *LogrusNeo4j) Run(cypher string, params map[string]interface{}, configur
 	s := time.Now()
 	result, err := l.Session.Run(cypher, params, configurers...)
 	e := time.Now()
+
 	if l.LogMode {
 		l.print(result, e.Sub(s).String(), err)
 	}
+
 	return result, err
 }
 
@@ -113,9 +115,11 @@ func (l *LoggerNeo4j) Run(cypher string, params map[string]interface{}, configur
 	s := time.Now()
 	result, err := l.Session.Run(cypher, params, configurers...)
 	e := time.Now()
+
 	if l.LogMode {
 		l.print(result, e.Sub(s).String(), err)
 	}
+
 	return result, err
 }
 
