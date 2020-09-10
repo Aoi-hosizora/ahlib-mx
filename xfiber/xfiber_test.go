@@ -25,7 +25,11 @@ func TestBuildErrorDto(t *testing.T) {
 	app.Use(func(c *fiber.Ctx) {
 		defer func() {
 			if err := recover(); err != nil {
-				_ = c.JSON(BuildErrorDto(err, c, nil, 2, true))
+				e := BuildErrorDto(err, c, 2, true)
+				e.Others = map[string]interface{}{"a": "b"}
+
+				log.Println(BuildFullErrorDto(err, c, e.Others, 2, false))
+				_ = c.JSON(e)
 			}
 		}()
 		c.Next()
@@ -34,8 +38,29 @@ func TestBuildErrorDto(t *testing.T) {
 		panic("test panic")
 	})
 	app.Get("error", func(c *fiber.Ctx) {
-		_ = c.JSON(BuildBasicErrorDto(fmt.Errorf("test error"), c, nil))
+		_ = c.JSON(BuildBasicErrorDto(fmt.Errorf("test error"), c))
 	})
+	_ = app.Listen("1234")
+}
+
+func TestLogger(t *testing.T) {
+	app := fiber.New()
+
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logrus := logrus2.New()
+	logrus.SetFormatter(&logrus2.TextFormatter{})
+
+	app.Use(PprofHandler())
+	app.Use(func(c *fiber.Ctx) {
+		start := time.Now()
+		c.Next()
+		WithLogger(logger, start, c, "12345")
+		WithLogrus(logrus, start, c, &LoggerExtra{
+			OtherString: "12345",
+			OtherFields: nil,
+		})
+	})
+
 	_ = app.Listen("1234")
 }
 
@@ -50,17 +75,6 @@ func TestBinding(t *testing.T) {
 		B string `validate:"date"`
 		C string `validate:"datetime"`
 	}
-
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-	logrus := logrus2.New()
-
-	app.Use(PprofHandler())
-	app.Use(func(c *fiber.Ctx) {
-		start := time.Now()
-		c.Next()
-		WithLogger(logger, start, c, "")
-		WithLogrus(logrus, start, c, "", nil)
-	})
 
 	app.Get("", func(ctx *fiber.Ctx) {
 		a := ctx.Query("a")

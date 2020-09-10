@@ -42,6 +42,9 @@ func BuildErrorDto(err interface{}, requests []string, others map[string]interfa
 	if requests == nil {
 		requests = []string{}
 	}
+	if others == nil {
+		others = map[string]interface{}{}
+	}
 
 	dto := &ErrorDto{
 		Time:    now,
