@@ -5,6 +5,29 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ParamOption generate a 2-array used in Param parameter.
+func ParamOption(from string, to string) [2]string {
+	return [2]string{from, to}
+}
+
+// Param copy some route param to new param in gin.Context.
+func Param(handler func(c *gin.Context), params ...[2]string) func(c *gin.Context) {
+	if len(params) == 0 {
+		panic("a param mapper route must have at least two params string.")
+	}
+	return func(c *gin.Context) {
+		for idx := 0; idx < len(params); idx++ {
+			c.Params = append(c.Params, gin.Param{
+				Key:   params[idx][0],
+				Value: c.Param(params[idx][1]),
+			})
+		}
+		if !c.IsAborted() {
+			handler(c)
+		}
+	}
+}
+
 // An interface used for Composite parameter.
 type CompositeHandler interface {
 	Check(param string) bool

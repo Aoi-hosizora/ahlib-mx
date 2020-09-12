@@ -86,6 +86,18 @@ func TestBinding(t *testing.T) {
 	_ = app.Run(":1234")
 }
 
+func TestParam(t *testing.T) {
+	app := gin.New()
+	app.GET(":a/:b", Param(func(c *gin.Context) {
+		log.Println(c.Param("a"))
+		log.Println(c.Param("b"))
+		log.Println(c.Param("c"))
+		log.Println(c.Param("d"))
+		log.Println(c.Param("e"))
+	}, ParamOption("c", "a"), ParamOption("d", "b")))
+	_ = app.Run(":1234")
+}
+
 func TestRoute(t *testing.T) {
 	app := gin.New()
 	app.GET(":a/:b", Composite("a",

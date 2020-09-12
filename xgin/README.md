@@ -24,3 +24,5 @@
 + `I(handlers ...gin.HandlerFunc) *IntegerHandler`
 + `F(handlers ...gin.HandlerFunc) *FloatHandler`
 + `Composite(key string, handlers ...CompositeHandler) gin.HandlerFunc`
++ `ParamOption(from string, to string) [2]string`
++ `Param(handler func(c *gin.Context), params ...[2]string) func(c *gin.Context)`
