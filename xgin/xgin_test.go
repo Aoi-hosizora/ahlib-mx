@@ -94,7 +94,7 @@ func TestParam(t *testing.T) {
 		log.Println(c.Param("c"))
 		log.Println(c.Param("d"))
 		log.Println(c.Param("e"))
-	}, ParamOption("c", "a"), ParamOption("d", "b")))
+	}, Padd("c", "a"), Padd("d", "b"), Pdel("a"), Pdel("b"), Pdel("b")))
 	_ = app.Run(":1234")
 }
 

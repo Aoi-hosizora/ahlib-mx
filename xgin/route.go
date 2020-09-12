@@ -5,23 +5,71 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ParamOption generate a 2-array used in Param parameter.
-func ParamOption(from string, to string) [2]string {
-	return [2]string{from, to}
+type ParamOption struct {
+	From   string
+	To     string
+	Delete bool
+}
+
+// Padd create an instance of ParamOption (delete: false).
+func Padd(from string, to string) *ParamOption {
+	return &ParamOption{From: from, To: to, Delete: false}
+}
+
+// Pdel create an instance of ParamOption (delete: true)
+func Pdel(from string) *ParamOption {
+	return &ParamOption{From: from, Delete: true}
 }
 
 // Param copy some route param to new param in gin.Context.
-func Param(handler func(c *gin.Context), params ...[2]string) func(c *gin.Context) {
+func Param(handler func(c *gin.Context), params ...*ParamOption) func(c *gin.Context) {
 	if len(params) == 0 {
 		panic("a param mapper route must have at least two params string.")
 	}
+
+	added := make([]*ParamOption, 0)
+	deleted := make([]string, 0)
+	for _, param := range params {
+		if !param.Delete {
+			added = append(added, param)
+		} else {
+			deleted = append(deleted, param.From)
+		}
+	}
+
+	indexOf := func(params []gin.Param, key string) int {
+		idx := -1
+		for i, param := range params {
+			if param.Key == key {
+				idx = i
+			}
+		}
+		return idx
+	}
+
 	return func(c *gin.Context) {
-		for idx := 0; idx < len(params); idx++ {
+		// add
+		for _, param := range added {
 			c.Params = append(c.Params, gin.Param{
-				Key:   params[idx][0],
-				Value: c.Param(params[idx][1]),
+				Key:   param.From,
+				Value: c.Param(param.To),
 			})
 		}
+
+		// del
+		for _, del := range deleted {
+			idx := indexOf(c.Params, del)
+			for idx != -1 {
+				if len(c.Params) == idx+1 {
+					c.Params = c.Params[:idx]
+				} else {
+					c.Params = append(c.Params[:idx], c.Params[idx+1:]...)
+				}
+				idx = indexOf(c.Params, del)
+			}
+		}
+
+		// handler
 		if !c.IsAborted() {
 			handler(c)
 		}
@@ -39,7 +87,7 @@ type MainHandler struct {
 	Handlers []gin.HandlerFunc
 }
 
-// Create an instance of MainHandler.
+// M Create an instance of MainHandler.
 func M(handlers ...gin.HandlerFunc) *MainHandler {
 	return &MainHandler{Handlers: handlers}
 }
@@ -63,7 +111,7 @@ type PrefixHandler struct {
 	Handlers []gin.HandlerFunc
 }
 
-// Create an instance of PrefixHandler.
+// P Create an instance of PrefixHandler.
 func P(prefix string, handlers ...gin.HandlerFunc) *PrefixHandler {
 	return &PrefixHandler{Prefix: prefix, Handlers: handlers}
 }
@@ -86,7 +134,7 @@ type IntegerHandler struct {
 	Handlers []gin.HandlerFunc
 }
 
-// Create an instance of IntegerHandler.
+// I Create an instance of IntegerHandler.
 func I(handlers ...gin.HandlerFunc) *IntegerHandler {
 	return &IntegerHandler{Handlers: handlers}
 }
@@ -110,7 +158,7 @@ type FloatHandler struct {
 	Handlers []gin.HandlerFunc
 }
 
-// Create an instance of FloatHandler.
+// F Create an instance of FloatHandler.
 func F(handlers ...gin.HandlerFunc) *FloatHandler {
 	return &FloatHandler{Handlers: handlers}
 }
