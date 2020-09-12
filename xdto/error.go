@@ -32,6 +32,9 @@ func BuildBasicErrorDto(err interface{}, requests []string, others map[string]in
 // Build a complete dto (also include runtime parameters).
 func BuildErrorDto(err interface{}, requests []string, others map[string]interface{}, skip int, print bool) *ErrorDto {
 	skip++
+	if err == nil {
+		return nil
+	}
 
 	now := time.Now().Format(time.RFC3339)
 	errType := fmt.Sprintf("%T", err)

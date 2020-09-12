@@ -14,3 +14,13 @@
 + `EnableRegexpBinding() error`
 + `EnableRFC3339DateBinding() error`
 + `EnableRFC3339DateTimeBinding() error`
++ `type CompositeHandler interface {}`
++ `type MainHandler struct {}`
++ `type PrefixHandler struct {}`
++ `type IntegerHandler struct {}`
++ `type FloatHandler struct {}`
++ `M(handlers ...gin.HandlerFunc) *MainHandler`
++ `P(prefix string, handlers ...gin.HandlerFunc) *PrefixHandler`
++ `I(handlers ...gin.HandlerFunc) *IntegerHandler`
++ `F(handlers ...gin.HandlerFunc) *FloatHandler`
++ `Composite(key string, handlers ...CompositeHandler) gin.HandlerFunc`

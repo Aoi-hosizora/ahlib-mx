@@ -85,3 +85,54 @@ func TestBinding(t *testing.T) {
 
 	_ = app.Run(":1234")
 }
+
+func TestRoute(t *testing.T) {
+	app := gin.New()
+	app.GET(":a/:b", Composite("a",
+		P("p", func(c *gin.Context) {
+			log.Println("P1", c.Param("a"), c.Param("b"))
+		}, func(c *gin.Context) {
+			log.Println("P2", c.Param("a"), c.Param("b"))
+			c.Abort()
+		}, func(c *gin.Context) {
+			log.Println("P3", c.Param("a"), c.Param("b"))
+		}),
+
+		P("1", func(c *gin.Context) {
+			log.Println("P4", c.Param("a"), c.Param("b"))
+		}, func(c *gin.Context) {
+			log.Println("P5", c.Param("a"), c.Param("b"))
+			c.Abort()
+		}, func(c *gin.Context) {
+			log.Println("P6", c.Param("a"), c.Param("b"))
+		}),
+
+		I(func(c *gin.Context) {
+			log.Println("I1", c.Param("a"), c.Param("b"))
+		}, func(c *gin.Context) {
+			log.Println("I2", c.Param("a"), c.Param("b"))
+			c.Abort()
+		}, func(c *gin.Context) {
+			log.Println("I3", c.Param("a"), c.Param("b"))
+		}),
+
+		F(func(c *gin.Context) {
+			log.Println("F1", c.Param("a"), c.Param("b"))
+		}, func(c *gin.Context) {
+			log.Println("F2", c.Param("a"), c.Param("b"))
+			c.Abort()
+		}, func(c *gin.Context) {
+			log.Println("F3", c.Param("a"), c.Param("b"))
+		}),
+
+		M(func(c *gin.Context) {
+			log.Println("M1", c.Param("a"), c.Param("b"))
+		}, func(c *gin.Context) {
+			log.Println("M2", c.Param("a"), c.Param("b"))
+			c.Abort()
+		}, func(c *gin.Context) {
+			log.Println("M3", c.Param("a"), c.Param("b"))
+		}),
+	))
+	_ = app.Run(":1234")
+}
