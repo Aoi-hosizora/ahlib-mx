@@ -86,65 +86,19 @@ func TestBinding(t *testing.T) {
 	_ = app.Run(":1234")
 }
 
-func TestParam(t *testing.T) {
-	app := gin.New()
-	app.GET(":a/:b", Param(func(c *gin.Context) {
-		log.Println(c.Param("a"))
-		log.Println(c.Param("b"))
-		log.Println(c.Param("c"))
-		log.Println(c.Param("d"))
-		log.Println(c.Param("e"))
-	}, Padd("c", "a"), Padd("d", "b"), Pdel("a"), Pdel("b"), Pdel("b")))
-	_ = app.Run(":1234")
-}
-
 func TestRoute(t *testing.T) {
 	app := gin.New()
-	app.GET(":a/:b", Composite("a",
-		P("p", func(c *gin.Context) {
-			log.Println("P1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("P2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("P3", c.Param("a"), c.Param("b"))
-		}),
-
-		P("1", func(c *gin.Context) {
-			log.Println("P4", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("P5", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("P6", c.Param("a"), c.Param("b"))
-		}),
-
-		I(func(c *gin.Context) {
-			log.Println("I1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("I2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("I3", c.Param("a"), c.Param("b"))
-		}),
-
-		F(func(c *gin.Context) {
-			log.Println("F1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("F2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("F3", c.Param("a"), c.Param("b"))
-		}),
-
-		M(func(c *gin.Context) {
-			log.Println("M1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("M2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("M3", c.Param("a"), c.Param("b"))
-		}),
-	))
+	app.NoMethod()
+	GET(app,
+		Route("a", func(c *gin.Context) { log.Println(1, c.FullPath()) }),
+		Route("b", func(c *gin.Context) { log.Println(2, c.FullPath()) }),
+		Route(":a", func(c *gin.Context) { log.Println(3, c.FullPath(), "|", c.Param("a")) }),
+		Route("a/b", func(c *gin.Context) { log.Println(4, c.FullPath()) }),
+		Route("c/d", func(c *gin.Context) { log.Println(5, c.FullPath()) }),
+		Route(":a/:b", func(c *gin.Context) { log.Println(6, c.FullPath(), "|", c.Param("a"), "|", c.Param("b")) }),
+		Route("a/b/c", func(c *gin.Context) { log.Println(7, c.FullPath()) }),
+		Route("d/e/f", func(c *gin.Context) { log.Println(8, c.FullPath()) }),
+		Route(":a/:b/:c", func(c *gin.Context) { log.Println(9, c.FullPath(), "|", c.Param("a"), "|", c.Param("b"), "|", c.Param("c")) }),
+	)
 	_ = app.Run(":1234")
 }

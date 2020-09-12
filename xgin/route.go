@@ -3,196 +3,140 @@ package xgin
 import (
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
-type ParamOption struct {
-	From   string
-	To     string
-	Delete bool
+/*
+v1.GET(":a", func)
+v1.GET(":a/:b", func) // pass
+
+v1.GET("a", func)
+v1.GET(":a/:b", func) // panic
+
+v1.GET(":_a", func)
+v1.GET(":_a/:_b", func)
+v1.GET(":_a/:_b/:_c", func)
+
+xgin.XXX(group,
+    xgin.Route(":a", func, func),
+    xgin.Route("a/:b", func, func),
+    xgin.Route(":a/:b", func, func),
+)
+->
+group.GET(":_a", func)
+group.GET(":_a/:_b", func)
+*/
+
+type route struct {
+	relativePath string
+	parameters   []string
+	handlers     []gin.HandlerFunc
 }
 
-// Padd create an instance of ParamOption (delete: false).
-func Padd(from string, to string) *ParamOption {
-	return &ParamOption{From: from, To: to, Delete: false}
+func Route(relativePath string, handlers ...gin.HandlerFunc) *route {
+	return &route{relativePath: relativePath, handlers: handlers}
 }
 
-// Pdel create an instance of ParamOption (delete: true)
-func Pdel(from string) *ParamOption {
-	return &ParamOption{From: from, Delete: true}
-}
-
-// Param copy some route param to new param in gin.Context.
-func Param(handler func(c *gin.Context), params ...*ParamOption) func(c *gin.Context) {
-	if len(params) == 0 {
-		panic("a param mapper route must have at least two params string.")
-	}
-
-	added := make([]*ParamOption, 0)
-	deleted := make([]string, 0)
-	for _, param := range params {
-		if !param.Delete {
-			added = append(added, param)
+func METHOD(method func(string, ...gin.HandlerFunc) gin.IRoutes, routes ...*route) {
+	routeGroups := make(map[int][]*route)
+	for _, r := range routes {
+		r.relativePath = strings.TrimLeft(r.relativePath, "/")
+		r.parameters = strings.Split(r.relativePath, "/")
+		layerCount := len(r.parameters)
+		if _, ok := routeGroups[layerCount]; !ok {
+			routeGroups[layerCount] = []*route{r}
 		} else {
-			deleted = append(deleted, param.From)
+			routeGroups[layerCount] = append(routeGroups[layerCount], r)
 		}
 	}
 
-	indexOf := func(params []gin.Param, key string) int {
-		idx := -1
-		for i, param := range params {
-			if param.Key == key {
-				idx = i
+	for layerCount, routes := range routeGroups {
+		routes := routes
+		pathSb := strings.Builder{}
+		for i := 1; i <= layerCount; i++ {
+			if i > 1 {
+				pathSb.WriteString("/")
 			}
-		}
-		return idx
-	}
-
-	return func(c *gin.Context) {
-		// add
-		for _, param := range added {
-			c.Params = append(c.Params, gin.Param{
-				Key:   param.From,
-				Value: c.Param(param.To),
-			})
+			pathSb.WriteString(":_")
+			pathSb.WriteString(xnumber.Itoa(i))
 		}
 
-		// del
-		for _, del := range deleted {
-			idx := indexOf(c.Params, del)
-			for idx != -1 {
-				if len(c.Params) == idx+1 {
-					c.Params = c.Params[:idx]
-				} else {
-					c.Params = append(c.Params[:idx], c.Params[idx+1:]...)
+		path := pathSb.String()
+		handler := func(c *gin.Context) {
+			handlers := findRoute(c, routes, true)
+			if handlers != nil {
+				for _, handler := range handlers {
+					if !c.IsAborted() {
+						handler(c)
+					}
 				}
-				idx = indexOf(c.Params, del)
+			} else {
+				// not found
 			}
 		}
 
-		// handler
-		if !c.IsAborted() {
-			handler(c)
-		}
+		method(path, handler)
 	}
 }
 
-// An interface used for Composite parameter.
-type CompositeHandler interface {
-	Check(param string) bool
-	Do(c *gin.Context)
-}
-
-// CompositeHandler for main handler.
-type MainHandler struct {
-	Handlers []gin.HandlerFunc
-}
-
-// M Create an instance of MainHandler.
-func M(handlers ...gin.HandlerFunc) *MainHandler {
-	return &MainHandler{Handlers: handlers}
-}
-
-func (m *MainHandler) Check(string) bool {
-	return true
-}
-
-func (m *MainHandler) Do(c *gin.Context) {
-	for _, handle := range m.Handlers {
-		handle(c)
-		if c.IsAborted() {
-			return
-		}
+func findRoute(c *gin.Context, routes []*route, do bool) []gin.HandlerFunc {
+	if routes == nil {
+		return nil
 	}
-}
-
-// CompositeHandler for specific prefix.
-type PrefixHandler struct {
-	Prefix   string
-	Handlers []gin.HandlerFunc
-}
-
-// P Create an instance of PrefixHandler.
-func P(prefix string, handlers ...gin.HandlerFunc) *PrefixHandler {
-	return &PrefixHandler{Prefix: prefix, Handlers: handlers}
-}
-
-func (p *PrefixHandler) Check(param string) bool {
-	return p.Prefix == param
-}
-
-func (p *PrefixHandler) Do(c *gin.Context) {
-	for _, handle := range p.Handlers {
-		handle(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-}
-
-// CompositeHandler for int64 parameter.
-type IntegerHandler struct {
-	Handlers []gin.HandlerFunc
-}
-
-// I Create an instance of IntegerHandler.
-func I(handlers ...gin.HandlerFunc) *IntegerHandler {
-	return &IntegerHandler{Handlers: handlers}
-}
-
-func (n *IntegerHandler) Check(param string) bool {
-	_, err := xnumber.Atoi64(param)
-	return err == nil
-}
-
-func (n *IntegerHandler) Do(c *gin.Context) {
-	for _, handle := range n.Handlers {
-		handle(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-}
-
-// CompositeHandler for float64 parameter.
-type FloatHandler struct {
-	Handlers []gin.HandlerFunc
-}
-
-// F Create an instance of FloatHandler.
-func F(handlers ...gin.HandlerFunc) *FloatHandler {
-	return &FloatHandler{Handlers: handlers}
-}
-
-func (f *FloatHandler) Check(param string) bool {
-	_, err := xnumber.Atof64(param)
-	return err == nil
-}
-
-func (f *FloatHandler) Do(c *gin.Context) {
-	for _, handle := range f.Handlers {
-		handle(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-}
-
-// Composite some CompositeHandler for `wildcard route`. This route will check handlers in order.
-// 	panic: 'xxx' in new path '/user/xxx' conflicts with existing wildcard ':id' in existing Prefix '/user/:id' [recovered]
-func Composite(key string, handlers ...CompositeHandler) gin.HandlerFunc {
-	if len(handlers) == 0 {
-		panic("a composite route must have at least one CompositeHandler.")
-	}
-
-	return func(c *gin.Context) {
-		subPath := c.Param(key)
-		do := func(c *gin.Context) {}
-		for _, option := range handlers {
-			if option.Check(subPath) {
-				do = option.Do
-				break
+	for _, route := range routes {
+		accept := true
+		for idx, parameter := range route.parameters {
+			if strings.HasPrefix(parameter, ":") {
+				continue
+			} else {
+				if parameter != c.Param("_"+xnumber.Itoa(idx+1)) {
+					accept = false
+				}
 			}
 		}
-		do(c)
+		if accept {
+			if do {
+				for idx, parameter := range route.parameters {
+					if strings.HasPrefix(parameter, ":") {
+						from := "_" + xnumber.Itoa(idx+1)
+						c.Params = append(c.Params, gin.Param{Key: parameter[1:], Value: c.Param(from)})
+					}
+				}
+			}
+			return route.handlers
+		}
 	}
+	return nil
+}
+
+func ANY(group gin.IRouter, routes ...*route) {
+	METHOD(group.Any, routes...)
+}
+
+func GET(group gin.IRouter, routes ...*route) {
+	METHOD(group.GET, routes...)
+}
+
+func POST(group gin.IRouter, routes ...*route) {
+	METHOD(group.POST, routes...)
+}
+
+func DELETE(group gin.IRouter, routes ...*route) {
+	METHOD(group.DELETE, routes...)
+}
+
+func PATCH(group gin.IRouter, routes ...*route) {
+	METHOD(group.PATCH, routes...)
+}
+
+func PUT(group gin.IRouter, routes ...*route) {
+	METHOD(group.PUT, routes...)
+}
+
+func OPTIONS(group gin.IRouter, routes ...*route) {
+	METHOD(group.OPTIONS, routes...)
+}
+
+func HEAD(group gin.IRouter, routes ...*route) {
+	METHOD(group.HEAD, routes...)
 }
