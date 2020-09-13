@@ -88,8 +88,8 @@ func TestBinding(t *testing.T) {
 
 func TestRoute(t *testing.T) {
 	app := gin.New()
-	app.NoMethod()
-	GET(app,
+	app.NoMethod(func(c *gin.Context) { c.String(200, "%s not found", c.Request.URL.String()) })
+	GET(app, app.Group("v1"),
 		Route("a", func(c *gin.Context) { log.Println(1, c.FullPath()) }),
 		Route("b", func(c *gin.Context) { log.Println(2, c.FullPath()) }),
 		Route(":a", func(c *gin.Context) { log.Println(3, c.FullPath(), "|", c.Param("a")) }),
@@ -99,6 +99,7 @@ func TestRoute(t *testing.T) {
 		Route("a/b/c", func(c *gin.Context) { log.Println(7, c.FullPath()) }),
 		Route("d/e/f", func(c *gin.Context) { log.Println(8, c.FullPath()) }),
 		Route(":a/:b/:c", func(c *gin.Context) { log.Println(9, c.FullPath(), "|", c.Param("a"), "|", c.Param("b"), "|", c.Param("c")) }),
+		Route("a/b/c/d", func(c *gin.Context) { log.Println(10, c.FullPath()) }),
 	)
 	_ = app.Run(":1234")
 }

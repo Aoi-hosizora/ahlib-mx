@@ -3,7 +3,7 @@ module github.com/Aoi-hosizora/ahlib-web
 go 1.14
 
 require (
-	github.com/Aoi-hosizora/ahlib v1.4.0
+	github.com/Aoi-hosizora/ahlib v1.4.1
 	github.com/Aoi-hosizora/go-serverchan v1.0.0
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.2.0
