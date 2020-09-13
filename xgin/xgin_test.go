@@ -86,65 +86,32 @@ func TestBinding(t *testing.T) {
 	_ = app.Run(":1234")
 }
 
-func TestParam(t *testing.T) {
-	app := gin.New()
-	app.GET(":a/:b", Param(func(c *gin.Context) {
-		log.Println(c.Param("a"))
-		log.Println(c.Param("b"))
-		log.Println(c.Param("c"))
-		log.Println(c.Param("d"))
-		log.Println(c.Param("e"))
-	}, ParamOption("c", "a"), ParamOption("d", "b")))
-	_ = app.Run(":1234")
-}
-
 func TestRoute(t *testing.T) {
 	app := gin.New()
-	app.GET(":a/:b", Composite("a",
-		P("p", func(c *gin.Context) {
-			log.Println("P1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("P2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("P3", c.Param("a"), c.Param("b"))
-		}),
+	app.HandleMethodNotAllowed = true
+	app.NoRoute(func(c *gin.Context) { c.String(200, "404 %s not found", c.Request.URL.String()) })
+	app.NoMethod(func(c *gin.Context) { c.String(200, "405 %s not allowed", c.Request.Method) })
 
-		P("1", func(c *gin.Context) {
-			log.Println("P4", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("P5", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("P6", c.Param("a"), c.Param("b"))
-		}),
+	g := app.Group("v1")
+	ar := NewAppRoute(app, g)
 
-		I(func(c *gin.Context) {
-			log.Println("I1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("I2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("I3", c.Param("a"), c.Param("b"))
-		}),
+	ar.GET("", func(c *gin.Context) { log.Println(0, c.FullPath()) })
+	ar.GET("a", func(c *gin.Context) { log.Println(1, c.FullPath()) })
+	ar.GET("b", func(c *gin.Context) { log.Println(2, c.FullPath()) })
+	ar.GET(":a", func(c *gin.Context) { log.Println(3, c.FullPath(), "|", c.Param("a")) })
+	ar.GET("a/b", func(c *gin.Context) { log.Println(4, c.FullPath()) })
+	ar.GET("c/d", func(c *gin.Context) { log.Println(5, c.FullPath()) })
+	ar.GET(":a/:b", func(c *gin.Context) { log.Println(6, c.FullPath(), "|", c.Param("a"), "|", c.Param("b")) })
+	ar.GET("a/b/c", func(c *gin.Context) { log.Println(7, c.FullPath()) })
+	ar.GET("d/e/f", func(c *gin.Context) { log.Println(8, c.FullPath()) })
+	ar.GET(":a/:b/:c", func(c *gin.Context) { log.Println(9, c.FullPath(), "|", c.Param("a"), "|", c.Param("b"), "|", c.Param("c")) })
+	ar.GET("a/b/c/d", func(c *gin.Context) { log.Println(10, c.FullPath()) })
+	ar.POST("a", func(c *gin.Context) { log.Println(11, c.FullPath()) }, func(c *gin.Context) { log.Println(11, c.FullPath()) })
+	ar.POST("a/b", func(c *gin.Context) { log.Println(12, c.FullPath()) })
+	ar.POST("a/b/:c", func(c *gin.Context) { log.Println(13, c.FullPath(), "|", c.Param("c")) })
+	ar.Do()
 
-		F(func(c *gin.Context) {
-			log.Println("F1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("F2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("F3", c.Param("a"), c.Param("b"))
-		}),
+	// TODO curl -X POST localhost:1234/v1/a/b/c/dd 405 POST not allowed
 
-		M(func(c *gin.Context) {
-			log.Println("M1", c.Param("a"), c.Param("b"))
-		}, func(c *gin.Context) {
-			log.Println("M2", c.Param("a"), c.Param("b"))
-			c.Abort()
-		}, func(c *gin.Context) {
-			log.Println("M3", c.Param("a"), c.Param("b"))
-		}),
-	))
 	_ = app.Run(":1234")
 }
