@@ -92,16 +92,10 @@ func TestRoute(t *testing.T) {
 	app.NoRoute(func(c *gin.Context) { c.String(200, "404 %s not found", c.Request.URL.String()) })
 	app.NoMethod(func(c *gin.Context) { c.String(200, "405 %s not allowed", c.Request.Method) })
 
-	app.Use(func(c *gin.Context) {
-		t := time.Now()
-		c.Next()
-		log.Println(time.Now().Sub(t).String())
-	})
-
 	g := app.Group("v1")
 	ar := NewAppRoute(app, g)
 
-	g.GET("", func(c *gin.Context) { log.Println(0, c.FullPath()) })
+	ar.GET("", func(c *gin.Context) { log.Println(0, c.FullPath()) })
 	ar.GET("a", func(c *gin.Context) { log.Println(1, c.FullPath()) })
 	ar.GET("b", func(c *gin.Context) { log.Println(2, c.FullPath()) })
 	ar.GET(":a", func(c *gin.Context) { log.Println(3, c.FullPath(), "|", c.Param("a")) })
@@ -116,6 +110,8 @@ func TestRoute(t *testing.T) {
 	ar.POST("a/b", func(c *gin.Context) { log.Println(12, c.FullPath()) })
 	ar.POST("a/b/:c", func(c *gin.Context) { log.Println(13, c.FullPath(), "|", c.Param("c")) })
 	ar.Do()
+
+	// TODO curl -X POST localhost:1234/v1/a/b/c/dd 405 POST not allowed
 
 	_ = app.Run(":1234")
 }

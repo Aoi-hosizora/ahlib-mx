@@ -5,7 +5,6 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/gin-gonic/gin"
-	"log"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -21,11 +20,7 @@ type AppRoute struct {
 
 // NewAppRoute create an instance of AppRoute.
 func NewAppRoute(engine *gin.Engine, router gin.IRouter) *AppRoute {
-	return &AppRoute{
-		engine: engine,
-		router: router,
-		groups: [][]*route{},
-	}
+	return &AppRoute{engine: engine, router: router, groups: [][]*route{}}
 }
 
 // route represents a route in AppRoute, include handlers and relativePath.
@@ -38,9 +33,6 @@ type route struct {
 
 // newRoute create an instance of route, panic if relativePath is empty.
 func newRoute(method string, relativePath string, handlers ...gin.HandlerFunc) *route {
-	if relativePath == "" {
-		panic("AppRoute only allow to create not empty route")
-	}
 	return &route{method: method, relativePath: relativePath, handlers: handlers}
 }
 
@@ -51,12 +43,8 @@ func (a *AppRoute) addToGroups(method string, relativePath string, handlers []gi
 	}
 
 	r := newRoute(method, relativePath, handlers...)
-	r.method = method
 	for idx, routes := range a.groups {
-		if len(routes) == 0 {
-			routes = []*route{r}
-			return
-		} else if routes[0].method == method {
+		if routes[0].method == method {
 			a.groups[idx] = append(routes, r)
 			return
 		}
@@ -114,28 +102,28 @@ func (a *AppRoute) Any(relativePath string, handlers ...gin.HandlerFunc) {
 // Do handle all registered routes to gin.IRouter using setting of gin.Engine.
 func (a *AppRoute) Do() {
 	// for all methods
-	for _, allRoutes := range a.groups {
-		if len(allRoutes) == 0 {
-			continue
-		}
-		method := allRoutes[0].method
-		allRoutes := allRoutes
+	for _, groupRoutes := range a.groups {
+		method := groupRoutes[0].method
+		allRoutes := groupRoutes
 
-		// pre handle routes, check max layout size
-		maxLayout := 0
-		for _, r := range allRoutes {
-			r.relativePath = strings.TrimPrefix(strings.TrimSuffix(r.relativePath, "/"), "/")
-			r.parameters = strings.Split(r.relativePath, "/")
-			if len(r.parameters) > maxLayout {
-				maxLayout = len(r.parameters)
+		// pre handle route param, get max layer
+		maxLayer := 0
+		for _, route := range allRoutes {
+			route.relativePath = strings.Trim(route.relativePath, "/")
+			route.parameters = strings.Split(route.relativePath, "/")
+			if route.relativePath == "" {
+				route.parameters = []string{}
+			}
+			if len(route.parameters) > maxLayer {
+				maxLayer = len(route.parameters)
 			}
 		}
 
 		// arrange by layer
-		layerRoutes := make([][]*route, maxLayout+1)
-		for _, r := range allRoutes {
-			layerCount := len(r.parameters)
-			layerRoutes[layerCount] = append(layerRoutes[layerCount], r)
+		layerRoutes := make([][]*route, maxLayer+1)
+		for _, route := range allRoutes {
+			layerCount := len(route.parameters)
+			layerRoutes[layerCount] = append(layerRoutes[layerCount], route)
 		}
 
 		// get unexported field
@@ -143,25 +131,30 @@ func (a *AppRoute) Do() {
 		noMethodHandler := xreflect.GetUnexportedField(reflect.ValueOf(a.engine).Elem().FieldByName("noMethod")).(gin.HandlersChain)
 
 		// build handler
-		for layerCount, routes := range layerRoutes {
-			if layerCount == 0 || len(routes) == 0 {
-				continue
-			}
-			layerCount := layerCount
+		for layer, routes := range layerRoutes {
+			layer := layer
 			routes := routes
 
-			// build fake path (:_1/:_2/...)
-			pathSb := strings.Builder{}
-			for i := 1; i <= layerCount; i++ {
-				if i > 1 {
-					pathSb.WriteString("/")
+			// handle route that is empty relativePath first
+			if layer == 0 {
+				for _, route := range routes { // 0 or 1
+					a.router.Handle(method, "", route.handlers...)
 				}
-				pathSb.WriteString(":_")
-				pathSb.WriteString(xnumber.Itoa(i)) // :_1
+				continue
 			}
-			fakePath := pathSb.String()
 
-			// build handler !!! core
+			// build fake path (:_1/:_2/...)
+			fakePathSb := strings.Builder{}
+			for i := 1; i <= layer; i++ {
+				if i > 1 {
+					fakePathSb.WriteString("/")
+				}
+				fakePathSb.WriteString(":_")
+				fakePathSb.WriteString(xnumber.Itoa(i)) // :_1
+			}
+			fakePath := fakePathSb.String()
+
+			// build handler !!! core <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 			handler := func(c *gin.Context) {
 				handlers := findRoute(c, routes, fakePath, true)
 
@@ -170,12 +163,12 @@ func (a *AppRoute) Do() {
 					// if handle 405
 					if a.engine.HandleMethodNotAllowed {
 						// finding is 405?
-						for _, routes := range a.groups {
-							if len(routes) == 0 || method == routes[0].method {
+						for _, groupRoutes := range a.groups {
+							if method == groupRoutes[0].method {
 								continue
 							}
 							// found, use noMethod handler
-							if findRoute(c, routes, fakePath, false) != nil {
+							if findRoute(c, groupRoutes, fakePath, false) != nil {
 								if noMethodHandler == nil {
 									c.String(405, "405 method not allowed")
 									return
@@ -230,8 +223,7 @@ func (a *AppRoute) Do() {
 						pre = "└─"
 					}
 
-					lastHandler := route.handlers[len(route.handlers)-1]
-					funcname := runtime.FuncForPC(reflect.ValueOf(lastHandler).Pointer()).Name()
+					funcname := runtime.FuncForPC(reflect.ValueOf(route.handlers[0]).Pointer()).Name()
 					fmt.Printf("[XGIN]   %2s %-6s _/%-23s --> %s (--> /%s)\n", pre, method, route.relativePath, funcname, fakePath)
 				}
 			}
@@ -242,16 +234,13 @@ func (a *AppRoute) Do() {
 // findRoute can find a correspond []*gin.HandleChain through array of route.
 // Using fakePath (:_1/:_2...) and do (need to change gin.Context).
 func findRoute(c *gin.Context, routes []*route, fakePath string, do bool) []gin.HandlerFunc {
-	if routes == nil {
-		return nil
-	}
-	log.Println(c.Params, routes[0].parameters)
-	if len(c.Params) != len(routes[0].parameters) {
-		return nil
-	}
-
-	// find route !!!! core
 	for _, route := range routes {
+		// different parameter size
+		if len(c.Params) != len(routes[0].parameters) {
+			continue
+		}
+
+		// check route accept
 		accept := true
 		for idx, parameter := range route.parameters {
 			if strings.HasPrefix(parameter, ":") { // is `:` path
@@ -259,11 +248,13 @@ func findRoute(c *gin.Context, routes []*route, fakePath string, do bool) []gin.
 			} else {
 				if parameter != c.Param("_"+xnumber.Itoa(idx+1)) { // is specific path
 					accept = false
+					break
 				}
 			}
 		}
 		if accept { // accept, found
-			if do { // if need to use this route to register handler
+			// if need to use this route to register handler
+			if do {
 				for idx, parameter := range route.parameters {
 					if strings.HasPrefix(parameter, ":") {
 						from := "_" + xnumber.Itoa(idx+1)
