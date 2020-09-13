@@ -88,18 +88,36 @@ func TestBinding(t *testing.T) {
 
 func TestRoute(t *testing.T) {
 	app := gin.New()
-	app.NoMethod(func(c *gin.Context) { c.String(200, "%s not found", c.Request.URL.String()) })
-	GET(app, app.Group("v1"),
-		Route("a", func(c *gin.Context) { log.Println(1, c.FullPath()) }),
-		Route("b", func(c *gin.Context) { log.Println(2, c.FullPath()) }),
-		Route(":a", func(c *gin.Context) { log.Println(3, c.FullPath(), "|", c.Param("a")) }),
-		Route("a/b", func(c *gin.Context) { log.Println(4, c.FullPath()) }),
-		Route("c/d", func(c *gin.Context) { log.Println(5, c.FullPath()) }),
-		Route(":a/:b", func(c *gin.Context) { log.Println(6, c.FullPath(), "|", c.Param("a"), "|", c.Param("b")) }),
-		Route("a/b/c", func(c *gin.Context) { log.Println(7, c.FullPath()) }),
-		Route("d/e/f", func(c *gin.Context) { log.Println(8, c.FullPath()) }),
-		Route(":a/:b/:c", func(c *gin.Context) { log.Println(9, c.FullPath(), "|", c.Param("a"), "|", c.Param("b"), "|", c.Param("c")) }),
-		Route("a/b/c/d", func(c *gin.Context) { log.Println(10, c.FullPath()) }),
-	)
+	app.HandleMethodNotAllowed = true
+	app.NoRoute(func(c *gin.Context) { c.String(200, "404 %s not found", c.Request.URL.String()) })
+	app.NoMethod(func(c *gin.Context) { c.String(200, "405 %s not allowed", c.Request.Method) })
+
+	app.Use(func(c *gin.Context) {
+		t := time.Now()
+		c.Next()
+		log.Println(time.Now().Sub(t).String())
+	})
+
+	g := app.Group("v1")
+	ar := NewAppRoute(app, g)
+
+	// TODO BUG: 2020/09/13 15:18:58 1 /v1/:_1/:_2/:_3/a
+
+	g.GET("", func(c *gin.Context) { log.Println(0, c.FullPath()) })
+	ar.GET("a", func(c *gin.Context) { log.Println(1, c.FullPath()) })
+	ar.GET("b", func(c *gin.Context) { log.Println(2, c.FullPath()) })
+	ar.GET(":a", func(c *gin.Context) { log.Println(3, c.FullPath(), "|", c.Param("a")) })
+	ar.GET("a/b", func(c *gin.Context) { log.Println(4, c.FullPath()) })
+	ar.GET("c/d", func(c *gin.Context) { log.Println(5, c.FullPath()) })
+	ar.GET(":a/:b", func(c *gin.Context) { log.Println(6, c.FullPath(), "|", c.Param("a"), "|", c.Param("b")) })
+	ar.GET("a/b/c", func(c *gin.Context) { log.Println(7, c.FullPath()) })
+	ar.GET("d/e/f", func(c *gin.Context) { log.Println(8, c.FullPath()) })
+	ar.GET(":a/:b/:c", func(c *gin.Context) { log.Println(9, c.FullPath(), "|", c.Param("a"), "|", c.Param("b"), "|", c.Param("c")) })
+	ar.GET("a/b/c/d", func(c *gin.Context) { log.Println(10, c.FullPath()) })
+	ar.POST("a", func(c *gin.Context) { log.Println(11, c.FullPath()) }, func(c *gin.Context) { log.Println(11, c.FullPath()) })
+	ar.POST("a/b", func(c *gin.Context) { log.Println(12, c.FullPath()) })
+	ar.POST("a/b/:c", func(c *gin.Context) { log.Println(13, c.FullPath(), "|", c.Param("c")) })
+	ar.Do()
+
 	_ = app.Run(":1234")
 }
