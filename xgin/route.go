@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"runtime"
 	"strings"
 )
 
@@ -15,7 +16,7 @@ import (
 type AppRoute struct {
 	engine *gin.Engine
 	router gin.IRouter
-	groups map[string][]*route
+	groups [][]*route
 }
 
 // NewAppRoute create an instance of AppRoute.
@@ -23,33 +24,44 @@ func NewAppRoute(engine *gin.Engine, router gin.IRouter) *AppRoute {
 	return &AppRoute{
 		engine: engine,
 		router: router,
-		groups: map[string][]*route{},
+		groups: [][]*route{},
 	}
 }
 
 // route represents a route in AppRoute, include handlers and relativePath.
 type route struct {
+	method       string
 	relativePath string
 	parameters   []string // used later
 	handlers     []gin.HandlerFunc
 }
 
 // newRoute create an instance of route, panic if relativePath is empty.
-func newRoute(relativePath string, handlers ...gin.HandlerFunc) *route {
+func newRoute(method string, relativePath string, handlers ...gin.HandlerFunc) *route {
 	if relativePath == "" {
 		panic("AppRoute only allow to create not empty route")
 	}
-	return &route{relativePath: relativePath, handlers: handlers}
+	return &route{method: method, relativePath: relativePath, handlers: handlers}
 }
 
 // addToGroups is used by http methods, used to insert handlers to AppRoute.groups.
 func (a *AppRoute) addToGroups(method string, relativePath string, handlers []gin.HandlerFunc) {
-	r := newRoute(relativePath, handlers...)
-	if _, ok := a.groups[method]; !ok {
-		a.groups[method] = []*route{r}
-	} else {
-		a.groups[method] = append(a.groups[method], r)
+	if len(handlers) == 0 {
+		panic("a route must have at least one handler.")
 	}
+
+	r := newRoute(method, relativePath, handlers...)
+	r.method = method
+	for idx, routes := range a.groups {
+		if len(routes) == 0 {
+			routes = []*route{r}
+			return
+		} else if routes[0].method == method {
+			a.groups[idx] = append(routes, r)
+			return
+		}
+	}
+	a.groups = append(a.groups, []*route{r})
 }
 
 // GET registers a new request handle and middleware with the given path and using Get method.
@@ -102,21 +114,28 @@ func (a *AppRoute) Any(relativePath string, handlers ...gin.HandlerFunc) {
 // Do handle all registered routes to gin.IRouter using setting of gin.Engine.
 func (a *AppRoute) Do() {
 	// for all methods
-	for method, routes := range a.groups {
-		method := method
-		routes := routes
+	for _, allRoutes := range a.groups {
+		if len(allRoutes) == 0 {
+			continue
+		}
+		method := allRoutes[0].method
+		allRoutes := allRoutes
 
-		// arrange by layer
-		layerRoutes := make(map[int][]*route)
-		for _, r := range routes {
+		// pre handle routes, check max layout size
+		maxLayout := 0
+		for _, r := range allRoutes {
 			r.relativePath = strings.TrimPrefix(strings.TrimSuffix(r.relativePath, "/"), "/")
 			r.parameters = strings.Split(r.relativePath, "/")
-			layerCount := len(r.parameters)
-			if _, ok := layerRoutes[layerCount]; !ok {
-				layerRoutes[layerCount] = []*route{r}
-			} else {
-				layerRoutes[layerCount] = append(layerRoutes[layerCount], r)
+			if len(r.parameters) > maxLayout {
+				maxLayout = len(r.parameters)
 			}
+		}
+
+		// arrange by layer
+		layerRoutes := make([][]*route, maxLayout+1)
+		for _, r := range allRoutes {
+			layerCount := len(r.parameters)
+			layerRoutes[layerCount] = append(layerRoutes[layerCount], r)
 		}
 
 		// get unexported field
@@ -125,35 +144,38 @@ func (a *AppRoute) Do() {
 
 		// build handler
 		for layerCount, routes := range layerRoutes {
+			if layerCount == 0 || len(routes) == 0 {
+				continue
+			}
+			layerCount := layerCount
 			routes := routes
-			// build parameter path sting
+
+			// build fake path (:_1/:_2/...)
 			pathSb := strings.Builder{}
 			for i := 1; i <= layerCount; i++ {
 				if i > 1 {
 					pathSb.WriteString("/")
 				}
 				pathSb.WriteString(":_")
-				pathSb.WriteString(xnumber.Itoa(i))
+				pathSb.WriteString(xnumber.Itoa(i)) // :_1
 			}
+			fakePath := pathSb.String()
 
 			// build handler !!! core
-			path := pathSb.String()
-
 			handler := func(c *gin.Context) {
-				handlers := findRoute(c, routes, path, true)
+				handlers := findRoute(c, routes, fakePath, true)
 
-				// route not found
+				// route not found, 404 or 405
 				if handlers == nil {
 					// if handle 405
 					if a.engine.HandleMethodNotAllowed {
 						// finding is 405?
-						for otherMethod, routes := range a.groups {
-							if method == otherMethod {
+						for _, routes := range a.groups {
+							if len(routes) == 0 || method == routes[0].method {
 								continue
 							}
 							// found, use noMethod handler
-							if findRoute(c, routes, path, false) != nil {
-								log.Println(otherMethod, path) // TODO wrong 405
+							if findRoute(c, routes, fakePath, false) != nil {
 								if noMethodHandler == nil {
 									c.String(405, "405 method not allowed")
 									return
@@ -185,19 +207,33 @@ func (a *AppRoute) Do() {
 			// handle to router
 			switch method {
 			case http.MethodGet:
-				a.router.GET(path, handler)
+				a.router.GET(fakePath, handler)
 			case http.MethodPost:
-				a.router.POST(path, handler)
+				a.router.POST(fakePath, handler)
 			case http.MethodDelete:
-				a.router.DELETE(path, handler)
+				a.router.DELETE(fakePath, handler)
 			case http.MethodPatch:
-				a.router.PATCH(path, handler)
+				a.router.PATCH(fakePath, handler)
 			case http.MethodPut:
-				a.router.PUT(path, handler)
+				a.router.PUT(fakePath, handler)
 			case http.MethodOptions:
-				a.router.OPTIONS(path, handler)
+				a.router.OPTIONS(fakePath, handler)
 			case http.MethodHead:
-				a.router.HEAD(path, handler)
+				a.router.HEAD(fakePath, handler)
+			}
+
+			// print log
+			if gin.Mode() == gin.DebugMode {
+				for idx, route := range routes {
+					pre := "├─"
+					if idx == len(routes)-1 {
+						pre = "└─"
+					}
+
+					lastHandler := route.handlers[len(route.handlers)-1]
+					funcname := runtime.FuncForPC(reflect.ValueOf(lastHandler).Pointer()).Name()
+					fmt.Printf("[XGIN]   %2s %-6s _/%-23s --> %s (--> /%s)\n", pre, method, route.relativePath, funcname, fakePath)
+				}
 			}
 		}
 	}
@@ -207,6 +243,10 @@ func (a *AppRoute) Do() {
 // Using fakePath (:_1/:_2...) and do (need to change gin.Context).
 func findRoute(c *gin.Context, routes []*route, fakePath string, do bool) []gin.HandlerFunc {
 	if routes == nil {
+		return nil
+	}
+	log.Println(c.Params, routes[0].parameters)
+	if len(c.Params) != len(routes[0].parameters) {
 		return nil
 	}
 
@@ -232,13 +272,10 @@ func findRoute(c *gin.Context, routes []*route, fakePath string, do bool) []gin.
 				}
 			}
 
-			// set unexported field
-
-			// fullPath
-			fullPath := xreflect.GetUnexportedField(reflect.ValueOf(c).Elem().FieldByName("fullPath")).(string)
-			fullPath = strings.TrimSuffix(strings.TrimSuffix(fullPath, fakePath), "/")
+			// set fullPath
+			fullPath := strings.TrimSuffix(strings.TrimSuffix(c.FullPath(), fakePath), "/")
 			fullPath = fmt.Sprintf("%s/%s", fullPath, route.relativePath)
-			xreflect.SetUnexportedField(reflect.ValueOf(c).Elem().FieldByName("fullPath"), fullPath) // TODO use reflect
+			xreflect.SetUnexportedField(reflect.ValueOf(c).Elem().FieldByName("fullPath"), fullPath)
 
 			// return
 			return route.handlers

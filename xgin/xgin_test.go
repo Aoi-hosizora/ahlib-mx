@@ -101,8 +101,6 @@ func TestRoute(t *testing.T) {
 	g := app.Group("v1")
 	ar := NewAppRoute(app, g)
 
-	// TODO BUG: 2020/09/13 15:18:58 1 /v1/:_1/:_2/:_3/a
-
 	g.GET("", func(c *gin.Context) { log.Println(0, c.FullPath()) })
 	ar.GET("a", func(c *gin.Context) { log.Println(1, c.FullPath()) })
 	ar.GET("b", func(c *gin.Context) { log.Println(2, c.FullPath()) })
