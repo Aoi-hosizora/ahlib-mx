@@ -3,6 +3,8 @@ package xdto
 import (
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
+	"log"
+	"os"
 	"time"
 )
 
@@ -65,9 +67,10 @@ func BuildErrorDto(err interface{}, requests []string, others map[string]interfa
 			dto.Stacks[idx] = stack.String()
 		}
 		if print {
-			fmt.Println()
+			l := log.New(os.Stderr, "", 0)
+			l.Println()
 			xruntime.PrintStacksRed(stacks)
-			fmt.Println()
+			l.Println()
 		}
 	}
 
