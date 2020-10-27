@@ -7,19 +7,23 @@ import (
 	"log"
 )
 
-// logrus
-
+// TelebotLogrus is a logrus logger used by telebot.
 type TelebotLogrus struct {
 	logger  *logrus.Logger
 	LogMode bool
 }
 
+// NewTelebotLogrus creates a new TelebotLogrus with logrus.Logger.
 func NewTelebotLogrus(logger *logrus.Logger, logMode bool) *TelebotLogrus {
 	return &TelebotLogrus{logger: logger, LogMode: logMode}
 }
 
-// Support endpoint type: `string` & `InlineButton` & `ReplyButton`.
-// Support handler type: `Message` & `Callback`.
+// Receive logs the receive events.
+//
+// Support endpoint type:
+// 	string, InlineButton, ReplyButton
+// Support handler type:
+// 	Message, Callback
 func (t *TelebotLogrus) Receive(endpoint interface{}, handle interface{}) {
 	if !t.LogMode {
 		return
@@ -48,6 +52,7 @@ func (t *TelebotLogrus) Receive(endpoint interface{}, handle interface{}) {
 	}).Info(fmt.Sprintf("[Telebot] %4d | -> | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username))
 }
 
+// Reply logs the reply events.
 func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error) {
 	if !t.LogMode || m == nil {
 		return
@@ -68,6 +73,7 @@ func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error
 	}
 }
 
+// Send logs the send events.
 func (t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error) {
 	if !t.LogMode || c == nil {
 		return
@@ -85,17 +91,23 @@ func (t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error) {
 	}
 }
 
-// logger
-
+// TelebotLogger is a standard logger used by telebot.
 type TelebotLogger struct {
 	logger  *log.Logger
 	LogMode bool
 }
 
+// NewTelebotLogger creates a TelebotLogger with log.Logger.
 func NewTelebotLogger(logger *log.Logger, logMode bool) *TelebotLogger {
 	return &TelebotLogger{logger: logger, LogMode: logMode}
 }
 
+// Receive logs the receive events.
+//
+// Support endpoint type:
+// 	string, InlineButton, ReplyButton
+// Support handler type:
+// 	Message, Callback
 func (t *TelebotLogger) Receive(endpoint interface{}, handle interface{}) {
 	if !t.LogMode {
 		return
@@ -118,6 +130,7 @@ func (t *TelebotLogger) Receive(endpoint interface{}, handle interface{}) {
 	t.logger.Printf("[Telebot] %4d | -> | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username)
 }
 
+// Reply logs the reply events.
 func (t *TelebotLogger) Reply(m *telebot.Message, to *telebot.Message, err error) {
 	if !t.LogMode || m == nil {
 		return
@@ -131,6 +144,7 @@ func (t *TelebotLogger) Reply(m *telebot.Message, to *telebot.Message, err error
 	}
 }
 
+// Send logs the send events.
 func (t *TelebotLogger) Send(c *telebot.Chat, to *telebot.Message, err error) {
 	if !t.LogMode || c == nil {
 		return
@@ -143,6 +157,10 @@ func (t *TelebotLogger) Send(c *telebot.Chat, to *telebot.Message, err error) {
 	}
 }
 
+// renderEndpoint renders the endpoint value to a string.
+//
+// Support endpoints:
+// 	string, InlineButton, ReplyButton
 func renderEndpoint(endpoint interface{}) (string, bool) {
 	ep := ""
 	if s, ok := endpoint.(string); ok {

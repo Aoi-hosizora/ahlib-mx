@@ -52,6 +52,7 @@ func Or(fns ...validator.Func) validator.Func {
 	}
 }
 
+// regexp: xxx
 func DefaultRegexpValidator() validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		param := fl.Param()

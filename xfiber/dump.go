@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// DumpRequest returns request strings from fiber.Ctx using fasthttp.RequestCtx.
 func DumpRequest(c *fiber.Ctx) []string {
 	request := make([]string, 0)
 	if c == nil {
@@ -24,15 +25,18 @@ func DumpRequest(c *fiber.Ctx) []string {
 	return request
 }
 
+// BuildBasicErrorDto builds xdto.ErrorDto from error and fiber.Ctx.
 func BuildBasicErrorDto(err interface{}, c *fiber.Ctx) *xdto.ErrorDto {
 	return xdto.BuildBasicErrorDto(err, DumpRequest(c), nil)
 }
 
+// BuildErrorDto builds xdto.ErrorDto from error, fiber.Ctx and runtime.
 func BuildErrorDto(err interface{}, c *fiber.Ctx, skip int, print bool) *xdto.ErrorDto {
 	skip++
 	return xdto.BuildErrorDto(err, DumpRequest(c), nil, skip, print)
 }
 
+// BuildFullErrorDto builds xdto.ErrorDto from error, fiber.Ctx, runtime and others.
 func BuildFullErrorDto(err interface{}, c *fiber.Ctx, other map[string]interface{}, skip int, print bool) *xdto.ErrorDto {
 	skip++
 	return xdto.BuildErrorDto(err, DumpRequest(c), other, skip, print)

@@ -63,31 +63,3 @@ func TestLogger(t *testing.T) {
 
 	_ = app.Listen("1234")
 }
-
-func TestBinding(t *testing.T) {
-	app := fiber.New()
-	_ = EnableRegexpBinding()
-	_ = EnableRFC3339DateBinding()
-	_ = EnableRFC3339DateTimeBinding()
-
-	type st struct {
-		A string `validate:"regexp=^[abc]+$"`
-		B string `validate:"date"`
-		C string `validate:"datetime"`
-	}
-
-	app.Get("", func(ctx *fiber.Ctx) {
-		a := ctx.Query("a")
-		b := ctx.Query("b")
-		c := ctx.Query("c")
-		st := &st{A: a, B: b, C: c}
-		if err := Struct(st); err != nil {
-			ctx.SendString(err.Error())
-		}
-		if err := Var(st.A, "regexp=^[abc]+$"); err != nil {
-			ctx.SendString(err.Error())
-		}
-	})
-
-	_ = app.Listen("1234")
-}

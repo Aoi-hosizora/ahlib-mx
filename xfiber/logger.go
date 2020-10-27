@@ -9,19 +9,22 @@ import (
 	"time"
 )
 
+// LoggerExtra represents the extra strings and fields.
 type LoggerExtra struct {
 	OtherString string
 	OtherFields map[string]interface{}
 }
 
+// WithLogrus logs every fiber's requests and errors with logrus.Logger.
 func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx, extra *LoggerExtra) {
 	latency := time.Now().Sub(start)
 	method := c.Method()
 	path := c.Path()
-	ip := c.IP()
 	code := c.Fasthttp.Response.StatusCode()
 	length := len(c.Fasthttp.Response.Body())
 	lengthStr := xnumber.RenderByte(float64(length))
+	latencyStr := latency.String()
+	ip := c.IP()
 
 	fields := logrus.Fields{
 		"module":   "gin",
@@ -40,7 +43,7 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx, extra *Log
 	entry := logger.WithFields(fields)
 
 	if c.Error() != nil {
-		msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
+		msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
 		if extra != nil && extra.OtherString != "" {
 			msg += fmt.Sprintf(" | %s", extra.OtherString)
 		}
@@ -58,17 +61,19 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *fiber.Ctx, extra *Log
 	}
 }
 
+// WithLogger logs every fiber's requests and errors with log.Logger.
 func WithLogger(logger *log.Logger, start time.Time, c *fiber.Ctx, other string) {
 	latency := time.Now().Sub(start)
 	method := c.Method()
 	path := c.Path()
-	ip := c.IP()
 	code := c.Fasthttp.Response.StatusCode()
 	length := len(c.Fasthttp.Response.Body())
 	lengthStr := xnumber.RenderByte(float64(length))
+	latencyStr := latency.String()
+	ip := c.IP()
 
 	if c.Error() != nil {
-		msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
+		msg := fmt.Sprintf("[Fiber] %6d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
 		if other != "" {
 			msg += fmt.Sprintf(" | %s", other)
 		}

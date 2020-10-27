@@ -3,3 +3,8 @@
 .idea/
 .ionide/
 .history/
+
+### Project ###
+logs/
+build/
+coverage.txt
