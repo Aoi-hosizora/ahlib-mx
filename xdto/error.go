@@ -54,8 +54,8 @@ func BuildErrorDto(err interface{}, requests []string, others map[string]interfa
 	dto := &ErrorDto{Time: now, Type: errType, Detail: errDetail, Request: requests, Others: others}
 
 	// runtime
-	skip++ // -2 || -1 || 0..
 	if skip >= 0 {
+		skip++
 		var stacks []*xruntime.Stack
 		stacks, dto.Filename, dto.Funcname, dto.LineIndex, dto.Line = xruntime.GetStackWithInfo(skip)
 		dto.Stacks = make([]string, len(stacks))

@@ -123,8 +123,9 @@ func eqHelper(i, p interface{}) bool {
 	case xreflect.String: // string
 		p, ok := xreflect.GetString(p)
 		return ok && p == iv.String()
-	default:
-		return false
+	default: // complex
+		p, ok := xreflect.GetComplex(p)
+		return ok && p == iv.Complex()
 	}
 }
 
@@ -148,7 +149,7 @@ func lenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) 
 	case xreflect.Float: // float
 		p, ok := xreflect.GetFloat(p)
 		return ok && ff(is.Float(), p)
-	default:
+	default: // complex
 		return false
 	}
 }

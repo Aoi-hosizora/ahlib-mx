@@ -3,23 +3,25 @@ package xvalidator
 import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/go-playground/validator/v10"
-	"log"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 )
 
 func TestRequired(t *testing.T) {
 	val := validator.New()
+	_ = val.RegisterValidation("int", EqualValidator(1))
+
 	type s struct {
-		Int int `validate:"required"`
+		Int int `validate:"required,int"`
 	}
 
 	s1 := &s{}
 	s2 := &s{Int: 1}
+	s3 := &s{Int: 5}
 	xtesting.True(t, ValidationRequiredError(val.Struct(s1)))
 	xtesting.False(t, ValidationRequiredError(val.Struct(s2)))
+	xtesting.False(t, ValidationRequiredError(val.Struct(s3)))
 }
 
 type s struct {
@@ -54,6 +56,13 @@ func TestEqual(t *testing.T) {
 	}
 	xtesting.Nil(t, show(val.Struct(s1)))
 	xtesting.NotNil(t, show(val.Struct(s2)))
+
+	type _s struct {
+		Complex complex64 `validate:"complex"`
+	}
+	_ = val.RegisterValidation("complex", EqualValidator(1+1i))
+	xtesting.Nil(t, show(val.Struct(&_s{Complex: 1 + 1i})))
+	xtesting.NotNil(t, show(val.Struct(&_s{Complex: 1i})))
 }
 
 func TestNotEqual(t *testing.T) {
@@ -106,6 +115,12 @@ func TestLen(t *testing.T) {
 	}
 	xtesting.Nil(t, show(val.Struct(s1)))
 	xtesting.NotNil(t, show(val.Struct(s2)))
+
+	type _s struct {
+		Complex complex64 `validate:"complex"`
+	}
+	_ = val.RegisterValidation("complex", LenValidator(1i))
+	xtesting.NotNil(t, show(val.Struct(&_s{Complex: 1i})))
 }
 
 func TestGreaterThen(t *testing.T) {
@@ -136,11 +151,11 @@ func TestGreaterThen(t *testing.T) {
 
 func TestGreaterThenOrEqual(t *testing.T) {
 	val := validator.New()
-	_ = val.RegisterValidation("int", GreaterThenValidator(5))
-	_ = val.RegisterValidation("uint", GreaterThenValidator(uint(5)))
-	_ = val.RegisterValidation("float", GreaterThenValidator(5.0))
-	_ = val.RegisterValidation("string", GreaterThenValidator(5))
-	_ = val.RegisterValidation("slice", GreaterThenValidator(5))
+	_ = val.RegisterValidation("int", GreaterThenOrEqualValidator(5))
+	_ = val.RegisterValidation("uint", GreaterThenOrEqualValidator(uint(5)))
+	_ = val.RegisterValidation("float", GreaterThenOrEqualValidator(5.0))
+	_ = val.RegisterValidation("string", GreaterThenOrEqualValidator(5))
+	_ = val.RegisterValidation("slice", GreaterThenOrEqualValidator(5))
 
 	s1 := &s{
 		Int:    5,
@@ -272,6 +287,12 @@ func TestOneof(t *testing.T) {
 	_ = val.RegisterValidation("string", OneofValidator("1", "2", "3"))
 	_ = val.RegisterValidation("slice", LenValidator(0))
 
+	type _s struct {
+		F  func() `validate:"int"`
+		F2 func() `validate:"slice"`
+	}
+	xtesting.NotNil(t, show(val.Struct(&_s{})))
+
 	s1 := &s{
 		Int:    1,
 		Uint:   2,
@@ -291,45 +312,56 @@ func TestOneof(t *testing.T) {
 }
 
 func TestOtherValidator(t *testing.T) {
-	type s struct {
-		Regexp1 string `validate:"regexp=^[0123]+$"`
-		Regexp2 string `validate:"rr"`
-		Date    string `validate:"datetime"`
-	}
-
 	val := validator.New()
 	_ = val.RegisterValidation("regexp", DefaultRegexpValidator())
 	_ = val.RegisterValidation("rr", RegexpValidator(regexp.MustCompile(`^[abc]+$`)))
 	_ = val.RegisterValidation("datetime", DateTimeValidator(time.RFC3339))
 
-	s1 := &s{
+	type _s1 struct {
+		Regexp  int `validate:"regexp=^0$"`
+		Regexp2 int `validate:"rr=^0$"`
+		Date    int `validate:"datetime"`
+	}
+	xtesting.NotNil(t, show(val.Struct(&_s1{})))
+
+	type _s2 struct {
+		Regexp1 string `validate:"regexp=^[0123]+$"`
+		Regexp2 string `validate:"rr"`
+		Date    string `validate:"datetime"`
+	}
+	s1 := &_s2{
 		Regexp1: "01230123",
 		Regexp2: "abcabcabc",
 		Date:    time.Now().Format(time.RFC3339),
 	}
-	s2 := &s{
+	s2 := &_s2{
 		Regexp1: "012340123",
 		Regexp2: "abcadbcabc",
 		Date:    time.Now().Format(time.RFC1123Z),
 	}
 	xtesting.Nil(t, show(val.Struct(s1)))
 	xtesting.NotNil(t, show(val.Struct(s2)))
+
+	type _s3 struct {
+		F func() `validate:"int"`
+	}
+	xtesting.NotNil(t, show(val.Struct(&_s3{})))
 }
 
 func show(err interface{}) interface{} {
 	if err == nil {
-		log.Println(nil)
+		// log.Println(nil)
 		return nil
 	}
 	errs := err.(validator.ValidationErrors)
 	if len(errs) == 0 {
 		return nil
 	}
-	sp := strings.Builder{}
-	for _, err := range errs {
-		sp.WriteString(err.Field() + ":" + err.Tag() + ", ")
-	}
-	l := sp.String()
-	log.Println(l[:len(l)-2])
+	// sp := strings.Builder{}
+	// for _, err := range errs {
+	// 	sp.WriteString(err.Field() + ":" + err.Tag() + ", ")
+	// }
+	// l := sp.String()
+	// log.Println(l[:len(l)-2])
 	return err
 }
