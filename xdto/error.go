@@ -5,12 +5,11 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"log"
 	"os"
+	"reflect"
 	"time"
 )
 
-// An error response model for fiber and gin.
-// Request: Need to dump gin.Request or fiber.Fasthttp.
-// Filename... need for runtime stack, need to provide skip.
+// ErrorDto is an error response model for fiber and gin.
 type ErrorDto struct {
 	Time    string                 `json:"time"`    // current time
 	Type    string                 `json:"type"`    // error type
@@ -25,24 +24,26 @@ type ErrorDto struct {
 	Stacks    []string `json:"stacks,omitempty"`     // stacks in skip
 }
 
-// Build a basic dto (only include time, type, detail, request).
+// BuildBasicErrorDto builds a basic dto (only include time, type, detail, request).
 func BuildBasicErrorDto(err interface{}, requests []string, others map[string]interface{}) *ErrorDto {
 	skip := -2
 	return BuildErrorDto(err, requests, others, skip, false)
 }
 
-// Build a complete dto (also include runtime parameters).
-func BuildErrorDto(err interface{}, requests []string, others map[string]interface{}, skip int, print bool) *ErrorDto {
-	skip++
+// BuildErrorDto builds a complete dto (also include runtime parameters).
+func BuildErrorDto(err interface{}, requests []string, others map[string]interface{}, skip int, doPrint bool) *ErrorDto {
 	if err == nil {
 		return nil
 	}
 
+	// basic
 	now := time.Now().Format(time.RFC3339)
-	errType := fmt.Sprintf("%T", err)
-	errDetail := fmt.Sprintf("%v", err)
+	errType := reflect.TypeOf(err).String()
+	errDetail := ""
 	if e, ok := err.(error); ok {
 		errDetail = e.Error()
+	} else {
+		errDetail = fmt.Sprintf("%v", err)
 	}
 	if requests == nil {
 		requests = []string{}
@@ -50,15 +51,10 @@ func BuildErrorDto(err interface{}, requests []string, others map[string]interfa
 	if others == nil {
 		others = map[string]interface{}{}
 	}
+	dto := &ErrorDto{Time: now, Type: errType, Detail: errDetail, Request: requests, Others: others}
 
-	dto := &ErrorDto{
-		Time:    now,
-		Type:    errType,
-		Detail:  errDetail,
-		Request: requests,
-		Others:  others,
-	}
-
+	// runtime
+	skip++ // -2 || -1 || 0..
 	if skip >= 0 {
 		var stacks []*xruntime.Stack
 		stacks, dto.Filename, dto.Funcname, dto.LineIndex, dto.Line = xruntime.GetStackWithInfo(skip)
@@ -66,7 +62,7 @@ func BuildErrorDto(err interface{}, requests []string, others map[string]interfa
 		for idx, stack := range stacks {
 			dto.Stacks[idx] = stack.String()
 		}
-		if print {
+		if doPrint {
 			l := log.New(os.Stderr, "", 0)
 			l.Println()
 			xruntime.PrintStacksRed(stacks)

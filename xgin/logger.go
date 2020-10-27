@@ -10,19 +10,22 @@ import (
 	"time"
 )
 
+// LoggerExtra represents the extra strings and fields.
 type LoggerExtra struct {
 	OtherString string
 	OtherFields map[string]interface{}
 }
 
+// WithLogrus logs every gin's requests and errors with logrus.Logger.
 func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, extra *LoggerExtra) {
 	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
-	ip := c.ClientIP()
 	code := c.Writer.Status()
 	length := math.Abs(float64(c.Writer.Size()))
 	lengthStr := xnumber.RenderByte(length)
+	latencyStr := latency.String()
+	ip := c.ClientIP()
 
 	fields := logrus.Fields{
 		"module":   "gin",
@@ -41,7 +44,7 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, extra *L
 	entry := logger.WithFields(fields)
 
 	if len(c.Errors) == 0 {
-		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latency.String(), ip, lengthStr, method, path)
+		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
 		if extra != nil && extra.OtherString != "" {
 			msg += fmt.Sprintf(" | %s", extra.OtherString)
 		}
@@ -59,15 +62,16 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, extra *L
 	}
 }
 
+// WithLogger logs every gin's requests and errors with log.Logger.
 func WithLogger(logger *log.Logger, start time.Time, c *gin.Context, other string) {
 	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
-	ip := c.ClientIP()
 	code := c.Writer.Status()
 	length := math.Abs(float64(c.Writer.Size()))
-	latencyStr := latency.String()
 	lengthStr := xnumber.RenderByte(length)
+	latencyStr := latency.String()
+	ip := c.ClientIP()
 
 	if len(c.Errors) == 0 {
 		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
