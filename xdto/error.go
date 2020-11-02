@@ -9,13 +9,14 @@ import (
 	"time"
 )
 
-// ErrorDto is an error response model for fiber and gin.
+// ErrorDto is a general error response model.
 type ErrorDto struct {
-	Time    string                 `json:"time"`    // current time
-	Type    string                 `json:"type"`    // error type
-	Detail  string                 `json:"detail"`  // error detail message
-	Request []string               `json:"request"` // request details
-	Others  map[string]interface{} `json:"others"`  // other message
+	Time    string   `json:"time"`    // current time
+	Type    string   `json:"type"`    // error type
+	Detail  string   `json:"detail"`  // error detail message
+	Request []string `json:"request"` // request details
+
+	Others map[string]interface{} `json:"others,omitempty"` // other message
 
 	Filename  string   `json:"filename,omitempty"`   // stack filename
 	Funcname  string   `json:"funcname,omitempty"`   // stack function name
@@ -25,13 +26,13 @@ type ErrorDto struct {
 }
 
 // BuildBasicErrorDto builds a basic dto (only include time, type, detail, request).
-func BuildBasicErrorDto(err interface{}, requests []string, others map[string]interface{}) *ErrorDto {
+func BuildBasicErrorDto(err interface{}, requests []string, otherKvs ...interface{}) *ErrorDto {
 	skip := -2
-	return BuildErrorDto(err, requests, others, skip, false)
+	return BuildErrorDto(err, requests, skip, false, otherKvs...)
 }
 
 // BuildErrorDto builds a complete dto (also include runtime parameters).
-func BuildErrorDto(err interface{}, requests []string, others map[string]interface{}, skip int, doPrint bool) *ErrorDto {
+func BuildErrorDto(err interface{}, requests []string, skip int, doPrint bool, otherKvs ...interface{}) *ErrorDto {
 	if err == nil {
 		return nil
 	}
@@ -48,10 +49,30 @@ func BuildErrorDto(err interface{}, requests []string, others map[string]interfa
 	if requests == nil {
 		requests = []string{}
 	}
-	if others == nil {
-		others = map[string]interface{}{}
+	dto := &ErrorDto{Time: now, Type: errType, Detail: errDetail, Request: requests}
+
+	// other
+	others := map[string]interface{}{}
+	if l := len(otherKvs); l > 0 {
+		for i := 0; i < l; i += 2 {
+			if i+1 >= l {
+				break
+			}
+			key := ""
+			keyItf := otherKvs[i]
+			value := otherKvs[i+1]
+			if keyItf == nil || value == nil {
+				continue
+			}
+			if k, ok := keyItf.(string); ok {
+				key = k
+			} else {
+				key = fmt.Sprintf("%v", keyItf)
+			}
+			others[key] = value
+		}
 	}
-	dto := &ErrorDto{Time: now, Type: errType, Detail: errDetail, Request: requests, Others: others}
+	dto.Others = others
 
 	// runtime
 	if skip >= 0 {

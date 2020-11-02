@@ -11,7 +11,7 @@ func TestErrorDto(t *testing.T) {
 	dto := BuildBasicErrorDto(nil, nil, nil)
 	xtesting.Nil(t, dto)
 
-	dto = BuildBasicErrorDto("test error", []string{""}, nil)
+	dto = BuildBasicErrorDto("test error", []string{""})
 	xtesting.Equal(t, dto.Type, "string")
 	xtesting.Equal(t, dto.Detail, "test error")
 	xtesting.Equal(t, dto.Request, []string{""})
@@ -22,17 +22,20 @@ func TestErrorDto(t *testing.T) {
 	xtesting.Equal(t, dto.Line, "")
 	xtesting.Equal(t, dto.Stacks, []string(nil))
 
-	dto = BuildBasicErrorDto(fmt.Errorf("test error"), nil, map[string]interface{}{"test": "error"})
+	dto = BuildBasicErrorDto(fmt.Errorf("test error"), nil, "test1", "error", "test2", 0, "xxx")
 	xtesting.Equal(t, dto.Type, "*errors.errorString")
 	xtesting.Equal(t, dto.Detail, "test error")
 	xtesting.Equal(t, dto.Request, []string{})
-	xtesting.Equal(t, dto.Others["test"], "error")
+	xtesting.Equal(t, len(dto.Others), 2)
+	xtesting.Equal(t, dto.Others["test1"], "error")
+	xtesting.Equal(t, dto.Others["test2"], 0)
 
-	dto = BuildErrorDto("", nil, nil, 0, false)
+	dto = BuildErrorDto("", nil, 0, false, 0)
 	xtesting.Equal(t, dto.Detail, "")
 	xtesting.Equal(t, dto.Funcname, `xdto.TestErrorDto`)
+	xtesting.Equal(t, dto.Others, map[string]interface{}{})
 	xtesting.True(t, strings.HasSuffix(dto.Filename, `xdto_test.go`))
-	xtesting.Equal(t, dto.Line, `dto = BuildErrorDto("", nil, nil, 0, false)`)
+	xtesting.Equal(t, dto.Line, `dto = BuildErrorDto("", nil, 0, false, 0)`)
 
-	_ = BuildErrorDto("", nil, nil, 0, true)
+	_ = BuildErrorDto("", nil, 0, true)
 }

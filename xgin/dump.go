@@ -27,18 +27,12 @@ func DumpRequest(c *gin.Context) []string {
 }
 
 // BuildBasicErrorDto builds xdto.ErrorDto from error and gin.Context.
-func BuildBasicErrorDto(err interface{}, c *gin.Context) *xdto.ErrorDto {
-	return xdto.BuildBasicErrorDto(err, DumpRequest(c), nil)
+func BuildBasicErrorDto(err interface{}, c *gin.Context, otherKvs ...interface{}) *xdto.ErrorDto {
+	return xdto.BuildBasicErrorDto(err, DumpRequest(c), otherKvs...)
 }
 
 // BuildErrorDto builds xdto.ErrorDto from error, gin.Context and runtime.
-func BuildErrorDto(err interface{}, c *gin.Context, skip int, print bool) *xdto.ErrorDto {
+func BuildErrorDto(err interface{}, c *gin.Context, skip int, doPrint bool, otherKvs ...interface{}) *xdto.ErrorDto {
 	skip++
-	return xdto.BuildErrorDto(err, DumpRequest(c), nil, skip, print)
-}
-
-// BuildFullErrorDto builds xdto.ErrorDto from error, gin.Context, runtime and others.
-func BuildFullErrorDto(err interface{}, c *gin.Context, other map[string]interface{}, skip int, print bool) *xdto.ErrorDto {
-	skip++
-	return xdto.BuildErrorDto(err, DumpRequest(c), other, skip, print)
+	return xdto.BuildErrorDto(err, DumpRequest(c), skip, doPrint, otherKvs...)
 }

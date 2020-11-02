@@ -27,8 +27,6 @@ func TestBuildErrorDto(t *testing.T) {
 			if err := recover(); err != nil {
 				e := BuildErrorDto(err, c, 2, true)
 				e.Others = map[string]interface{}{"a": "b"}
-
-				log.Println(BuildFullErrorDto(err, c, e.Others, 2, false))
 				_ = c.JSON(e)
 			}
 		}()
