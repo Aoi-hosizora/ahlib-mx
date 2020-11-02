@@ -2,6 +2,7 @@ package xgin
 
 import (
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib-web/internal/xwlogger"
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -10,14 +11,23 @@ import (
 	"time"
 )
 
-// LoggerExtra represents the extra strings and fields.
-type LoggerExtra struct {
-	OtherString string
-	OtherFields map[string]interface{}
+// WithExtraString represents LoggerOption for logging extra string.
+func WithExtraString(s string) xwlogger.LoggerOption {
+	return func(ex *xwlogger.LoggerExtra) {
+		ex.ExtraString = &s
+	}
 }
 
-// WithLogrus logs every gin's requests and errors with logrus.Logger.
-func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, extra *LoggerExtra) {
+// WithExtraFields represents LoggerOption for logging extra fields.
+func WithExtraFields(m map[string]interface{}) xwlogger.LoggerOption {
+	return func(ex *xwlogger.LoggerExtra) {
+		ex.ExtraFields = &m
+	}
+}
+
+// WithLogrus logs gin's request and error with logrus.Logger.
+func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, options ...xwlogger.LoggerOption) {
+	// information
 	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
@@ -27,6 +37,11 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, extra *L
 	latencyStr := latency.String()
 	ip := c.ClientIP()
 
+	// extra
+	extra := &xwlogger.LoggerExtra{}
+	extra.ApplyOptions(options)
+
+	// fields
 	fields := logrus.Fields{
 		"module":   "gin",
 		"method":   method,
@@ -36,19 +51,13 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, extra *L
 		"length":   length,
 		"clientIP": ip,
 	}
-	if extra != nil && extra.OtherFields != nil {
-		for k, v := range extra.OtherFields {
-			fields[k] = v
-		}
-	}
+	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
+	// logger
 	if len(c.Errors) == 0 {
 		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
-		if extra != nil && extra.OtherString != "" {
-			msg += fmt.Sprintf(" | %s", extra.OtherString)
-		}
-
+		extra.AddToString(&msg)
 		if code >= 500 {
 			entry.Error(msg)
 		} else if code >= 400 {
@@ -62,8 +71,9 @@ func WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, extra *L
 	}
 }
 
-// WithLogger logs every gin's requests and errors with log.Logger.
-func WithLogger(logger *log.Logger, start time.Time, c *gin.Context, other string) {
+// WithLogger logs gin's request and error with log.Logger.
+func WithLogger(logger *log.Logger, start time.Time, c *gin.Context, options ...xwlogger.LoggerOption) {
+	// information
 	latency := time.Now().Sub(start)
 	method := c.Request.Method
 	path := c.Request.URL.Path
@@ -73,11 +83,14 @@ func WithLogger(logger *log.Logger, start time.Time, c *gin.Context, other strin
 	latencyStr := latency.String()
 	ip := c.ClientIP()
 
+	// extra
+	extra := &xwlogger.LoggerExtra{}
+	extra.ApplyOptions(options)
+
+	// logger
 	if len(c.Errors) == 0 {
 		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", code, latencyStr, ip, lengthStr, method, path)
-		if other != "" {
-			msg += fmt.Sprintf(" | %s", other)
-		}
+		extra.AddToString(&msg)
 		logger.Println(msg)
 	} else {
 		msg := c.Errors.ByType(gin.ErrorTypePrivate).String()

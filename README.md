@@ -14,6 +14,7 @@
 + **xdto**
 + **xgin**
 + xfiber
++ **xrecovery**
 + **xtelebot**
 + xserverchan
 + **xvalidator**

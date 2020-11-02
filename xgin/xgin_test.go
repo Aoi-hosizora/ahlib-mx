@@ -51,11 +51,15 @@ func TestLogger(t *testing.T) {
 	app.Use(func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
-		WithLogger(logger, start, c, "12345")
-		WithLogrus(logrus, start, c, &LoggerExtra{
-			OtherString: "12345",
-			OtherFields: nil,
-		})
+
+		WithLogrus(logrus, start, c, nil)
+		WithLogrus(logrus, start, c, WithExtraString("abc"))
+		WithLogrus(logrus, start, c, WithExtraFields(map[string]interface{}{"a": "b"}))
+		WithLogrus(logrus, start, c, WithExtraString("abc"), WithExtraFields(map[string]interface{}{"a": "b"}))
+
+		WithLogger(logger, start, c, nil)
+		WithLogger(logger, start, c, WithExtraString("abc"))
+		WithLogger(logger, start, c, WithExtraFields(map[string]interface{}{"a": "b"}))
 	})
 
 	_ = app.Run(":1234")
