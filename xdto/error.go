@@ -2,6 +2,7 @@ package xdto
 
 import (
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib-web/internal/xmap"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"log"
 	"os"
@@ -52,27 +53,7 @@ func BuildErrorDto(err interface{}, requests []string, skip int, doPrint bool, o
 	dto := &ErrorDto{Time: now, Type: errType, Detail: errDetail, Request: requests}
 
 	// other
-	others := map[string]interface{}{}
-	if l := len(otherKvs); l > 0 {
-		for i := 0; i < l; i += 2 {
-			if i+1 >= l {
-				break
-			}
-			key := ""
-			keyItf := otherKvs[i]
-			value := otherKvs[i+1]
-			if keyItf == nil || value == nil {
-				continue
-			}
-			if k, ok := keyItf.(string); ok {
-				key = k
-			} else {
-				key = fmt.Sprintf("%v", keyItf)
-			}
-			others[key] = value
-		}
-	}
-	dto.Others = others
+	dto.Others = xmap.SliceToStringMap(otherKvs)
 
 	// runtime
 	if skip >= 0 {

@@ -15,6 +15,7 @@ func TestLogger(t *testing.T) {
 	WithLogrus(logrus, fmt.Errorf("test error"))
 	WithLogrus(logrus, fmt.Errorf("test error"), WithExtraString("123"))
 	WithLogrus(logrus, fmt.Errorf("test error"), WithExtraFields(map[string]interface{}{"a": "b"}))
+	WithLogrus(logrus, fmt.Errorf("test error"), WithExtraFieldsV("a", "b"))
 	WithLogrus(logrus, fmt.Errorf("test error"), WithExtraString("123"), WithExtraFields(map[string]interface{}{"a": "b"}))
 
 	WithLogger(logger, fmt.Errorf("test error"))

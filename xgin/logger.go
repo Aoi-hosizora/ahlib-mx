@@ -2,6 +2,7 @@ package xgin
 
 import (
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib-web/internal/xmap"
 	"github.com/Aoi-hosizora/ahlib-web/internal/xwlogger"
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,14 @@ func WithExtraString(s string) xwlogger.LoggerOption {
 // WithExtraFields represents LoggerOption for logging extra fields.
 func WithExtraFields(m map[string]interface{}) xwlogger.LoggerOption {
 	return func(ex *xwlogger.LoggerExtra) {
+		ex.ExtraFields = &m
+	}
+}
+
+// WithExtraFieldsV represents LoggerOption for logging extra fields (vararg).
+func WithExtraFieldsV(m ...interface{}) xwlogger.LoggerOption {
+	return func(ex *xwlogger.LoggerExtra) {
+		m := xmap.SliceToStringMap(m)
 		ex.ExtraFields = &m
 	}
 }

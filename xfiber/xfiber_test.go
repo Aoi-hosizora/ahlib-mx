@@ -56,6 +56,7 @@ func TestLogger(t *testing.T) {
 		WithLogrus(logrus, start, c, nil)
 		WithLogrus(logrus, start, c, WithExtraString("abc"))
 		WithLogrus(logrus, start, c, WithExtraFields(map[string]interface{}{"a": "b"}))
+		WithLogrus(logrus, start, c, WithExtraFieldsV("a", "b"))
 		WithLogrus(logrus, start, c, WithExtraString("abc"), WithExtraFields(map[string]interface{}{"a": "b"}))
 
 		WithLogger(logger, start, c, nil)
