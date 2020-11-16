@@ -18,3 +18,6 @@
 + `LengthRangeValidator(min, max interface{}) validator.Func`
 + `LengthOutOfRangeValidator(min, max interface{}) validator.Func`
 + `OneofValidator(ps ...interface{}) validator.Func`
++ `GetTranslator(validator *validator.Validate, loc locales.Translator, defaultTranslationFunc func(v *validator.Validate, trans ut.Translator) error) (ut.Translator, error)`
++ `DefaultRegisterTranslationsFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc`
++ `DefaultTranslationFunc() validator.TranslationFunc`

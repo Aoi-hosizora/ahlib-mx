@@ -10,21 +10,18 @@ import (
 )
 
 // Check if error is validator.ValidationErrors and with invoked by `required`.
-func ValidationRequiredError(err error) bool {
+func IsValidationRequiredError(err error) bool {
 	errs, ok := err.(validator.ValidationErrors)
 	if !ok {
-		// is not validation error
 		return false
 	}
 
 	for _, field := range errs {
 		if field.Tag() == "required" {
-			// invoked by `required`
 			return true
 		}
 	}
 
-	// is not invoked by `required`
 	return false
 }
 

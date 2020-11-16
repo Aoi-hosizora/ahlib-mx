@@ -2,7 +2,10 @@ package xvalidator
 
 import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
+	"github.com/go-playground/locales/en"
 	"github.com/go-playground/validator/v10"
+	en_translations "github.com/go-playground/validator/v10/translations/en"
+	"log"
 	"regexp"
 	"testing"
 	"time"
@@ -19,9 +22,9 @@ func TestRequired(t *testing.T) {
 	s1 := &s{}
 	s2 := &s{Int: 1}
 	s3 := &s{Int: 5}
-	xtesting.True(t, ValidationRequiredError(val.Struct(s1)))
-	xtesting.False(t, ValidationRequiredError(val.Struct(s2)))
-	xtesting.False(t, ValidationRequiredError(val.Struct(s3)))
+	xtesting.True(t, IsValidationRequiredError(val.Struct(s1)))
+	xtesting.False(t, IsValidationRequiredError(val.Struct(s2)))
+	xtesting.False(t, IsValidationRequiredError(val.Struct(s3)))
 }
 
 type s struct {
@@ -364,4 +367,19 @@ func show(err interface{}) interface{} {
 	// l := sp.String()
 	// log.Println(l[:len(l)-2])
 	return err
+}
+
+func TestGetTranslator(t *testing.T) {
+	v := validator.New()
+	translator, err := GetTranslator(v, en.New(), en_translations.RegisterDefaultTranslations)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	type S struct {
+		A string `validate:"required"`
+	}
+	err = v.Struct(&S{})
+	xtesting.NotNil(t, err)
+	xtesting.Equal(t, err.(validator.ValidationErrors).Translate(translator)["S.A"], "A is a required field")
 }

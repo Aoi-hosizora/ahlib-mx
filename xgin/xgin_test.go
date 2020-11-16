@@ -1,8 +1,12 @@
 package xgin
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/locales/en"
+	"github.com/go-playground/validator/v10"
+	en_translations "github.com/go-playground/validator/v10/translations/en"
 	logrus2 "github.com/sirupsen/logrus"
 	"log"
 	"os"
@@ -68,24 +72,44 @@ func TestLogger(t *testing.T) {
 
 func TestBinding(t *testing.T) {
 	app := gin.New()
-	_ = EnableRegexpBinding()
-	_ = EnableRFC3339DateBinding()
-	_ = EnableRFC3339DateTimeBinding()
+	enTrans, err := GetTranslator(en.New(), en_translations.RegisterDefaultTranslations)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println(EnableRegexpBindingWithTranslator(enTrans))
+	log.Println(EnableRFC3339DateBindingWithTranslator(enTrans))
+	log.Println(EnableRFC3339DateTimeBindingWithTranslator(enTrans))
 
 	type st struct {
 		A string `binding:"regexp=^[abc]+$"`
 		B string `binding:"date"`
 		C string `binding:"datetime"`
+		D string `binding:"gte=2"`
 	}
 
 	app.GET("", func(ctx *gin.Context) {
+		log.Println(ctx.Request.RequestURI)
 		st := &st{}
 		err := ctx.ShouldBindQuery(st)
 		if err != nil {
-			ctx.String(200, err.Error())
+			translations := err.(validator.ValidationErrors).Translate(enTrans)
+			ctx.JSON(200, &gin.H{
+				"msg":    err.Error(),
+				"detail": translations,
+			})
 		}
 	})
 
+	// http://localhost:1234/?A=a&B=2020-11-16&C=2020-11-16T21:44:03Z&D=555
+	/*
+		"detail": {
+			"st.A": "A must matches regexp /^[abc]+$/",
+			"st.B": "B must be an RFC3339 Date",
+			"st.C": "C must be an RFC3339 DateTime",
+			"st.D": "D must be at least 2 characters in length"
+		},
+	*/
 	_ = app.Run(":1234")
 }
 
@@ -117,4 +141,78 @@ func TestRoute(t *testing.T) {
 	// TODO curl -X POST localhost:1234/v1/a/b/c/dd 405 POST not allowed
 
 	_ = app.Run(":1234")
+}
+
+func TestRequiredAndOmitempty(t *testing.T) {
+	unmarshal := func(obj interface{}, j string) interface{} {
+		err := json.Unmarshal([]byte(j), obj)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		return obj
+	}
+	type S1 struct {
+		A uint64 `binding:"required"`
+		B string `binding:"required"`
+	}
+	type S2 struct {
+		A *uint64 `binding:"required"`
+		B *string `binding:"required"`
+	}
+	type S3 struct {
+		A uint64 `binding:"omitempty"`
+		B string `binding:"omitempty"`
+	}
+	type S4 struct {
+		A *uint64 `binding:"omitempty"`
+		B *string `binding:"omitempty"`
+	}
+	type S5 struct {
+		A uint64 `binding:"required,omitempty"`
+		B string `binding:"required,omitempty"`
+	}
+	type S6 struct {
+		A *uint64 `binding:"required,omitempty"`
+		B *string `binding:"required,omitempty"`
+	}
+
+	v := validator.New()
+	v.SetTagName("binding")
+
+	// string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S1{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S1{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S1{}, `{"A": 0, "B": ""}`)) == nil)      // false
+	log.Println(v.Struct(unmarshal(&S1{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// *string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S2{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S2{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S2{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S2{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// string omitempty
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S3{}, `{}`)) == nil)                     // true
+	log.Println(v.Struct(unmarshal(&S3{}, `{"A": null, "B": null}`)) == nil) // true
+	log.Println(v.Struct(unmarshal(&S3{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S3{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// *string omitempty => string omitempty
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S4{}, `{}`)) == nil)                     // true
+	log.Println(v.Struct(unmarshal(&S4{}, `{"A": null, "B": null}`)) == nil) // true
+	log.Println(v.Struct(unmarshal(&S4{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S4{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// string required,omitempty => string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S5{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S5{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S5{}, `{"A": 0, "B": ""}`)) == nil)      // false
+	log.Println(v.Struct(unmarshal(&S5{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// *string required,omitempty => *string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S6{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S6{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 1, "B": " "}`)) == nil)     // true
 }

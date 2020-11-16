@@ -5,42 +5,70 @@ import (
 	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
 	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/locales"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 )
 
-// Add user defined binding.
+func GetValidate() (*validator.Validate, error) {
+	v, ok := binding.Validator.Engine().(*validator.Validate)
+	if !ok {
+		return nil, fmt.Errorf("gin's validator is not github.com/go-playground/validator/v10")
+	}
+	return v, nil
+}
+
+func GetTranslator(loc locales.Translator, defaultTranslationFunc func(v *validator.Validate, trans ut.Translator) error) (ut.Translator, error) {
+	v, err := GetValidate()
+	if err != nil {
+		return nil, err
+	}
+	return xvalidator.GetTranslator(v, loc, defaultTranslationFunc)
+}
+
+// AddBinding adds user defined binding.
 // Reference see https://godoc.org/github.com/go-playground/validator#hdr-Baked_In_Validators_and_Tags.
 //
 // Binding tips:
 //
-// 1. If you want to allow empty value but not allow nil, then use `required` with pointer type of field. (most common)
+// 1. `required` + non-pointer (Common)
+// 	A uint64 `binding:"required"` // cannot be nil and 0
+// 	B string `binding:"required"` // cannot be nil and ""
 //
-// Example:
-// 	Gender   *uint8  `binding:"required,o_gender"`  // can be 0, but not nil
-// 	Profile  *string `binding:"required,l_profile"` // can be "", but not nul
+// 2. `required` + pointer (Common)
+// 	A *uint64 `binding:"required"` // cannot be nil, can be 0
+// 	B *string `binding:"required"` // cannot be nil, can be ""
 //
-// 2. If you don't require the field to appear, but allow empty, then use `omitempty` without pointer type of field. (most common)
+// 3. `omitempty` + non-pointer (Common)
+// 	A uint64 `binding:"omitempty"` // can be nil and 0
+// 	B string `binding:"omitempty"` // can be nil and ""
 //
-// Example:
-// 	Email    string `binding:"omitempty,l_email,email"` // can be nil, but also be ""
-// 	Username string `binding:"omitempty,l_name,r_name"` // can be nil, but also be ""
+// 4. `omitempty` + pointer => same as 3
+// 	A *uint64 `binding:"omitempty"` // can be nil and 0
+// 	B *string `binding:"omitempty"` // can be nil and ""
 //
-// 3. If you have a `required` (ignore `omitempty`) without pointer, the when you used a zero value, it will throw error.
+// 5. `required` + `omitempty` + non-pointer => same as 1
+// 	A uint64 `binding:"required,omitempty"` // cannot be nil and 0
+// 	B string `binding:"required,omitempty"` // cannot be nil and ""
 //
-// Example:
-// 	Gender   uint8  `binding:"required,o_gender"`            // could not be 0, and nil
-// 	Profile  string `binding:"required,omitempty,l_profile"` // could not be "", and nil
-//
-// 4. Just no `required` and `omitempty`, the field will depend on other remain tag.
-// Example:
-// 	Email    string `binding:"l_email,email"` // can not be nil, and ""
-// 	Username string `binding:""`              // can be nil, but also be ""
+// 6. `required` + `omitempty` + pointer => same as 2
+// 	A *uint64 `binding:"required,omitempty"` // cannot be nil, can be 0
+// 	B *string `binding:"required,omitempty"` // cannot be nil, can be ""
 func AddBinding(tag string, fn validator.Func) error {
-	val, ok := binding.Validator.Engine().(*validator.Validate)
-	if !ok {
-		return fmt.Errorf("gin's validator is not validator.Validate")
+	v, err := GetValidate()
+	if err != nil {
+		return nil
 	}
-	return val.RegisterValidation(tag, fn)
+	return v.RegisterValidation(tag, fn)
+}
+
+// AddTranslator adds user defined validation translator to ut.Translator.
+func AddTranslator(translator ut.Translator, tag, message string, override bool, transFunc validator.TranslationFunc) error {
+	v, err := GetValidate()
+	if err != nil {
+		return nil
+	}
+	return v.RegisterTranslation(tag, translator, xvalidator.DefaultRegisterTranslationsFunc(tag, message, override), transFunc)
 }
 
 // Enable regexp binding: `regexp`.
@@ -48,12 +76,39 @@ func EnableRegexpBinding() error {
 	return AddBinding("regexp", xvalidator.DefaultRegexpValidator())
 }
 
-// Enable rfc3339 date binding: `date`.
+// Enable regexp binding with translator: `regexp`.
+func EnableRegexpBindingWithTranslator(translator ut.Translator) error {
+	err := EnableRegexpBinding()
+	if err != nil {
+		return err
+	}
+	return AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", false, xvalidator.DefaultTranslationWithPramFunc())
+}
+
+// Enable rfc3339 date binding with translator: `date`.
 func EnableRFC3339DateBinding() error {
 	return AddBinding("date", xvalidator.DateTimeValidator(xtime.RFC3339Date))
+}
+
+// Enable rfc3339 date binding: `date`.
+func EnableRFC3339DateBindingWithTranslator(translator ut.Translator) error {
+	err := EnableRFC3339DateBinding()
+	if err != nil {
+		return err
+	}
+	return AddTranslator(translator, "date", "{0} must be an RFC3339 Date", false, xvalidator.DefaultTranslationFunc())
 }
 
 // Enable rfc3339 regexp binding: `datetime`.
 func EnableRFC3339DateTimeBinding() error {
 	return AddBinding("datetime", xvalidator.DateTimeValidator(xtime.RFC3339DateTime))
+}
+
+// Enable rfc3339 regexp binding with translator: `datetime`.
+func EnableRFC3339DateTimeBindingWithTranslator(translator ut.Translator) error {
+	err := EnableRFC3339DateTimeBinding()
+	if err != nil {
+		return err
+	}
+	return AddTranslator(translator, "datetime", "{0} must be an RFC3339 DateTime", true, xvalidator.DefaultTranslationFunc())
 }
