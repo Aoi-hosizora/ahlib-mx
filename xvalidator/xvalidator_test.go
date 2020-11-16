@@ -4,8 +4,6 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/go-playground/locales/en"
 	"github.com/go-playground/validator/v10"
-	en_translations "github.com/go-playground/validator/v10/translations/en"
-	"log"
 	"regexp"
 	"testing"
 	"time"
@@ -371,15 +369,32 @@ func show(err interface{}) interface{} {
 
 func TestGetTranslator(t *testing.T) {
 	v := validator.New()
-	translator, err := GetTranslator(v, en.New(), en_translations.RegisterDefaultTranslations)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	type S struct {
 		A string `validate:"required"`
 	}
-	err = v.Struct(&S{})
+
+	translator, _ := GetTranslator(v, en.New(), EnValidatorTranslation())
+	err := v.Struct(&S{})
 	xtesting.NotNil(t, err)
 	xtesting.Equal(t, err.(validator.ValidationErrors).Translate(translator)["S.A"], "A is a required field")
+
+	translator, _ = GetTranslator(v, en.New(), FrValidatorTranslation())
+	err = v.Struct(&S{})
+	xtesting.NotNil(t, err)
+	xtesting.Equal(t, err.(validator.ValidationErrors).Translate(translator)["S.A"], "A est un champ obligatoire")
+
+	translator, _ = GetTranslator(v, en.New(), JaValidatorTranslation())
+	err = v.Struct(&S{})
+	xtesting.NotNil(t, err)
+	xtesting.Equal(t, err.(validator.ValidationErrors).Translate(translator)["S.A"], "Aは必須フィールドです")
+
+	translator, _ = GetTranslator(v, en.New(), ZhValidatorTranslation())
+	err = v.Struct(&S{})
+	xtesting.NotNil(t, err)
+	xtesting.Equal(t, err.(validator.ValidationErrors).Translate(translator)["S.A"], "A为必填字段")
+
+	translator, _ = GetTranslator(v, en.New(), ZhTwValidatorTranslation())
+	err = v.Struct(&S{})
+	xtesting.NotNil(t, err)
+	xtesting.Equal(t, err.(validator.ValidationErrors).Translate(translator)["S.A"], "A為必填欄位")
 }

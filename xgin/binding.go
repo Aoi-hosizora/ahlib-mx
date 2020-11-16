@@ -18,12 +18,12 @@ func GetValidate() (*validator.Validate, error) {
 	return v, nil
 }
 
-func GetTranslator(loc locales.Translator, defaultTranslationFunc func(v *validator.Validate, trans ut.Translator) error) (ut.Translator, error) {
+func GetTranslator(loc locales.Translator, translationFunc xvalidator.DefaultTranslationFunc) (ut.Translator, error) {
 	v, err := GetValidate()
 	if err != nil {
 		return nil, err
 	}
-	return xvalidator.GetTranslator(v, loc, defaultTranslationFunc)
+	return xvalidator.GetTranslator(v, loc, translationFunc)
 }
 
 // AddBinding adds user defined binding.
@@ -63,12 +63,17 @@ func AddBinding(tag string, fn validator.Func) error {
 }
 
 // AddTranslator adds user defined validation translator to ut.Translator.
-func AddTranslator(translator ut.Translator, tag, message string, override bool, transFunc validator.TranslationFunc) error {
+func AddTranslator(translator ut.Translator, tag, message string, override, withParam bool) error {
 	v, err := GetValidate()
 	if err != nil {
 		return nil
 	}
-	return v.RegisterTranslation(tag, translator, xvalidator.DefaultRegisterTranslationsFunc(tag, message, override), transFunc)
+
+	transFunc := xvalidator.ValidatorTranslationFunc()
+	if withParam {
+		transFunc = xvalidator.ValidatorTranslationParamFunc()
+	}
+	return v.RegisterTranslation(tag, translator, xvalidator.ValidatorRegisterTranslationsFunc(tag, message, override), transFunc)
 }
 
 // Enable regexp binding: `regexp`.
@@ -76,27 +81,37 @@ func EnableRegexpBinding() error {
 	return AddBinding("regexp", xvalidator.DefaultRegexpValidator())
 }
 
-// Enable regexp binding with translator: `regexp`.
+// Enable regexp binding translator: `regexp`.
+func EnableRegexpBindingTranslator(translator ut.Translator) error {
+	return AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", true, true)
+}
+
+// Enable regexp binding and translator: `regexp`.
 func EnableRegexpBindingWithTranslator(translator ut.Translator) error {
 	err := EnableRegexpBinding()
 	if err != nil {
 		return err
 	}
-	return AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", false, xvalidator.DefaultTranslationWithPramFunc())
+	return EnableRegexpBindingTranslator(translator)
 }
 
-// Enable rfc3339 date binding with translator: `date`.
+// Enable rfc3339 date binding: `date`.
 func EnableRFC3339DateBinding() error {
 	return AddBinding("date", xvalidator.DateTimeValidator(xtime.RFC3339Date))
 }
 
-// Enable rfc3339 date binding: `date`.
+// Enable rfc3339 date translator: `date`.
+func EnableRFC3339DateBindingTranslator(translator ut.Translator) error {
+	return AddTranslator(translator, "date", "{0} must be an RFC3339 date", true, false)
+}
+
+// Enable rfc3339 date binding and translator: `date`.
 func EnableRFC3339DateBindingWithTranslator(translator ut.Translator) error {
 	err := EnableRFC3339DateBinding()
 	if err != nil {
 		return err
 	}
-	return AddTranslator(translator, "date", "{0} must be an RFC3339 Date", false, xvalidator.DefaultTranslationFunc())
+	return EnableRFC3339DateBindingTranslator(translator)
 }
 
 // Enable rfc3339 regexp binding: `datetime`.
@@ -104,11 +119,16 @@ func EnableRFC3339DateTimeBinding() error {
 	return AddBinding("datetime", xvalidator.DateTimeValidator(xtime.RFC3339DateTime))
 }
 
-// Enable rfc3339 regexp binding with translator: `datetime`.
+// Enable rfc3339 regexp translator: `datetime`.
+func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error {
+	return AddTranslator(translator, "datetime", "{0} must be an RFC3339 datetime", true, false)
+}
+
+// Enable rfc3339 regexp binding and translator: `datetime`.
 func EnableRFC3339DateTimeBindingWithTranslator(translator ut.Translator) error {
 	err := EnableRFC3339DateTimeBinding()
 	if err != nil {
 		return err
 	}
-	return AddTranslator(translator, "datetime", "{0} must be an RFC3339 DateTime", true, xvalidator.DefaultTranslationFunc())
+	return EnableRFC3339DateTimeBindingTranslator(translator)
 }
