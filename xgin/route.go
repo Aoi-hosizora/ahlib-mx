@@ -31,7 +31,7 @@ type route struct {
 	handlers     []gin.HandlerFunc
 }
 
-// newRoute create an instance of route, panic if relativePath is empty.
+// newRoute create an instance of route
 func newRoute(method string, relativePath string, handlers ...gin.HandlerFunc) *route {
 	return &route{method: method, relativePath: relativePath, handlers: handlers}
 }
@@ -218,15 +218,28 @@ func (a *AppRoute) Do() {
 			// print log
 			if gin.Mode() == gin.DebugMode {
 				for idx, route := range routes {
-					pre := "├─"
-					if idx == len(routes)-1 {
-						pre = "└─"
-					}
-
 					funcname := runtime.FuncForPC(reflect.ValueOf(route.handlers[0]).Pointer()).Name()
-					fmt.Printf("[XGIN]   %2s %-6s _/%-23s --> %s (--> /%s)\n", pre, method, route.relativePath, funcname, fakePath)
+					debugPrintRoute(idx, len(routes), method, route.relativePath, funcname, fakePath)
 				}
 			}
+		}
+	}
+}
+
+// DebugPrintRouteFunc is a replacement route logger.
+var DebugPrintRouteFunc func(idx, routeLen int, method, relativePath, funcname, fakePath string)
+
+// debugPrintRoute logs AppRoute.Do result.
+func debugPrintRoute(idx, routeLen int, method, relativePath, funcname, fakePath string) {
+	if gin.Mode() == gin.DebugMode {
+		if DebugPrintRouteFunc == nil {
+			pre := "├─"
+			if idx == routeLen-1 {
+				pre = "└─"
+			}
+			fmt.Printf("[XGIN]   %2s %-6s _/%-23s --> %s (--> /%s)\n", pre, method, relativePath, funcname, fakePath)
+		} else {
+			DebugPrintRouteFunc(idx, routeLen, method, relativePath, funcname, fakePath)
 		}
 	}
 }
