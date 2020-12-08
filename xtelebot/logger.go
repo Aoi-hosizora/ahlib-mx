@@ -49,7 +49,7 @@ func (t *TelebotLogrus) Receive(endpoint interface{}, handle interface{}) {
 		"endpoint":  ep,
 		"chatID":    m.Chat.ID,
 		"chatName":  m.Chat.Username,
-	}).Info(fmt.Sprintf("[Telebot] %4d | -> | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username))
+	}).Info(fmt.Sprintf("[Telebot] %4d | -> | %14v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username))
 }
 
 // Reply logs the reply events.
