@@ -1,7 +1,7 @@
 package xgin
 
 import (
-	"fmt"
+	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/gin-gonic/gin"
 	logrus2 "github.com/sirupsen/logrus"
 	"log"
@@ -13,30 +13,9 @@ import (
 func TestDumpRequest(t *testing.T) {
 	app := gin.New()
 	app.GET("a", func(c *gin.Context) {
-		for _, s := range DumpRequest(c) {
+		for _, s := range DumpRequest(c, nil) {
 			log.Println(s)
 		}
-	})
-	_ = app.Run(":1234")
-}
-
-func TestBuildErrorDto(t *testing.T) {
-	app := gin.New()
-	app.Use(func(c *gin.Context) {
-		defer func() {
-			if err := recover(); err != nil {
-				e := BuildErrorDto(err, c, 2, true)
-				e.Others = map[string]interface{}{"a": "b"}
-				c.JSON(200, e)
-			}
-		}()
-		c.Next()
-	})
-	app.GET("panic", func(c *gin.Context) {
-		panic("test panic")
-	})
-	app.GET("error", func(c *gin.Context) {
-		c.JSON(200, BuildBasicErrorDto(fmt.Errorf("test error"), c))
 	})
 	_ = app.Run(":1234")
 }
@@ -132,9 +111,14 @@ func TestRoute(t *testing.T) {
 	ar.POST("a", func(c *gin.Context) { log.Println(11, c.FullPath()) }, func(c *gin.Context) { log.Println(11, c.FullPath()) })
 	ar.POST("a/b", func(c *gin.Context) { log.Println(12, c.FullPath()) })
 	ar.POST("a/b/:c", func(c *gin.Context) { log.Println(13, c.FullPath(), "|", c.Param("c")) })
-	ar.Do()
+	ar.Register()
 
-	// TODO curl -X POST localhost:1234/v1/a/b/c/dd 405 POST not allowed
+	xtesting.Panic(t, func() {
+		g := app.Group("v2/_test")
+		ar := NewAppRoute(app, g)
+		ar.GET("", func(c *gin.Context) {})
+		ar.Register()
+	})
 
 	_ = app.Run(":1234")
 }

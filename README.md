@@ -1,6 +1,6 @@
 # ahlib-web
 
-+ A personal golang library for personal web development, split from [Aoi-hosizora/ahlib](https://github.com/Aoi-hosizora/ahlib).
++ A personal golang library for personal web development, including gin + bot, split from [Aoi-hosizora/ahlib](https://github.com/Aoi-hosizora/ahlib).
 
 ### Related libraries
 
@@ -11,7 +11,6 @@
 
 ### Packages
 
-+ xdto (waiting for refactoring)
 + xgin (waiting for refactoring)
 + xrecovery (waiting for refactoring)
 + xserverchan (waiting for refactoring)
