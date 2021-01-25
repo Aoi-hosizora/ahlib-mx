@@ -2,6 +2,7 @@ package xserverchan
 
 import (
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib/xstring"
 	"github.com/Aoi-hosizora/go-serverchan"
 	"github.com/sirupsen/logrus"
 )
@@ -23,11 +24,11 @@ func (s *ServerchanLogrus) Log(sckey string, title string, code int32, err error
 		return
 	}
 
-	sckey = serverchan.Mask(sckey)
-	title = serverchan.Mask(title)
+	sckey = xstring.DefaultMaskToken(sckey)
+	title = xstring.DefaultMaskToken(title)
 
 	if err != nil {
-		if !serverchan.IsResponseError(err) {
+		if err == serverchan.ErrNotSuccess {
 			s.logger.Error(fmt.Sprintf("[Serverchan] Send to %s error: %v", sckey, err))
 		} else {
 			s.logger.WithFields(map[string]interface{}{

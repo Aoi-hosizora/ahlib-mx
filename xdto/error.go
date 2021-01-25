@@ -3,6 +3,7 @@ package xdto
 import (
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib-web/internal/xmap"
+	"github.com/Aoi-hosizora/ahlib/xcolor"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"log"
 	"os"
@@ -58,8 +59,8 @@ func BuildErrorDto(err interface{}, requests []string, skip int, doPrint bool, o
 	// runtime
 	if skip >= 0 {
 		skip++
-		var stacks []*xruntime.Stack
-		stacks, dto.Filename, dto.Funcname, dto.LineIndex, dto.Line = xruntime.GetStackWithInfo(skip)
+		var stacks xruntime.TraceStack
+		stacks, dto.Filename, dto.Funcname, dto.LineIndex, dto.Line = xruntime.RuntimeTraceStackWithInfo(skip)
 		dto.Stacks = make([]string, len(stacks))
 		for idx, stack := range stacks {
 			dto.Stacks[idx] = stack.String()
@@ -67,7 +68,7 @@ func BuildErrorDto(err interface{}, requests []string, skip int, doPrint bool, o
 		if doPrint {
 			l := log.New(os.Stderr, "", 0)
 			l.Println()
-			xruntime.PrintStacksRed(stacks)
+			l.Println(xcolor.Red.Sprint(stacks.String()))
 			l.Println()
 		}
 	}

@@ -1,5 +1,7 @@
 package xgin
 
+/*
+
 import (
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
@@ -132,3 +134,5 @@ func EnableRFC3339DateTimeBindingWithTranslator(translator ut.Translator) error 
 	}
 	return EnableRFC3339DateTimeBindingTranslator(translator)
 }
+
+*/
