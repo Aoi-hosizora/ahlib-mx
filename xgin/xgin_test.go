@@ -1,9 +1,12 @@
 package xgin
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/gin-gonic/gin"
-	logrus2 "github.com/sirupsen/logrus"
+	"github.com/go-playground/validator/v10"
+	"github.com/sirupsen/logrus"
 	"log"
 	"os"
 	"testing"
@@ -23,26 +26,45 @@ func TestDumpRequest(t *testing.T) {
 func TestLogger(t *testing.T) {
 	app := gin.New()
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-	logrus := logrus2.New()
+	l1 := logrus.New()
+	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
+	l2 := log.New(os.Stderr, "", log.LstdFlags)
 
 	PprofWrap(app)
 	app.Use(func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
+		end := time.Now()
 
-		WithLogrus(logrus, start, c, nil)
-		WithLogrus(logrus, start, c, WithExtraString("abc"))
-		WithLogrus(logrus, start, c, WithExtraFields(map[string]interface{}{"a": "b"}))
-		WithLogrus(logrus, start, c, WithExtraFieldsV("a", "b"))
-		WithLogrus(logrus, start, c, WithExtraString("abc"), WithExtraFields(map[string]interface{}{"a": "b"}))
+		LogToLogrus(l1, c, start, end)
+		LogToLogrus(l1, c, start, end, WithExtraText("abc"))
+		LogToLogrus(l1, c, start, end, WithExtraFields(map[string]interface{}{"a": "b"}))
+		LogToLogrus(l1, c, start, end, WithExtraFieldsV("a", "b"))
+		LogToLogrus(l1, c, start, end, WithExtraText("abc"), WithExtraFieldsV("a", "b"))
 
-		WithLogger(logger, start, c, nil)
-		WithLogger(logger, start, c, WithExtraString("abc"))
-		WithLogger(logger, start, c, WithExtraFields(map[string]interface{}{"a": "b"}))
+		LogToLogger(l2, c, start, end)
+		LogToLogger(l2, c, start, end, WithExtraText("abc"))
+		LogToLogger(l2, c, start, end, WithExtraFields(map[string]interface{}{"a": "b"}))
+	})
+	app.GET("", func(c *gin.Context) {
+		c.JSON(200, &gin.H{"ok": true})
 	})
 
 	_ = app.Run(":1234")
+}
+
+func TestGinLogger(t *testing.T) {
+	app := gin.New()
+	gin.ForceConsoleColor()
+	app.Use(gin.Logger())
+	app.GET("", func(c *gin.Context) {})
+	app.GET("a", func(c *gin.Context) {})
+	app.GET("a/:id", func(c *gin.Context) {})
+	_ = app.Run(":1234")
+	/*
+		[GIN] 2021/01/26 - 12:03:53 | 200 |       956.9µs |             ::1 | GET      "/a/b"
+		[GIN] 2021/01/26 - 12:04:28 | 404 |            0s |             ::1 | POST     "/a"
+	*/
 }
 
 // func TestBinding(t *testing.T) {
@@ -88,14 +110,14 @@ func TestLogger(t *testing.T) {
 // 	_ = app.Run(":1234")
 // }
 
-func TestRoute(t *testing.T) {
+func TestAppRouter(t *testing.T) {
 	app := gin.New()
 	app.HandleMethodNotAllowed = true
 	app.NoRoute(func(c *gin.Context) { c.String(200, "404 %s not found", c.Request.URL.String()) })
 	app.NoMethod(func(c *gin.Context) { c.String(200, "405 %s not allowed", c.Request.Method) })
 
 	g := app.Group("v1")
-	ar := NewAppRoute(app, g)
+	ar := NewAppRouter(app, g)
 
 	ar.GET("", func(c *gin.Context) { log.Println(0, c.FullPath()) })
 	ar.GET("a", func(c *gin.Context) { log.Println(1, c.FullPath()) })
@@ -115,7 +137,7 @@ func TestRoute(t *testing.T) {
 
 	xtesting.Panic(t, func() {
 		g := app.Group("v2/_test")
-		ar := NewAppRoute(app, g)
+		ar := NewAppRouter(app, g)
 		ar.GET("", func(c *gin.Context) {})
 		ar.Register()
 	})
@@ -124,75 +146,75 @@ func TestRoute(t *testing.T) {
 }
 
 func TestRequiredAndOmitempty(t *testing.T) {
-	// unmarshal := func(obj interface{}, j string) interface{} {
-	// 	err := json.Unmarshal([]byte(j), obj)
-	// 	if err != nil {
-	// 		log.Fatalln(err)
-	// 	}
-	// 	return obj
-	// }
-	// type S1 struct {
-	// 	A uint64 `binding:"required"`
-	// 	B string `binding:"required"`
-	// }
-	// type S2 struct {
-	// 	A *uint64 `binding:"required"`
-	// 	B *string `binding:"required"`
-	// }
-	// type S3 struct {
-	// 	A uint64 `binding:"omitempty"`
-	// 	B string `binding:"omitempty"`
-	// }
-	// type S4 struct {
-	// 	A *uint64 `binding:"omitempty"`
-	// 	B *string `binding:"omitempty"`
-	// }
-	// type S5 struct {
-	// 	A uint64 `binding:"required,omitempty"`
-	// 	B string `binding:"required,omitempty"`
-	// }
-	// type S6 struct {
-	// 	A *uint64 `binding:"required,omitempty"`
-	// 	B *string `binding:"required,omitempty"`
-	// }
-	//
-	// v := validator.New()
-	// v.SetTagName("binding")
-	//
-	// // string required
-	// fmt.Println()
-	// log.Println(v.Struct(unmarshal(&S1{}, `{}`)) == nil)                     // false
-	// log.Println(v.Struct(unmarshal(&S1{}, `{"A": null, "B": null}`)) == nil) // false
-	// log.Println(v.Struct(unmarshal(&S1{}, `{"A": 0, "B": ""}`)) == nil)      // false
-	// log.Println(v.Struct(unmarshal(&S1{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// // *string required
-	// fmt.Println()
-	// log.Println(v.Struct(unmarshal(&S2{}, `{}`)) == nil)                     // false
-	// log.Println(v.Struct(unmarshal(&S2{}, `{"A": null, "B": null}`)) == nil) // false
-	// log.Println(v.Struct(unmarshal(&S2{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	// log.Println(v.Struct(unmarshal(&S2{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// // string omitempty
-	// fmt.Println()
-	// log.Println(v.Struct(unmarshal(&S3{}, `{}`)) == nil)                     // true
-	// log.Println(v.Struct(unmarshal(&S3{}, `{"A": null, "B": null}`)) == nil) // true
-	// log.Println(v.Struct(unmarshal(&S3{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	// log.Println(v.Struct(unmarshal(&S3{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// // *string omitempty => string omitempty
-	// fmt.Println()
-	// log.Println(v.Struct(unmarshal(&S4{}, `{}`)) == nil)                     // true
-	// log.Println(v.Struct(unmarshal(&S4{}, `{"A": null, "B": null}`)) == nil) // true
-	// log.Println(v.Struct(unmarshal(&S4{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	// log.Println(v.Struct(unmarshal(&S4{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// // string required,omitempty => string required
-	// fmt.Println()
-	// log.Println(v.Struct(unmarshal(&S5{}, `{}`)) == nil)                     // false
-	// log.Println(v.Struct(unmarshal(&S5{}, `{"A": null, "B": null}`)) == nil) // false
-	// log.Println(v.Struct(unmarshal(&S5{}, `{"A": 0, "B": ""}`)) == nil)      // false
-	// log.Println(v.Struct(unmarshal(&S5{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// // *string required,omitempty => *string required
-	// fmt.Println()
-	// log.Println(v.Struct(unmarshal(&S6{}, `{}`)) == nil)                     // false
-	// log.Println(v.Struct(unmarshal(&S6{}, `{"A": null, "B": null}`)) == nil) // false
-	// log.Println(v.Struct(unmarshal(&S6{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	// log.Println(v.Struct(unmarshal(&S6{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	unmarshal := func(obj interface{}, j string) interface{} {
+		err := json.Unmarshal([]byte(j), obj)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		return obj
+	}
+	type S1 struct {
+		A uint64 `binding:"required"`
+		B string `binding:"required"`
+	}
+	type S2 struct {
+		A *uint64 `binding:"required"`
+		B *string `binding:"required"`
+	}
+	type S3 struct {
+		A uint64 `binding:"omitempty"`
+		B string `binding:"omitempty"`
+	}
+	type S4 struct {
+		A *uint64 `binding:"omitempty"`
+		B *string `binding:"omitempty"`
+	}
+	type S5 struct {
+		A uint64 `binding:"required,omitempty"`
+		B string `binding:"required,omitempty"`
+	}
+	type S6 struct {
+		A *uint64 `binding:"required,omitempty"`
+		B *string `binding:"required,omitempty"`
+	}
+
+	v := validator.New()
+	v.SetTagName("binding")
+
+	// string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S1{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S1{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S1{}, `{"A": 0, "B": ""}`)) == nil)      // false
+	log.Println(v.Struct(unmarshal(&S1{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// *string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S2{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S2{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S2{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S2{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// string omitempty
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S3{}, `{}`)) == nil)                     // true
+	log.Println(v.Struct(unmarshal(&S3{}, `{"A": null, "B": null}`)) == nil) // true
+	log.Println(v.Struct(unmarshal(&S3{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S3{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// *string omitempty => string omitempty
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S4{}, `{}`)) == nil)                     // true
+	log.Println(v.Struct(unmarshal(&S4{}, `{"A": null, "B": null}`)) == nil) // true
+	log.Println(v.Struct(unmarshal(&S4{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S4{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// string required,omitempty => string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S5{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S5{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S5{}, `{"A": 0, "B": ""}`)) == nil)      // false
+	log.Println(v.Struct(unmarshal(&S5{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	// *string required,omitempty => *string required
+	fmt.Println()
+	log.Println(v.Struct(unmarshal(&S6{}, `{}`)) == nil)                     // false
+	log.Println(v.Struct(unmarshal(&S6{}, `{"A": null, "B": null}`)) == nil) // false
+	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 0, "B": ""}`)) == nil)      // true
+	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 1, "B": " "}`)) == nil)     // true
 }

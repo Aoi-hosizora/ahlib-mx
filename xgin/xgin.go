@@ -2,8 +2,12 @@ package xgin
 
 import (
 	"errors"
+	"github.com/Aoi-hosizora/ahlib-more/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/locales"
+	"github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"net/http/httputil"
 	"net/http/pprof"
@@ -57,18 +61,18 @@ func GetValidatorEngine() (*validator.Validate, error) {
 	return val, nil
 }
 
-// // GetValidatorTranslator applies and returns ut.Translator for validator.Validate using given locales.Translator and xvalidator.TranslationRegisterHandler.
-// // Also see xvalidator.ApplyValidatorTranslator.
-// //
-// // Example:
-// // 	translator, err = xgin.GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-// func GetValidatorTranslator(locTrans locales.Translator, registerFn xvalidator.TranslationRegisterHandler) (ut.Translator, error) {
-// 	val, err := GetValidatorEngine()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return xvalidator.ApplyValidatorTranslator(val, locTrans, registerFn) // create translator and do register
-// }
+// GetValidatorTranslator applies and returns ut.Translator for validator.Validate using given locales.Translator and xvalidator.TranslationRegisterHandler.
+// Also see xvalidator.ApplyValidatorTranslator.
+//
+// Example:
+// 	translator, err = xgin.GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+func GetValidatorTranslator(locTrans locales.Translator, registerFn xvalidator.TranslationRegisterHandler) (ut.Translator, error) {
+	val, err := GetValidatorEngine()
+	if err != nil {
+		return nil, err
+	}
+	return xvalidator.ApplyValidatorTranslator(val, locTrans, registerFn) // create translator and do register
+}
 
 // AddBinding adds user defined binding to gin's validator engine. You can use your custom validator.Func or xvalidator's functions
 // such as xvalidator.RegexpValidator and xvalidator.DateTimeValidator.
@@ -109,51 +113,51 @@ func AddBinding(tag string, fn validator.Func) error {
 	return v.RegisterValidation(tag, fn)
 }
 
-// // AddTranslator adds user defined validation translator to ut.Translator, which only supports validator.Validate. Also see
-// // xvalidator.AddToTranslatorFunc and xvalidator.DefaultTranslationFunc.
-// //
-// // Example:
-// // 	err = xgin.AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", true)
-// // 	err = xgin.AddTranslator(translator, "email", "{0} must be an email", true)
-// func AddTranslator(translator ut.Translator, tag, message string, override bool) error {
-// 	v, err := GetValidatorEngine()
-// 	if err != nil {
-// 		return nil
-// 	}
+// AddTranslator adds user defined validation translator to ut.Translator, which only supports validator.Validate. Also see
+// xvalidator.AddToTranslatorFunc and xvalidator.DefaultTranslateFunc.
 //
-// 	fn := xvalidator.AddToTranslatorFunc(tag, message, override)
-// 	return v.RegisterTranslation(tag, translator, fn, xvalidator.DefaultTranslationFunc())
-// }
+// Example:
+// 	err = xgin.AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", true)
+// 	err = xgin.AddTranslator(translator, "email", "{0} must be an email", true)
+func AddTranslator(translator ut.Translator, tag, message string, override bool) error {
+	v, err := GetValidatorEngine()
+	if err != nil {
+		return nil
+	}
 
-// // EnableRegexpBinding enables parametered regexp validator to `regexp`, see xvalidator.ParamRegexpValidator.
-// func EnableRegexpBinding() error {
-// 	return AddBinding("regexp", xvalidator.ParamRegexpValidator())
-// }
-//
-// // EnableRegexpBindingTranslator enables parametered regexp validator's translator to given ut.Translator.
-// func EnableRegexpBindingTranslator(translator ut.Translator) error {
-// 	return AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", true)
-// }
-//
-// // EnableRFC3339DateBinding enables rfc3339 date validator to `date`, see xvalidator.DateTimeValidator.
-// func EnableRFC3339DateBinding() error {
-// 	return AddBinding("date", xvalidator.DateTimeValidator(xtime.RFC3339Date))
-// }
-//
-// // EnableRFC3339DateBindingTranslator enables rfc3339 date validator's translator to given ut.Translator.
-// func EnableRFC3339DateBindingTranslator(translator ut.Translator) error {
-// 	return AddTranslator(translator, "date", "{0} must be an RFC3339 date", true)
-// }
-//
-// // EnableRFC3339DateTimeBinding enables rfc3339 datetime validator to `datetime`, see xvalidator.DateTimeValidator.
-// func EnableRFC3339DateTimeBinding() error {
-// 	return AddBinding("datetime", xvalidator.DateTimeValidator(xtime.RFC3339DateTime))
-// }
-//
-// // EnableRFC3339DateTimeBindingTranslator enables rfc3339 datetime validator's translator to given ut.Translator.
-// func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error {
-// 	return AddTranslator(translator, "datetime", "{0} must be an RFC3339 datetime", true)
-// }
+	fn := xvalidator.AddToTranslatorFunc(tag, message, override)
+	return v.RegisterTranslation(tag, translator, fn, xvalidator.DefaultTranslateFunc())
+}
+
+// EnableRegexpBinding enables parametered regexp validator to `regexp`, see xvalidator.ParamRegexpValidator.
+func EnableRegexpBinding() error {
+	return AddBinding("regexp", xvalidator.ParamRegexpValidator())
+}
+
+// EnableRegexpBindingTranslator enables parametered regexp validator's translator to given ut.Translator.
+func EnableRegexpBindingTranslator(translator ut.Translator) error {
+	return AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", true)
+}
+
+// EnableRFC3339DateBinding enables rfc3339 date validator to `date`, see xvalidator.DateTimeValidator.
+func EnableRFC3339DateBinding() error {
+	return AddBinding("date", xvalidator.DateTimeValidator(xtime.RFC3339Date))
+}
+
+// EnableRFC3339DateBindingTranslator enables rfc3339 date validator's translator to given ut.Translator.
+func EnableRFC3339DateBindingTranslator(translator ut.Translator) error {
+	return AddTranslator(translator, "date", "{0} must be an RFC3339 date", true)
+}
+
+// EnableRFC3339DateTimeBinding enables rfc3339 datetime validator to `datetime`, see xvalidator.DateTimeValidator.
+func EnableRFC3339DateTimeBinding() error {
+	return AddBinding("datetime", xvalidator.DateTimeValidator(xtime.RFC3339DateTime))
+}
+
+// EnableRFC3339DateTimeBindingTranslator enables rfc3339 datetime validator's translator to given ut.Translator.
+func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error {
+	return AddTranslator(translator, "datetime", "{0} must be an RFC3339 datetime", true)
+}
 
 // =====
 // pprof

@@ -1,10 +1,11 @@
 ### Editor ###
 .vscode/
-.idea/
 .ionide/
 .history/
+.idea/
 
 ### Project ###
 logs/
 build/
 coverage.txt
+*.log

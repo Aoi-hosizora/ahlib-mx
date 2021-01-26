@@ -4,6 +4,10 @@ import (
 	"sync"
 )
 
+// ======================
+// UserStatus & UsersData
+// ======================
+
 // UserStatus represents a user's status, can be used in fsm.
 type UserStatus uint64
 

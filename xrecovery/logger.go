@@ -2,36 +2,28 @@ package xrecovery
 
 import (
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/internal/xmap"
-	"github.com/Aoi-hosizora/ahlib-web/internal/xwlogger"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
 	"github.com/sirupsen/logrus"
 	"log"
 )
 
 // WithExtraString represents LoggerOption for logging extra string.
-func WithExtraString(s string) xwlogger.LoggerOption {
-	return func(ex *xwlogger.LoggerExtra) {
-		ex.ExtraString = &s
-	}
+func WithExtraString(s string) logop.LoggerOption {
+	return logop.WithExtraText(s)
 }
 
 // WithExtraFields represents LoggerOption for logging extra fields.
-func WithExtraFields(m map[string]interface{}) xwlogger.LoggerOption {
-	return func(ex *xwlogger.LoggerExtra) {
-		ex.ExtraFields = &m
-	}
+func WithExtraFields(m map[string]interface{}) logop.LoggerOption {
+	return logop.WithExtraFields(m)
 }
 
 // WithExtraFieldsV represents LoggerOption for logging extra fields (vararg).
-func WithExtraFieldsV(m ...interface{}) xwlogger.LoggerOption {
-	return func(ex *xwlogger.LoggerExtra) {
-		m := xmap.SliceToStringMap(m)
-		ex.ExtraFields = &m
-	}
+func WithExtraFieldsV(m ...interface{}) logop.LoggerOption {
+	return logop.WithExtraFieldsV(m...)
 }
 
 // WithLogrus logs a panic message with logrus.Logger.
-func WithLogrus(logger *logrus.Logger, err interface{}, options ...xwlogger.LoggerOption) {
+func WithLogrus(logger *logrus.Logger, err interface{}, options ...logop.LoggerOption) {
 	// information
 	errMessage := ""
 	if e, ok := err.(error); ok {
@@ -41,7 +33,7 @@ func WithLogrus(logger *logrus.Logger, err interface{}, options ...xwlogger.Logg
 	}
 
 	// extra
-	extra := &xwlogger.LoggerExtra{}
+	extra := &logop.LoggerExtraOptions{}
 	extra.ApplyOptions(options)
 
 	// fields
@@ -54,12 +46,12 @@ func WithLogrus(logger *logrus.Logger, err interface{}, options ...xwlogger.Logg
 
 	// logger
 	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMessage)
-	extra.AddToString(&msg)
+	extra.AddToMessage(&msg)
 	entry.Error(msg)
 }
 
 // WithLogger logs a panic message with log.Logger.
-func WithLogger(logger *log.Logger, err interface{}, options ...xwlogger.LoggerOption) {
+func WithLogger(logger *log.Logger, err interface{}, options ...logop.LoggerOption) {
 	// information
 	errMessage := ""
 	if e, ok := err.(error); ok {
@@ -69,11 +61,11 @@ func WithLogger(logger *log.Logger, err interface{}, options ...xwlogger.LoggerO
 	}
 
 	// extra
-	extra := &xwlogger.LoggerExtra{}
+	extra := &logop.LoggerExtraOptions{}
 	extra.ApplyOptions(options)
 
 	// logger
 	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMessage)
-	extra.AddToString(&msg)
+	extra.AddToMessage(&msg)
 	logger.Println(msg)
 }

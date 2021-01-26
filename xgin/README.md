@@ -1,37 +1,53 @@
 # xgin
 
+## Dependencies
+
++ github.com/gin-gonic/gin
++ github.com/sirupsen/logrus
+
+## Documents
+
+### Types
+
++ `type AppRouter struct`
+
+### Variables
+
++ `var DebugAppRouterPrintFunc func(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string)`
+
+### Constants
+
++ None
+
 ### Functions
 
-+ `DumpRequest(c *gin.Context) []string`
-+ `BuildBasicErrorDto(err interface{}, c *gin.Context, otherKvs ...interface{}) *xdto.ErrorDto`
-+ `BuildErrorDto(err interface{}, c *gin.Context, skip int, doPrint bool, otherKvs ...interface{}) *xdto.ErrorDto`
-+ `WithExtraString(s string) LoggerOption`
-+ `WithExtraFields(m map[string]interface{}) LoggerOption`
-+ `WithExtraFieldsV(m ...interface{}) LoggerOption`
-+ `WithLogrus(logger *logrus.Logger, start time.Time, c *gin.Context, options ...LoggerOption)`
-+ `WithLogger(logger *log.Logger, start time.Time, c *gin.Context, options ...LoggerOption)`
-+ `PprofWrap(router *gin.Engine)`
-+ `func GetValidate() (*validator.Validate, error)`
-+ `GetTranslator(loc locales.Translator, translationFunc xvalidator.DefaultTranslationFunc) (ut.Translator, error)`
-+ `AddBinding(tag string, fn validator.Func) error`
-+ `AddTranslator(translator ut.Translator, tag, message string, override, withParam bool) error`
-+ `EnableRegexpBinding() error`
-+ `EnableRegexpBindingTranslator(translator ut.Translator) error`
-+ `EnableRegexpBindingWithTranslator(translator ut.Translator) error`
-+ `EnableRFC3339DateBinding() error`
-+ `EnableRFC3339DateBindingTranslator(translator ut.Translator) error`
-+ `EnableRFC3339DateBindingWithTranslator(translator ut.Translator) error`
-+ `EnableRFC3339DateTimeBinding() error`
-+ `EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
-+ `EnableRFC3339DateTimeBindingWithTranslator(translator ut.Translator) error`
-+ `type AppRoute struct {}`
-+ `NewAppRoute(engine *gin.Engine, router gin.IRouter) *AppRoute`
-+ `(a *AppRoute) GET(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) POST(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) DELETE(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) PATCH(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) PUT(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) OPTIONS(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) HEAD(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) Any(relativePath string, handlers ...gin.HandlerFunc)`
-+ `(a *AppRoute) Do()`
++ `func DumpRequest(c *gin.Context, ignoreHeaders []string) []string`
++ `func GetValidatorEngine() (*validator.Validate, error)`
++ `func GetValidatorTranslator(locTrans locales.Translator, registerFn xvalidator.TranslationRegisterHandler) (ut.Translator, error)`
++ `func AddBinding(tag string, fn validator.Func) error`
++ `func AddTranslator(translator ut.Translator, tag, message string, override bool) error`
++ `func EnableRegexpBinding() error`
++ `func EnableRegexpBindingTranslator(translator ut.Translator) error`
++ `func EnableRFC3339DateBinding() error`
++ `func EnableRFC3339DateBindingTranslator(translator ut.Translator) error`
++ `func EnableRFC3339DateTimeBinding() error`
++ `func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
++ `func PprofWrap(router *gin.Engine)`
++ `func NewAppRouter(engine *gin.Engine, router gin.IRouter) *AppRouter`
++ `func WithExtraText(text string) logop.LoggerOption`
++ `func WithExtraFields(fields map[string]interface{}) logop.LoggerOption`
++ `func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption`
++ `func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption)`
++ `func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption)`
+
+### Methods
+
++ `func (a *AppRouter) GET(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) POST(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) DELETE(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) PATCH(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) PUT(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) OPTIONS(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) HEAD(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) Any(relativePath string, handlers ...gin.HandlerFunc)`
++ `func (a *AppRouter) Register()`
