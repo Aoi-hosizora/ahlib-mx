@@ -4,32 +4,31 @@ import (
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
 	"github.com/sirupsen/logrus"
-	"log"
 )
 
-// WithExtraString represents LoggerOption for logging extra string.
-func WithExtraString(s string) logop.LoggerOption {
-	return logop.WithExtraText(s)
+// WithExtraText creates an option for logger to log with extra text.
+func WithExtraText(text string) logop.LoggerOption {
+	return logop.WithExtraText(text)
 }
 
-// WithExtraFields represents LoggerOption for logging extra fields.
-func WithExtraFields(m map[string]interface{}) logop.LoggerOption {
-	return logop.WithExtraFields(m)
+// WithExtraText creates an option for logger to log with extra fields.
+func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
+	return logop.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV represents LoggerOption for logging extra fields (vararg).
-func WithExtraFieldsV(m ...interface{}) logop.LoggerOption {
-	return logop.WithExtraFieldsV(m...)
+// WithExtraText creates an option for logger to log with extra fields in vararg.
+func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
+	return logop.WithExtraFieldsV(fields...)
 }
 
-// WithLogrus logs a panic message with logrus.Logger.
-func WithLogrus(logger *logrus.Logger, err interface{}, options ...logop.LoggerOption) {
+// LogToLogrus logs a panic message to logrus.Logger.
+func LogToLogrus(logger *logrus.Logger, err interface{}, options ...logop.LoggerOption) {
 	// information
-	errMessage := ""
+	var errorMessage string
 	if e, ok := err.(error); ok {
-		errMessage = e.Error()
+		errorMessage = e.Error()
 	} else {
-		errMessage = fmt.Sprintf("%v", err)
+		errorMessage = fmt.Sprintf("%v", err)
 	}
 
 	// extra
@@ -38,26 +37,28 @@ func WithLogrus(logger *logrus.Logger, err interface{}, options ...logop.LoggerO
 
 	// fields
 	fields := logrus.Fields{
-		"module": "panic",
-		"error":  errMessage,
+		"module": "recovery",
+		"error":  errorMessage,
 	}
 	extra.AddToFields(fields)
-	entry := logger.WithFields(fields)
 
 	// logger
-	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMessage)
+	entry := logger.WithFields(fields)
+	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errorMessage)
 	extra.AddToMessage(&msg)
+	// [Recovery] panic recovered: test error
+	//                            |----------|
 	entry.Error(msg)
 }
 
-// WithLogger logs a panic message with log.Logger.
-func WithLogger(logger *log.Logger, err interface{}, options ...logop.LoggerOption) {
+// LogToLogger logs a panic message to logrus.StdLogger such as log.Logger.
+func LogToLogger(logger logrus.StdLogger, err interface{}, options ...logop.LoggerOption) {
 	// information
-	errMessage := ""
+	var errorMessage string
 	if e, ok := err.(error); ok {
-		errMessage = e.Error()
+		errorMessage = e.Error()
 	} else {
-		errMessage = fmt.Sprintf("%v", err)
+		errorMessage = fmt.Sprintf("%v", err)
 	}
 
 	// extra
@@ -65,7 +66,7 @@ func WithLogger(logger *log.Logger, err interface{}, options ...logop.LoggerOpti
 	extra.ApplyOptions(options)
 
 	// logger
-	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMessage)
+	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errorMessage)
 	extra.AddToMessage(&msg)
 	logger.Println(msg)
 }

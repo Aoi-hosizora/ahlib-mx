@@ -2,12 +2,12 @@ package xgin
 
 import (
 	"errors"
-	"github.com/Aoi-hosizora/ahlib-more/xvalidator"
-	"github.com/Aoi-hosizora/ahlib/xtime"
+	// "github.com/Aoi-hosizora/ahlib-more/xvalidator"
+	// "github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/locales"
-	"github.com/go-playground/universal-translator"
+	// "github.com/go-playground/locales"
+	// "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"net/http/httputil"
 	"net/http/pprof"
@@ -60,6 +60,8 @@ func GetValidatorEngine() (*validator.Validate, error) {
 	}
 	return val, nil
 }
+
+/*
 
 // GetValidatorTranslator applies and returns ut.Translator for validator.Validate using given locales.Translator and xvalidator.TranslationRegisterHandler.
 // Also see xvalidator.ApplyValidatorTranslator.
@@ -158,6 +160,8 @@ func EnableRFC3339DateTimeBinding() error {
 func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error {
 	return AddTranslator(translator, "datetime", "{0} must be an RFC3339 datetime", true)
 }
+
+*/
 
 // =====
 // pprof

@@ -16,15 +16,15 @@ import (
 //
 // Note:
 //
-// 1. gin supports:
+// 1. gin.Engine supports:
 // 	router.GET(":a", fn)
 // 	router.GET(":a/:b", fn)
 //
-// 2. gin does not support:
+// 2. gin.Engine does not support:
 // 	router.GET("a", fn)
 // 	router.GET(":a/:b", fn) // conflict, panic
 //
-// 3. AppRouter supports:
+// 3. xgin.AppRouter supports:
 // 	ap.GET("a", fn)
 // 	ap.GET(":a", fn)
 // 	ap.GET(":a/b", fn)
@@ -48,7 +48,7 @@ type AppRouter struct {
 // 	ap.GET(":a", fn)    // /v1/:a
 // 	ap.GET(":a/b", fn)  // /v1/:a/b
 // 	ap.GET(":a/:b", fn) // /v1/:a/:b
-// 	ap.Register()       // register the handlers to gin
+// 	ap.Register()
 func NewAppRouter(engine *gin.Engine, router gin.IRouter) *AppRouter {
 	noRoute := xreflect.GetUnexportedField(reflect.ValueOf(engine).Elem().FieldByName("noRoute")).(gin.HandlersChain)
 	noMethod := xreflect.GetUnexportedField(reflect.ValueOf(engine).Elem().FieldByName("noMethod")).(gin.HandlersChain)
@@ -78,8 +78,8 @@ type routerConfig struct {
 }
 
 const (
-	panicNoHandler        = "xgin: a router must have at least one handler"
-	panicUseUnderlineName = "xgin: use router's layer name started with '_' in gin.IRouter"
+	panicNoHandler        = "xgin: router must have at least one handler"
+	panicUseUnderlineName = "xgin: router's layer name starts with '_'"
 )
 
 // newRouterConfig creates an instance of routerConfig, panics if handlers is empty.
@@ -143,10 +143,10 @@ func (a *AppRouter) Any(relativePath string, handlers ...gin.HandlerFunc) {
 }
 
 // addToGroups is used to add handlers to AppRouter.groups, panics when given IRouter has a `_` started layer name.
-func (a *AppRouter) addToGroups(method string, relativePath string, handlers []gin.HandlerFunc) {
+func (a *AppRouter) addToGroups(method, relativePath string, handlers []gin.HandlerFunc) {
 	routerGroup := a.router.(*gin.RouterGroup) // IRouter must be a gin.RouterGroup
 	basePath := xreflect.GetUnexportedField(reflect.ValueOf(routerGroup).Elem().FieldByName("basePath")).(string)
-	for _, layerName := range strings.Split(basePath, "/") { // maybe incomplete path
+	for _, layerName := range strings.Split(basePath, "/") { // maybe incomplete basePath
 		if strings.HasPrefix(layerName, "_") { // check `_xxx` layer name first
 			panic(panicUseUnderlineName)
 		}
@@ -180,6 +180,8 @@ var DebugAppRouterPrintFunc = func(index, count int, method, relativePath, handl
 		pre = "└─"
 	}
 	fmt.Printf("[XGIN]   %2s %-6s ~/%-23s --> %s (%d handlers) ==> ~/%s\n", pre, method, relativePath, handlerFuncname, handlersCount, layerFakePath)
+	// [GIN-debug] POST   /v1/:_1/:_2/:_3           --> github.com/Aoi-hosizora/ahlib-web/xgin.buildAppRouterHandler.func1 (1 handlers)
+	// [XGIN]   └─ POST   ~/a/b/:c                  --> github.com/Aoi-hosizora/ahlib-web/xgin.TestAppRouter.func17 (1 handlers) ==> ~/:_1/:_2/:_3
 }
 
 // ====

@@ -7,37 +7,37 @@ import (
 )
 
 const (
-	None UserStatus = iota
+	None ChatStatus = iota
 	Status1
 	Status2
 )
 
 func TestUsersData(t *testing.T) {
-	ud := NewUsersData(None)
+	bd := NewBotData(WithInitialChatStatus(None))
 
 	wg := sync.WaitGroup{}
 	wg.Add(20)
 
 	for i := int64(0); i < 20; i++ {
-		go func(ud *UsersData, i int64) {
-			xtesting.Equal(t, ud.GetStatus(i), None)
-			ud.SetStatus(i, Status1)
-			xtesting.Equal(t, ud.GetStatus(i), Status1)
-			ud.SetStatus(i, Status2)
-			xtesting.Equal(t, ud.GetStatus(i), Status2)
-			ud.ResetStatus(i)
-			xtesting.Equal(t, ud.GetStatus(i), None)
+		go func(bd *BotData, i int64) {
+			xtesting.Equal(t, bd.GetStatus(i), None)
+			bd.SetStatus(i, Status1)
+			xtesting.Equal(t, bd.GetStatus(i), Status1)
+			bd.SetStatus(i, Status2)
+			xtesting.Equal(t, bd.GetStatus(i), Status2)
+			bd.ResetStatus(i)
+			xtesting.Equal(t, bd.GetStatus(i), None)
 
-			xtesting.Equal(t, ud.GetCache(i, ""), nil)
-			ud.SetCache(i, "", 0)
-			xtesting.Equal(t, ud.GetCache(i, ""), 0)
-			ud.SetCache(i, "", "")
-			xtesting.Equal(t, ud.GetCache(i, ""), "")
-			ud.DeleteCache(i, "")
-			xtesting.Equal(t, ud.GetCache(i, ""), nil)
+			xtesting.Equal(t, bd.GetCacheOr(i, "", nil), nil)
+			bd.SetCache(i, "", 0)
+			xtesting.Equal(t, bd.GetCacheOr(i, "", nil), 0)
+			bd.SetCache(i, "", "")
+			xtesting.Equal(t, bd.GetCacheOr(i, "", nil), "")
+			bd.RemoveCache(i, "")
+			xtesting.Equal(t, bd.GetCacheOr(i, "", nil), nil)
 
 			wg.Done()
-		}(ud, i)
+		}(bd, i)
 	}
 
 	wg.Wait()

@@ -5,7 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// LoggerOption represents an option for logop.LoggerExtraOptions, created by WithXXX functions.
+// LoggerOption represents an option for LoggerExtraOptions, created by WithXXX functions.
 type LoggerOption func(*LoggerExtraOptions)
 
 // WithExtraText creates an logop.LoggerOption for logging extra string.
