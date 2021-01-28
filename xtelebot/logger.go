@@ -7,62 +7,53 @@ import (
 	"log"
 )
 
-// TelebotLogrus is a logrus logger used by telebot.
-type TelebotLogrus struct {
-	logger  *logrus.Logger
-	LogMode bool
-}
-
-// NewTelebotLogrus creates a new TelebotLogrus with logrus.Logger.
-func NewTelebotLogrus(logger *logrus.Logger, logMode bool) *TelebotLogrus {
-	return &TelebotLogrus{logger: logger, LogMode: logMode}
-}
-
-// Receive logs the receive events.
+// LogReceiveToLogrus logs the receive events.
 //
 // Support endpoint type:
 // 	string, InlineButton, ReplyButton
 // Support handler type:
 // 	Message, Callback
-func (t *TelebotLogrus) Receive(endpoint interface{}, handle interface{}) {
-	if !t.LogMode {
-		return
-	}
-
+func LogReceiveToLogrus(logger *logrus.Logger, endpoint, handler interface{}) {
+	// information
 	ep, ok := renderEndpoint(endpoint)
 	if !ok {
 		return
 	}
-
 	var m *telebot.Message
-	if msg, ok := handle.(*telebot.Message); ok {
+	if msg, ok := handler.(*telebot.Message); ok {
 		m = msg
-	} else if cb, ok := handle.(*telebot.Callback); ok {
+	} else if cb, ok := handler.(*telebot.Callback); ok {
 		m = cb.Message
 	} else {
 		return // unsupported handle
 	}
 
-	t.logger.WithFields(map[string]interface{}{
-		"module":    "telebot",
-		"messageID": m.ID,
-		"endpoint":  ep,
-		"chatID":    m.Chat.ID,
-		"chatName":  m.Chat.Username,
-	}).Info(fmt.Sprintf("[Telebot] %4d | -> | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username))
+	// fields
+	fields := logrus.Fields{
+		"module":     "telebot",
+		"message_id": m.ID,
+		"endpoint":   ep,
+		"chat_id":    m.Chat.ID,
+		"chat_name":  m.Chat.Username,
+	}
+	entry := logger.WithFields(fields)
+
+	// logger
+	msg := fmt.Sprintf("[Telebot] %4d | -> | %17v | (%d %s)", m.ID, ep, m.Chat.ID, m.Chat.Username)
+	entry.Info(msg)
 }
 
-// Reply logs the reply events.
-func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error) {
-	if !t.LogMode || m == nil {
+// LogReplyToLogrus logs the reply events.
+func LogReplyToLogrus(logger *logrus.Logger, m *telebot.Message, to *telebot.Message, err error) {
+	if m == nil {
 		return
 	}
 
 	if err != nil {
-		t.logger.Error(fmt.Sprintf("[Telebot] Reply to %d %s error: %v", m.Chat.ID, m.Chat.Username, err))
+		logger.Error(fmt.Sprintf("[Telebot] Reply to %d %s error: %v", m.Chat.ID, m.Chat.Username, err))
 	} else if to != nil {
 		du := to.Time().Sub(m.Time()).String()
-		t.logger.WithFields(map[string]interface{}{
+		logger.WithFields(map[string]interface{}{
 			"module":        "telebot",
 			"fromMessageId": m.ID,
 			"toMessageId":   to.ID,
@@ -73,16 +64,16 @@ func (t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error
 	}
 }
 
-// Send logs the send events.
-func (t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error) {
-	if !t.LogMode || c == nil {
+// LogSendToLogrus logs the send events.
+func LogSendToLogrus(logger *logrus.Logger, c *telebot.Chat, to *telebot.Message, err error) {
+	if c == nil {
 		return
 	}
 
 	if err != nil {
-		t.logger.Error(fmt.Sprintf("[Telebot] Send to %d %s error: %v", c.ID, c.Username, err))
+		logger.Error(fmt.Sprintf("[Telebot] Send to %d %s error: %v", c.ID, c.Username, err))
 	} else if to != nil {
-		t.logger.WithFields(map[string]interface{}{
+		logger.WithFields(map[string]interface{}{
 			"module":      "telebot",
 			"toMessageId": to.ID,
 			"chatID":      to.Chat.ID,

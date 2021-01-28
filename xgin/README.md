@@ -2,6 +2,7 @@
 
 ## Dependencies
 
++ github.com/Aoi-hosizora/ahlib
 + github.com/gin-gonic/gin
 + github.com/sirupsen/logrus
 
@@ -10,10 +11,12 @@
 ### Types
 
 + `type AppRouter struct`
++ `type LoggerParam struct`
 
 ### Variables
 
-+ `var DebugAppRouterPrintFunc func(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string)`
++ `var PrintAppRouterRegisterFunc func(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string)`
++ `var FormatGinLoggerFunc func(param *LoggerParam) string`
 
 ### Constants
 

@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// ChatStatus represents the status of a user, can be used in fsm to state transfer.
+// ChatStatus represents the status of a chat, can be used in fsm.
 type ChatStatus uint64
 
 // botDataConfig represents some configs for BotData, set by BotDataOption.
@@ -15,8 +15,8 @@ type botDataConfig struct {
 // BotDataOption represents an option for BotData, created by WithXXX functions.
 type BotDataOption func(*botDataConfig)
 
-// WithInitialChatStatus creates an option for initial chat's status.
-func WithInitialChatStatus(initialStatus ChatStatus) BotDataOption {
+// WithInitialStatus creates an option for initial chat's status.
+func WithInitialStatus(initialStatus ChatStatus) BotDataOption {
 	return func(b *botDataConfig) {
 		b.initialStatus = initialStatus
 	}
@@ -87,8 +87,8 @@ func (b *BotData) GetStatusOr(chatID int64, fallbackStatus ChatStatus) ChatStatu
 func (b *BotData) GetStatusOrInit(chatID int64) ChatStatus {
 	s, ok := b.GetStatus(chatID)
 	if !ok {
-		b.mus.Lock()
 		s = b.config.initialStatus
+		b.mus.Lock()
 		b.statuses[chatID] = s
 		b.mus.Unlock()
 	}
@@ -153,8 +153,8 @@ func (b *BotData) GetCacheOr(chatID int64, key string, fallbackValue interface{}
 // GetChatCaches returns a chat's all caches data, returns false if no cache is set.
 func (b *BotData) GetChatCaches(chatID int64) (map[string]interface{}, bool) {
 	b.muc.RLock()
+	defer b.muc.RUnlock()
 	m, ok := b.caches[chatID]
-	b.muc.RUnlock()
 	if !ok {
 		return nil, false
 	}

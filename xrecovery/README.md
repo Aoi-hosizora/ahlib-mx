@@ -2,17 +2,18 @@
 
 ## Dependencies
 
++ github.com/Aoi-hosizora/ahlib
 + github.com/sirupsen/logrus
 
 ## Documents
 
 ### Types
 
-+ None
++ `type LoggerParam struct`
 
 ### Variables
 
-+ None
++ `var FormatLoggerFunc func(param *LoggerParam) string`
 
 ### Constants
 

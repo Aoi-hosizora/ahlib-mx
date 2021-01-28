@@ -172,16 +172,26 @@ func (a *AppRouter) Register() {
 	}
 }
 
-// DebugAppRouterPrintFunc is a logger function (do log after gin's each handler's log) for the same layer's handlers, it uses the given
-// method, relativePath, handlerFuncname, handlersCount, layerFakePath, and the current router's index and total layer's count.
-var DebugAppRouterPrintFunc = func(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string) {
+// PrintAppRouterRegisterFunc is a logger function for AppRouter.Register, logs after gin's [GIN-debug] logger.
+var PrintAppRouterRegisterFunc func(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string)
+
+// printAppRouteRegister represents the inner logger function for AppRouter.Register, used in coreAppRouterRegister.
+// Logs like:
+// 	[GIN-debug] POST   /v1/:_1/:_2/:_3           --> github.com/Aoi-hosizora/ahlib-web/xgin.buildAppRouterHandler.func1 (1 handlers)
+// 	[XGIN]   └─ POST   ~/a/b/:c                  --> github.com/Aoi-hosizora/ahlib-web/xgin.TestAppRouter.func17 (1 handlers) ==> ~/:_1/:_2/:_3
+// 	        |--|------|-------------------------|
+// 	         2    6
+func printAppRouteRegister(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string) {
+	if PrintAppRouterRegisterFunc != nil {
+		PrintAppRouterRegisterFunc(index, count, method, relativePath, handlerFuncname, handlersCount, layerFakePath)
+		return
+	}
+
 	pre := "├─"
 	if index == count-1 {
 		pre = "└─"
 	}
 	fmt.Printf("[XGIN]   %2s %-6s ~/%-23s --> %s (%d handlers) ==> ~/%s\n", pre, method, relativePath, handlerFuncname, handlersCount, layerFakePath)
-	// [GIN-debug] POST   /v1/:_1/:_2/:_3           --> github.com/Aoi-hosizora/ahlib-web/xgin.buildAppRouterHandler.func1 (1 handlers)
-	// [XGIN]   └─ POST   ~/a/b/:c                  --> github.com/Aoi-hosizora/ahlib-web/xgin.TestAppRouter.func17 (1 handlers) ==> ~/:_1/:_2/:_3
 }
 
 // ====
@@ -229,10 +239,10 @@ func coreAppRouterRegister(ar *AppRouter, method string, routers []*routerConfig
 		ar.router.Handle(method, layerFakePath, targetHandler)
 
 		// do log after gin's log
-		if gin.Mode() == gin.DebugMode && DebugAppRouterPrintFunc != nil {
+		if gin.Mode() == gin.DebugMode {
 			for i, router := range layerRouters { // same layer's routers
 				funcname := runtime.FuncForPC(reflect.ValueOf(router.handlers[0]).Pointer()).Name()
-				DebugAppRouterPrintFunc(i, len(layerRouters), method, router.relativePath, funcname, len(router.handlers), layerFakePath)
+				printAppRouteRegister(i, len(layerRouters), method, router.relativePath, funcname, len(router.handlers), layerFakePath)
 			}
 		}
 	}

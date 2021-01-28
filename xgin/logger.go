@@ -24,28 +24,28 @@ func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
 	return logop.WithExtraFieldsV(fields...)
 }
 
-// loggerParam stores the logger parameters, used in LogToLogrus and LogToLogger.
-type loggerParam struct {
+// LoggerParam stores the logger parameters, is used in LogToLogrus and LogToLogger.
+type LoggerParam struct {
 	// request
-	method   string
-	path     string
-	start    time.Time
-	clientIP string
+	Method   string
+	Path     string
+	Start    time.Time
+	ClientIP string
 
 	// response
-	status     int
-	stop       time.Time
-	latency    time.Duration
-	latencyStr string
-	length     int
-	lengthStr  string
+	Status     int
+	Stop       time.Time
+	Latency    time.Duration
+	LatencyStr string
+	Length     int
+	LengthStr  string
 
 	// error
-	errorMessage string
+	ErrorMessage string
 }
 
-// getLoggerParam returns loggerParam from given gin.Context and time.
-func getLoggerParam(c *gin.Context, start, stop time.Time) *loggerParam {
+// getLoggerParam returns LoggerParam from given gin.Context and time.
+func getLoggerParam(c *gin.Context, start, stop time.Time) *LoggerParam {
 	path := c.Request.URL.Path
 	if raw := c.Request.URL.RawQuery; raw != "" {
 		path = path + "?" + raw
@@ -56,20 +56,20 @@ func getLoggerParam(c *gin.Context, start, stop time.Time) *loggerParam {
 		length = 0
 	}
 
-	return &loggerParam{
-		method:   c.Request.Method,
-		path:     path,
-		start:    start,
-		clientIP: c.ClientIP(),
+	return &LoggerParam{
+		Method:   c.Request.Method,
+		Path:     path,
+		Start:    start,
+		ClientIP: c.ClientIP(),
 
-		status:     c.Writer.Status(),
-		stop:       stop,
-		latency:    latency,
-		latencyStr: latency.String(),
-		length:     length,
-		lengthStr:  xnumber.RenderByte(float64(length)),
+		Status:     c.Writer.Status(),
+		Stop:       stop,
+		Latency:    latency,
+		LatencyStr: latency.String(),
+		Length:     length,
+		LengthStr:  xnumber.RenderByte(float64(length)),
 
-		errorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
+		ErrorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
 	}
 }
 
@@ -84,34 +84,30 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 
 	// fields
 	fields := logrus.Fields{
-		"module":   "gin",
-		"method":   param.method,
-		"path":     param.path,
-		"status":   param.status,
-		"start":    param.start,
-		"stop":     param.stop,
-		"latency":  param.latency,
-		"length":   param.length,
-		"clientIP": param.clientIP,
+		"module":    "gin",
+		"method":    param.Method,
+		"path":      param.Path,
+		"status":    param.Status,
+		"start":     param.Start,
+		"stop":      param.Stop,
+		"latency":   param.Latency,
+		"length":    param.Length,
+		"client_ip": param.ClientIP,
 	}
 	extra.AddToFields(fields)
 
 	// logger
 	entry := logger.WithFields(fields)
 	if len(c.Errors) != 0 {
-		msg := fmt.Sprintf("[Gin] %s", param.errorMessage)
+		msg := fmt.Sprintf("[Gin] %s", param.ErrorMessage)
 		entry.Error(msg)
 	} else {
-		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s",
-			param.status, param.latencyStr, param.clientIP, param.lengthStr, param.method, param.path)
+		msg := formatGinLogger(param)
 		extra.AddToMessage(&msg)
-		// [Gin]      200 |      993.3µs |             ::1 |        11B | GET     /test
-		//      |--------| |------------| |---------------| |----------| |-------|-----|
-		//          8            12               15             10          7     ...
 		switch {
-		case param.status >= 500:
+		case param.Status >= 500:
 			entry.Error(msg)
-		case param.status >= 400:
+		case param.Status >= 400:
 			entry.Warn(msg)
 		default:
 			entry.Info(msg)
@@ -119,7 +115,7 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 	}
 }
 
-// LogToLogrus logs gin's request and response information to logrus.StdLogger such as log.Logger using given gin.Context and logop.LoggerOption-s.
+// LogToLogrus logs gin's request and response information to logrus.StdLogger using given gin.Context and logop.LoggerOption-s.
 func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
 	// information
 	param := getLoggerParam(c, start, end)
@@ -130,12 +126,28 @@ func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, 
 
 	// logger
 	if len(c.Errors) != 0 {
-		msg := fmt.Sprintf("[Gin] %s", param.errorMessage)
+		msg := fmt.Sprintf("[Gin] %s", param.ErrorMessage)
 		logger.Print(msg)
 	} else {
-		msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s",
-			param.status, param.latencyStr, param.clientIP, param.lengthStr, param.method, param.path)
+		msg := formatGinLogger(param)
 		extra.AddToMessage(&msg)
 		logger.Print(msg)
 	}
+}
+
+// FormatGinLoggerFunc is a gin logger format function for LogToLogrus and LogToLogger using given LoggerParam.
+var FormatGinLoggerFunc func(param *LoggerParam) string
+
+// formatGinLogger represents the inner gin logger format function for LogToLogrus and LogToLogger using given LoggerParam.
+// Logs like:
+// 	[Gin]      200 |      993.3µs |             ::1 |        11B | GET     /test
+// 	     |--------| |------------| |---------------| |----------| |-------|-----|
+// 	         8            12               15             10          7     ...
+func formatGinLogger(param *LoggerParam) string {
+	if FormatGinLoggerFunc != nil {
+		return FormatGinLoggerFunc(param)
+	}
+
+	return fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s",
+		param.Status, param.LatencyStr, param.ClientIP, param.LengthStr, param.Method, param.Path)
 }

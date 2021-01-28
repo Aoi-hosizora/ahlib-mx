@@ -3,6 +3,7 @@
 ## Dependencies
 
 + github.com/sirupsen/logrus
++ gopkg.in/tucnak/telebot.v2
 
 ## Documents
 
@@ -22,7 +23,7 @@
 
 ### Functions
 
-+ `func WithInitialChatStatus(initialStatus ChatStatus) BotDataOption`
++ `func WithInitialStatus(initialStatus ChatStatus) BotDataOption`
 + `func NewBotData(options ...BotDataOption) *BotData`
 
 ### Methods

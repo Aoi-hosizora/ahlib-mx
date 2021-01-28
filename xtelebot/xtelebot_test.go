@@ -13,20 +13,20 @@ const (
 )
 
 func TestUsersData(t *testing.T) {
-	bd := NewBotData(WithInitialChatStatus(None))
+	bd := NewBotData(WithInitialStatus(None))
 
 	wg := sync.WaitGroup{}
 	wg.Add(20)
 
 	for i := int64(0); i < 20; i++ {
 		go func(bd *BotData, i int64) {
-			xtesting.Equal(t, bd.GetStatus(i), None)
+			xtesting.Equal(t, bd.GetStatusOrInit(i), None)
 			bd.SetStatus(i, Status1)
-			xtesting.Equal(t, bd.GetStatus(i), Status1)
+			xtesting.Equal(t, bd.GetStatusOrInit(i), Status1)
 			bd.SetStatus(i, Status2)
-			xtesting.Equal(t, bd.GetStatus(i), Status2)
+			xtesting.Equal(t, bd.GetStatusOrInit(i), Status2)
 			bd.ResetStatus(i)
-			xtesting.Equal(t, bd.GetStatus(i), None)
+			xtesting.Equal(t, bd.GetStatusOrInit(i), None)
 
 			xtesting.Equal(t, bd.GetCacheOr(i, "", nil), nil)
 			bd.SetCache(i, "", 0)
