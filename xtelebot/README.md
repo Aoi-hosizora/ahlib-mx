@@ -2,8 +2,8 @@
 
 ## Dependencies
 
-+ github.com/sirupsen/logrus
 + gopkg.in/tucnak/telebot.v2
++ github.com/sirupsen/logrus
 
 ## Documents
 
@@ -25,6 +25,15 @@
 
 + `func WithInitialStatus(initialStatus ChatStatus) BotDataOption`
 + `func NewBotData(options ...BotDataOption) *BotData`
++ `func WithExtraText(text string) logop.LoggerOption`
++ `func WithExtraFields(fields map[string]interface{}) logop.LoggerOption`
++ `func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption`
++ `func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption)`
++ `func LogReplyToLogrus(logger *logrus.Logger, received *telebot.Message, sent *telebot.Message, err error, options ...logop.LoggerOption)`
++ `func LogSendToLogrus(logger *logrus.Logger, sent *telebot.Message, err error, options ...logop.LoggerOption)`
++ `func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption)`
++ `func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...logop.LoggerOption)`
++ `func LogSendToLogger(logger logrus.StdLogger, sent *telebot.Message, err error, options ...logop.LoggerOption)`
 
 ### Methods
 
@@ -42,18 +51,3 @@
 + `func (b *BotData) SetCache(chatID int64, key string, value interface{})`
 + `func (b *BotData) RemoveCache(chatID int64, key string)`
 + `func (b *BotData) DeleteChatCaches(chatID int64)`
-
----
-
-### ...
-
-+ `type TelebotLogrus struct {}`
-+ `NewTelebotLogrus(logger *logrus.Logger, logMode bool) *TelebotLogrus`
-+ `(t *TelebotLogrus) Receive(endpoint interface{}, handle interface{})`
-+ `(t *TelebotLogrus) Reply(m *telebot.Message, to *telebot.Message, err error)`
-+ `(t *TelebotLogrus) Send(c *telebot.Chat, to *telebot.Message, err error)`
-+ `type TelebotLogger struct {}`
-+ `NewTelebotLogger(logger *log.Logger, logMode bool) *TelebotLogrus`
-+ `(t *TelebotLogger) Receive(endpoint interface{}, handle interface{})`
-+ `(t *TelebotLogger) Reply(m *telebot.Message, to *telebot.Message, err error)`
-+ `(t *TelebotLogger) Send(c *telebot.Chat, to *telebot.Message, err error)`

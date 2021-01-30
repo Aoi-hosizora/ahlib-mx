@@ -2,8 +2,11 @@ package xtelebot
 
 import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
+	"gopkg.in/tucnak/telebot.v2"
+	"log"
 	"sync"
 	"testing"
+	"time"
 )
 
 const (
@@ -41,4 +44,15 @@ func TestUsersData(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestXXX(t *testing.T) {
+	chat := &telebot.Chat{ID: 12345678, Title: "XXXBot", Username: "Aoi-hosizora"}
+
+	receiveParam := getReceiveLoggerParam("$on_text", &telebot.Message{ID: 3344, Chat: chat})
+	log.Println(formatReceiveLogger(receiveParam))
+	replyParam := getReplyLoggerParam(&telebot.Message{ID: 3344, Chat: chat, Unixtime: time.Now().Unix() - 2}, &telebot.Message{ID: 3345, Chat: chat, Unixtime: time.Now().Unix(), Text: "hello world"})
+	log.Println(formatReplyLogger(replyParam))
+	sendParam := getSendLoggerParam(&telebot.Message{ID: 3346, Chat: chat, Unixtime: time.Now().Unix(), Text: "hello world"})
+	log.Println(formatSendLogger(sendParam))
 }

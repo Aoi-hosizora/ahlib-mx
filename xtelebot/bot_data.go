@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// ChatStatus represents the status of a chat, can be used in fsm.
+// ChatStatus represents a status of a chat, can be used in fsm.
 type ChatStatus uint64
 
 // botDataConfig represents some configs for BotData, set by BotDataOption.
@@ -15,14 +15,14 @@ type botDataConfig struct {
 // BotDataOption represents an option for BotData, created by WithXXX functions.
 type BotDataOption func(*botDataConfig)
 
-// WithInitialStatus creates an option for initial chat's status.
+// WithInitialStatus creates an option for initial chat's status, this defaults to `ChatStatus(0)`.
 func WithInitialStatus(initialStatus ChatStatus) BotDataOption {
 	return func(b *botDataConfig) {
 		b.initialStatus = initialStatus
 	}
 }
 
-// BotData represents the data of all chats in a bot.
+// BotData represents a set of chats data in a bot.
 type BotData struct {
 	config *botDataConfig
 
@@ -32,7 +32,7 @@ type BotData struct {
 	muc      sync.RWMutex                     // locks caches
 }
 
-// NewBotData creates a new BotData with some BotDataOption-s.
+// NewBotData creates a new BotData with BotDataOption-s.
 func NewBotData(options ...BotDataOption) *BotData {
 	config := &botDataConfig{
 		initialStatus: ChatStatus(0), // initial status is 0
@@ -56,10 +56,12 @@ func NewBotData(options ...BotDataOption) *BotData {
 
 // GetStatusChats returns all ids from chats which has been set status, the returned slice has no order.
 func (b *BotData) GetStatusChats() []int64 {
+	b.mus.RLock()
 	ids := make([]int64, 0, len(b.statuses))
 	for key := range b.statuses {
 		ids = append(ids, key)
 	}
+	b.mus.RUnlock()
 	return ids
 }
 
@@ -122,10 +124,12 @@ func (b *BotData) DeleteStatus(chatID int64) {
 
 // GetStatusChats returns all ids from chats which has been set cache, the returned slice has no order.
 func (b *BotData) GetCacheChats() []int64 {
+	b.muc.RLock()
 	ids := make([]int64, 0, len(b.caches))
 	for key := range b.caches {
 		ids = append(ids, key)
 	}
+	b.muc.RUnlock()
 	return ids
 }
 
@@ -187,7 +191,7 @@ func (b *BotData) RemoveCache(chatID int64, key string) {
 	b.muc.Unlock()
 }
 
-// DeleteChatCaches deletes a chat's all caches data.
+// DeleteChatCaches deletes a chat's all caches.
 func (b *BotData) DeleteChatCaches(chatID int64) {
 	b.muc.Lock()
 	delete(b.caches, chatID)

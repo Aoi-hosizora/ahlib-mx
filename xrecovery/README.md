@@ -9,11 +9,11 @@
 
 ### Types
 
-+ `type LoggerParam struct`
++ None
 
 ### Variables
 
-+ `var FormatLoggerFunc func(param *LoggerParam) string`
++ None
 
 ### Constants
 

@@ -6,54 +6,56 @@ import (
 	"strings"
 )
 
-// LoggerOption represents an option for LoggerExtraOptions, created by WithXXX functions.
-type LoggerOption func(*LoggerExtraOptions)
-
-// LoggerExtraOptions represents some extra options for logger, set by LoggerOption.
-type LoggerExtraOptions struct {
+// loggerExtra represents some extra options for logger.
+type loggerExtra struct {
 	Text   string                 // extra text
 	Fields map[string]interface{} // extra fields
 }
 
+// LoggerOption represents an option for loggerExtra, created by WithXXX functions.
+type LoggerOption func(*loggerExtra)
+
 // WithExtraText creates a logop.LoggerOption for logger to log with extra text.
 func WithExtraText(text string) LoggerOption {
-	return func(op *LoggerExtraOptions) {
-		op.Text = strings.TrimSpace(text)
+	return func(extra *loggerExtra) {
+		extra.Text = strings.TrimSpace(text)
 	}
 }
 
 // WithExtraFields creates a logop.LoggerOption for logger to log with extra fields.
 func WithExtraFields(fields map[string]interface{}) LoggerOption {
-	return func(op *LoggerExtraOptions) {
-		op.Fields = fields
+	return func(extra *loggerExtra) {
+		extra.Fields = fields
 	}
 }
 
 // WithExtraFieldsV creates a logop.LoggerOption for logger to log with extra fields in vararg.
 func WithExtraFieldsV(fields ...interface{}) LoggerOption {
-	return func(op *LoggerExtraOptions) {
-		op.Fields = sliceToMap(fields)
+	return func(extra *loggerExtra) {
+		extra.Fields = sliceToMap(fields)
 	}
 }
 
-// ApplyOptions applies LoggerOption array to loggerExtra.
-func (l *LoggerExtraOptions) ApplyOptions(options []LoggerOption) {
+// NewLoggerExtra creates a loggerExtra from given LoggerOption-s.
+func NewLoggerExtra(options ...LoggerOption) *loggerExtra {
+	extra := &loggerExtra{}
 	for _, op := range options {
 		if op != nil {
-			op(l)
+			op(extra)
 		}
 	}
+	return extra
 }
 
 // AddToMessage adds extra string to message.
-func (l *LoggerExtraOptions) AddToMessage(m *string) {
+func (l *loggerExtra) AddToMessage(m *string) {
 	if l.Text != "" {
 		*m += fmt.Sprintf(" | %s", l.Text)
 	}
 }
 
 // AddToFields adds extra fields to logrus.Fields.
-func (l *LoggerExtraOptions) AddToFields(f logrus.Fields) {
+func (l *loggerExtra) AddToFields(f logrus.Fields) {
 	for k, v := range l.Fields {
 		f[k] = v
 	}

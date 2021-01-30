@@ -11,12 +11,10 @@
 ### Types
 
 + `type AppRouter struct`
-+ `type LoggerParam struct`
 
 ### Variables
 
 + `var PrintAppRouterRegisterFunc func(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string)`
-+ `var FormatGinLoggerFunc func(param *LoggerParam) string`
 
 ### Constants
 
