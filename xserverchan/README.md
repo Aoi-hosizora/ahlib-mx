@@ -10,11 +10,11 @@
 
 ### Types
 
-+ `type SendLoggerParam struct`
++ None
 
 ### Variables
 
-+ `var FormatSendLoggerFunc func(param *SendLoggerParam) string`
++ None
 
 ### Constants
 

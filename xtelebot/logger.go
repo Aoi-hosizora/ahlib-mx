@@ -8,17 +8,17 @@ import (
 	"time"
 )
 
-// WithExtraText creates an option for logger to log with extra text.
+// WithExtraText creates a logger option to log with extra text.
 func WithExtraText(text string) logop.LoggerOption {
 	return logop.WithExtraText(text)
 }
 
-// WithExtraFields creates an option for logger to log with extra fields.
+// WithExtraFields creates a logger option to log with extra fields.
 func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
 	return logop.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV creates an option for logger to log with extra fields in vararg.
+// WithExtraFieldsV creates a logger option to log with extra fields in vararg.
 func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
 	return logop.WithExtraFieldsV(fields...)
 }
@@ -28,7 +28,6 @@ type receiveLoggerParam struct {
 	endpoint     string
 	messageID    int
 	chatID       int64
-	chatTitle    string
 	chatUsername string
 }
 
@@ -38,7 +37,6 @@ func getReceiveLoggerParam(endpoint string, message *telebot.Message) *receiveLo
 		endpoint:     endpoint,
 		messageID:    message.ID,
 		chatID:       message.Chat.ID,
-		chatTitle:    message.Chat.Title,
 		chatUsername: message.Chat.Username,
 	}
 }
@@ -48,11 +46,10 @@ type replyLoggerParam struct {
 	receivedMessageID int
 	repliedMessageID  int
 	repliedType       string
-	receivedTime      time.Time // <<<
+	receivedTime      time.Time
 	repliedTime       time.Time
 	latency           time.Duration
 	chatID            int64
-	chatTitle         string
 	chatUsername      string
 }
 
@@ -66,7 +63,6 @@ func getReplyLoggerParam(received, replied *telebot.Message) *replyLoggerParam {
 		repliedTime:       replied.Time(),
 		latency:           replied.Time().Sub(received.Time()),
 		chatID:            replied.Chat.ID,
-		chatTitle:         replied.Chat.Title,
 		chatUsername:      replied.Chat.Username,
 	}
 }
@@ -77,36 +73,34 @@ type sendLoggerParam struct {
 	sentType      string
 	sentTime      time.Time
 	chatID        int64
-	chatTitle     string
 	chatUsername  string
 }
 
-// getReplyLoggerParam returns replyLoggerParam from given sent telebot.Message.
+// getSendLoggerParam returns sendLoggerParam from given sent telebot.Message.
 func getSendLoggerParam(sent *telebot.Message) *sendLoggerParam {
 	return &sendLoggerParam{
 		sentMessageID: sent.ID,
 		sentType:      renderMessageType(sent),
 		sentTime:      sent.Time(),
 		chatID:        sent.Chat.ID,
-		chatTitle:     sent.Chat.Title,
 		chatUsername:  sent.Chat.Username,
 	}
 }
 
 // LogReceiveToLogrus logs a receive-event message to logrus.Logger using given endpoint and telebot.Message.
 //
-// Support endpoint types:
+// Support endpoint types (with telebot.Message handler):
 // 	string, telebot.InlineButton, telebot.ReplyButton
 // Not support handler's type:
 // 	telebot.Query
 func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
-	unique, ok := renderEndpoint(endpoint)
+	epStr, ok := renderEndpoint(endpoint)
 	if !ok {
 		return // unsupported endpoint
 	}
 
-	param := getReceiveLoggerParam(unique, message)
-	extra := logop.NewLoggerExtra(options...)
+	param := getReceiveLoggerParam(epStr, message)
+	extra := logop.NewLoggerOptions(options)
 
 	fields := logrus.Fields{
 		"module":        "telebot",
@@ -114,7 +108,6 @@ func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *te
 		"endpoint":      param.endpoint,
 		"message_id":    param.messageID,
 		"chat_id":       param.chatID,
-		"chat_title":    param.chatTitle,
 		"chat_username": param.chatUsername,
 	}
 	extra.AddToFields(fields)
@@ -125,19 +118,19 @@ func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *te
 	entry.Info(msg)
 }
 
-// LogReplyToLogrus logs a reply-event message to logrus.Logger using given received telebot.Message and replied telebot.Message with error.
-func LogReplyToLogrus(logger *logrus.Logger, received *telebot.Message, sent *telebot.Message, err error, options ...logop.LoggerOption) {
-	if received == nil || (err == nil && sent == nil) {
+// LogReplyToLogrus logs a reply-event message to logrus.Logger using given received and replied telebot.Message with error.
+func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...logop.LoggerOption) {
+	if received == nil || (replied == nil && err == nil) {
 		return // ignore
 	}
 	if err != nil {
-		msg := fmt.Sprintf("[Telebot] Reply to %d %s error: %v", sent.Chat.ID, sent.Chat.Username, err)
+		msg := fmt.Sprintf("[Telebot] Reply to %d %s failed: %v", received.Chat.ID, received.Chat.Username, err)
 		logger.Error(msg)
 		return
 	}
 
-	param := getReplyLoggerParam(received, sent)
-	extra := logop.NewLoggerExtra(options...)
+	param := getReplyLoggerParam(received, replied)
+	extra := logop.NewLoggerOptions(options)
 
 	fields := logrus.Fields{
 		"module":              "telebot",
@@ -149,7 +142,6 @@ func LogReplyToLogrus(logger *logrus.Logger, received *telebot.Message, sent *te
 		"replied_time":        param.repliedTime,
 		"latency":             param.latency,
 		"chat_id":             param.chatID,
-		"chat_title":          param.chatTitle,
 		"chat_username":       param.chatUsername,
 	}
 	extra.AddToFields(fields)
@@ -160,19 +152,19 @@ func LogReplyToLogrus(logger *logrus.Logger, received *telebot.Message, sent *te
 	entry.Info(msg)
 }
 
-// LogSendToLogrus logs a send-event message to logrus.Logger using given sent telebot.Message with error.
-func LogSendToLogrus(logger *logrus.Logger, sent *telebot.Message, err error, options ...logop.LoggerOption) {
-	if err == nil && sent == nil {
+// LogSendToLogrus logs a send-event message to logrus.Logger using given telebot.Chat and sent telebot.Message with error.
+func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption) {
+	if chat == nil || (sent == nil && err == nil) {
 		return // ignore
 	}
 	if err != nil {
-		msg := fmt.Sprintf("[Telebot] Send to %d %s error: %v", sent.Chat.ID, sent.Chat.Username, err)
+		msg := fmt.Sprintf("[Telebot] Send to %d %s failed: %v", chat.ID, chat.Username, err)
 		logger.Error(msg)
 		return
 	}
 
-	param := getSendLoggerParam(sent)
-	extra := logop.NewLoggerExtra(options...)
+	param := getSendLoggerParam(sent) // no use of chat
+	extra := logop.NewLoggerOptions(options)
 
 	fields := logrus.Fields{
 		"module":          "telebot",
@@ -181,7 +173,6 @@ func LogSendToLogrus(logger *logrus.Logger, sent *telebot.Message, err error, op
 		"sent_type":       param.sentType,
 		"sent_time":       param.sentTime,
 		"chat_id":         param.chatID,
-		"chat_title":      param.chatTitle,
 		"chat_username":   param.chatUsername,
 	}
 	extra.AddToFields(fields)
@@ -194,20 +185,20 @@ func LogSendToLogrus(logger *logrus.Logger, sent *telebot.Message, err error, op
 
 // LogReceiveToLogger logs a receive-event message to logrus.StdLogger using given endpoint and telebot.Message.
 func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
-	unique, ok := renderEndpoint(endpoint)
+	epStr, ok := renderEndpoint(endpoint)
 	if !ok {
 		return // unsupported endpoint
 	}
 
-	param := getReceiveLoggerParam(unique, message)
-	extra := logop.NewLoggerExtra(options...)
+	param := getReceiveLoggerParam(epStr, message)
+	extra := logop.NewLoggerOptions(options)
 
 	msg := formatReceiveLogger(param)
 	extra.AddToMessage(&msg)
 	logger.Println(msg)
 }
 
-// LogReplyToLogger logs a reply-event message to logrus.StdLogger using given received telebot.Message and replied telebot.Message with error.
+// LogReplyToLogger logs a reply-event message to logrus.StdLogger using given received and replied telebot.Message with error.
 func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...logop.LoggerOption) {
 	if received == nil || (err == nil && replied == nil) {
 		return // ignore
@@ -219,33 +210,33 @@ func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Messag
 	}
 
 	param := getReplyLoggerParam(received, replied)
-	extra := logop.NewLoggerExtra(options...)
+	extra := logop.NewLoggerOptions(options)
 
 	msg := formatReplyLogger(param)
 	extra.AddToMessage(&msg)
 	logger.Println(msg)
 }
 
-// LogSendToLogger logs a send-event message to logrus.StdLogger using given sent telebot.Message with error.
-func LogSendToLogger(logger logrus.StdLogger, sent *telebot.Message, err error, options ...logop.LoggerOption) {
-	if err == nil && sent == nil {
+// LogSendToLogger logs a send-event message to logrus.StdLogger using given telebot.Chat and sent telebot.Message with error.
+func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption) {
+	if chat == nil || (sent == nil && err == nil) {
 		return // ignore
 	}
 	if err != nil {
-		msg := fmt.Sprintf("[Telebot] Send to %d %s failed: %v", sent.Chat.ID, sent.Chat.Username, err)
+		msg := fmt.Sprintf("[Telebot] Send to %d %s failed: %v", chat.ID, chat.Username, err)
 		logger.Println(msg)
 		return
 	}
 
-	param := getSendLoggerParam(sent)
-	extra := logop.NewLoggerExtra(options...)
+	param := getSendLoggerParam(sent) // no use of chat
+	extra := logop.NewLoggerOptions(options)
 
 	msg := formatSendLogger(param)
 	extra.AddToMessage(&msg)
 	logger.Println(msg)
 }
 
-// formatReceiveLogger formats receiveLoggerParam to string for logger.
+// formatReceiveLogger formats receiveLoggerParam to logger string.
 // Logs like:
 // 	[Telebot] 3344 |                       $on_text | 12345678 Aoi-hosizora
 func formatReceiveLogger(param *receiveLoggerParam) string {
@@ -253,7 +244,7 @@ func formatReceiveLogger(param *receiveLoggerParam) string {
 		param.messageID, param.endpoint, param.chatID, param.chatUsername)
 }
 
-// formatReplyLogger formats replyLoggerParam to string for logger.
+// formatReplyLogger formats replyLoggerParam to logger string.
 // Logs like:
 // 	[Telebot] 3345 |           2s |   t:text | 3344 | 12345678 Aoi-hosizora
 func formatReplyLogger(param *replyLoggerParam) string {
@@ -261,7 +252,7 @@ func formatReplyLogger(param *replyLoggerParam) string {
 		param.repliedMessageID, param.latency.String(), param.repliedType, param.receivedMessageID, param.chatID, param.chatUsername)
 }
 
-// formatSendLogger formats sendLoggerParam to string for logger.
+// formatSendLogger formats sendLoggerParam to logger string.
 // Logs like:
 // 	[Telebot] 3346 |            x |   t:text |    x | 12345678 Aoi-hosizora
 func formatSendLogger(param *sendLoggerParam) string {
@@ -274,31 +265,31 @@ func formatSendLogger(param *sendLoggerParam) string {
 // Support endpoint types:
 // 	string, telebot.InlineButton, telebot.ReplyButton
 func renderEndpoint(endpoint interface{}) (string, bool) {
-	unique := ""
+	epStr := ""
 	switch ep := endpoint.(type) {
 	case string:
 		if ep == "" || ep == "\a" {
 			return "", false // empty
 		}
 		if len(ep) > 1 && ep[0] == '\a' {
-			unique = "$on_" + unique[1:] // OnXXX string
+			epStr = "$on_" + epStr[1:] // OnXXX string
 		} else {
-			unique = ep // string
+			epStr = ep // string
 		}
 	case telebot.ReplyButton:
-		unique = "$rep_btn:" + ep.Text // CallbackUnique
+		epStr = "$rep_btn:" + ep.Text // CallbackUnique
 	case telebot.InlineButton:
-		unique = "$inl_btn:" + ep.Unique // CallbackUnique
+		epStr = "$inl_btn:" + ep.Unique // CallbackUnique
 	default:
-		return "", false // unsupported
+		return "", false // unsupported endpoint
 	}
 
-	return unique, true
+	return epStr, true
 }
 
 // renderMessageType renders a telebot.Message's type, see telebot.Sendable.
 func renderMessageType(m *telebot.Message) string {
-	typ := "text"
+	typ := "text" // default
 	switch {
 	case m.Photo != nil:
 		typ = "photo"
@@ -328,5 +319,6 @@ func renderMessageType(m *telebot.Message) string {
 	case m.VideoNote != nil:
 		typ = "vnote"
 	}
-	return "t:" + typ
+
+	return "t:" + typ // t:xxx
 }

@@ -24,8 +24,8 @@
 + `func WithExtraText(text string) logop.LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) logop.LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption`
-+ `func LogToLogrus(logger *logrus.Logger, err interface{}, options ...logop.LoggerOption)`
-+ `func LogToLogger(logger logrus.StdLogger, err interface{}, options ...logop.LoggerOption)`
++ `func LogToLogrus(logger *logrus.Logger, err interface{}, stack xruntime.TraceStack, options ...logop.LoggerOption)`
++ `func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceStack, options ...logop.LoggerOption)`
 
 ### Methods
 

@@ -6,56 +6,59 @@ import (
 	"strings"
 )
 
-// loggerExtra represents some extra options for logger.
-type loggerExtra struct {
+// loggerOptions represents some logger options, such as for extra data, set by LoggerOption.
+type loggerOptions struct {
 	Text   string                 // extra text
 	Fields map[string]interface{} // extra fields
 }
 
-// LoggerOption represents an option for loggerExtra, created by WithXXX functions.
-type LoggerOption func(*loggerExtra)
+// LoggerOption represents an option for loggerOptions, created by WithXXX functions.
+type LoggerOption func(*loggerOptions)
 
-// WithExtraText creates a logop.LoggerOption for logger to log with extra text.
+// WithExtraText creates a logop.LoggerOption to log with extra text.
 func WithExtraText(text string) LoggerOption {
-	return func(extra *loggerExtra) {
+	return func(extra *loggerOptions) {
 		extra.Text = strings.TrimSpace(text)
 	}
 }
 
-// WithExtraFields creates a logop.LoggerOption for logger to log with extra fields.
+// WithExtraFields creates a logop.LoggerOption to log with extra fields.
 func WithExtraFields(fields map[string]interface{}) LoggerOption {
-	return func(extra *loggerExtra) {
+	return func(extra *loggerOptions) {
 		extra.Fields = fields
 	}
 }
 
-// WithExtraFieldsV creates a logop.LoggerOption for logger to log with extra fields in vararg.
+// WithExtraFieldsV creates a logop.LoggerOption to log with extra fields in vararg.
 func WithExtraFieldsV(fields ...interface{}) LoggerOption {
-	return func(extra *loggerExtra) {
+	return func(extra *loggerOptions) {
 		extra.Fields = sliceToMap(fields)
 	}
 }
 
-// NewLoggerExtra creates a loggerExtra from given LoggerOption-s.
-func NewLoggerExtra(options ...LoggerOption) *loggerExtra {
-	extra := &loggerExtra{}
+// NewLoggerOptions creates a loggerOptions from given LoggerOption-s.
+func NewLoggerOptions(options []LoggerOption) *loggerOptions {
+	out := &loggerOptions{
+		Text:   "",
+		Fields: make(map[string]interface{}),
+	}
 	for _, op := range options {
 		if op != nil {
-			op(extra)
+			op(out)
 		}
 	}
-	return extra
+	return out
 }
 
 // AddToMessage adds extra string to message.
-func (l *loggerExtra) AddToMessage(m *string) {
+func (l *loggerOptions) AddToMessage(m *string) {
 	if l.Text != "" {
 		*m += fmt.Sprintf(" | %s", l.Text)
 	}
 }
 
 // AddToFields adds extra fields to logrus.Fields.
-func (l *loggerExtra) AddToFields(f logrus.Fields) {
+func (l *loggerOptions) AddToFields(f logrus.Fields) {
 	for k, v := range l.Fields {
 		f[k] = v
 	}
@@ -77,12 +80,13 @@ func sliceToMap(args []interface{}) map[string]interface{} {
 		keyItf := args[ki]
 		value := args[vi] // interface{}
 		if keyItf == nil || value == nil {
-			continue
+			i--
+			continue // skip nil key and value
 		}
 		if k, ok := keyItf.(string); ok {
 			key = k
 		} else {
-			key = fmt.Sprintf("%v", keyItf)
+			key = fmt.Sprintf("%v", keyItf) // %v
 		}
 
 		out[key] = value

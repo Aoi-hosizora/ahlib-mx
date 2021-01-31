@@ -29,11 +29,11 @@
 + `func WithExtraFields(fields map[string]interface{}) logop.LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption`
 + `func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption)`
-+ `func LogReplyToLogrus(logger *logrus.Logger, received *telebot.Message, sent *telebot.Message, err error, options ...logop.LoggerOption)`
-+ `func LogSendToLogrus(logger *logrus.Logger, sent *telebot.Message, err error, options ...logop.LoggerOption)`
++ `func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...logop.LoggerOption)`
++ `func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption)`
 + `func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption)`
 + `func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...logop.LoggerOption)`
-+ `func LogSendToLogger(logger logrus.StdLogger, sent *telebot.Message, err error, options ...logop.LoggerOption)`
++ `func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption)`
 
 ### Methods
 

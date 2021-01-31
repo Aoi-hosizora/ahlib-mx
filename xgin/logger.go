@@ -9,17 +9,17 @@ import (
 	"time"
 )
 
-// WithExtraText creates an option for logger to log with extra text.
+// WithExtraText creates a logger option to log with extra text.
 func WithExtraText(text string) logop.LoggerOption {
 	return logop.WithExtraText(text)
 }
 
-// WithExtraFields creates an option for logger to log with extra fields.
+// WithExtraFields creates a logger option to log with extra fields.
 func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
 	return logop.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV creates an option for logger to log with extra fields in vararg.
+// WithExtraFieldsV creates a logger option to log with extra fields in vararg.
 func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
 	return logop.WithExtraFieldsV(fields...)
 }
@@ -37,7 +37,7 @@ type loggerParam struct {
 	errorMessage string
 }
 
-// getLoggerParam returns loggerParam from given gin.Context and time.Time.
+// getLoggerParam returns loggerParam from given gin.Context.
 func getLoggerParam(c *gin.Context, start, end time.Time) *loggerParam {
 	path := c.Request.URL.Path
 	if raw := c.Request.URL.RawQuery; raw != "" {
@@ -64,7 +64,7 @@ func getLoggerParam(c *gin.Context, start, end time.Time) *loggerParam {
 // LogToLogrus logs gin's request and response information to logrus.Logger using given gin.Context.
 func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
 	param := getLoggerParam(c, start, end)
-	extra := logop.NewLoggerExtra(options...)
+	extra := logop.NewLoggerOptions(options)
 
 	fields := logrus.Fields{
 		"module":     "gin",
@@ -100,7 +100,7 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 // LogToLogrus logs gin's request and response information to logrus.StdLogger using given gin.Context.
 func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
 	param := getLoggerParam(c, start, end)
-	extra := logop.NewLoggerExtra(options...)
+	extra := logop.NewLoggerOptions(options)
 
 	if len(c.Errors) != 0 {
 		msg := fmt.Sprintf("[Gin] %s", param.errorMessage)
@@ -112,7 +112,7 @@ func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, 
 	}
 }
 
-// formatLogger formats loggerParam to string for logger.
+// formatLogger formats loggerParam to logger string.
 // Logs like:
 // 	[Gin]      200 |      993.3µs |             ::1 |        11B | GET     /test
 // 	     |--------| |------------| |---------------| |----------| |-------|-----|

@@ -24,7 +24,7 @@ func WithInitialStatus(initialStatus ChatStatus) BotDataOption {
 
 // BotData represents a set of chats data in a bot.
 type BotData struct {
-	config *botDataConfig
+	config *botDataConfig // BotData config
 
 	statuses map[int64]ChatStatus             // store statuses of all chats
 	mus      sync.RWMutex                     // locks statuses

@@ -7,47 +7,72 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// WithExtraText creates an option for logger to log with extra text.
+// WithExtraText creates a logger option to log with extra text.
 func WithExtraText(text string) logop.LoggerOption {
 	return logop.WithExtraText(text)
 }
 
-// WithExtraFields creates an option for logger to log with extra fields.
+// WithExtraFields creates a logger option to log with extra fields.
 func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
 	return logop.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV creates an option for logger to log with extra fields in vararg.
+// WithExtraFieldsV creates a logger option to log with extra fields in vararg.
 func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
 	return logop.WithExtraFieldsV(fields...)
 }
 
-// LogToLogrus logs a panic message to logrus.Logger using given error, nil-able xruntime.TraceStack.
-// Logs like:
-// 	[Recovery] panic recovered: test error
-// 	                           |----------|
+// loggerParam stores some logger parameters, used in LogToLogrus and LogToLogger.
+type loggerParam struct {
+	errorMessage string
+	traceStack   xruntime.TraceStack
+}
+
+// getLoggerParam returns loggerParam using given error and xruntime.TraceStack.
+func getLoggerParam(err interface{}, stack xruntime.TraceStack) *loggerParam {
+	return &loggerParam{
+		errorMessage: fmt.Sprintf("%v", err),
+		traceStack:   stack,
+	}
+}
+
+// LogToLogrus logs a panic message to logrus.Logger from given error, nil-able xruntime.TraceStack.
 func LogToLogrus(logger *logrus.Logger, err interface{}, stack xruntime.TraceStack, options ...logop.LoggerOption) {
-	errMsg := fmt.Sprintf("%v", err)
-	extra := logop.NewLoggerExtra(options...)
+	param := getLoggerParam(err, stack)
+	extra := logop.NewLoggerOptions(options)
+
 	fields := logrus.Fields{
 		"module": "recovery",
-		"error":  errMsg,
-		"stack":  stack.String(),
+		"error":  param.errorMessage,
+		"stack":  param.traceStack.String(),
 	}
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
-	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMsg)
+	msg := formatLogger(param)
 	extra.AddToMessage(&msg)
 	entry.Error(msg)
 }
 
 // LogToLogger logs a panic message to logrus.StdLogger using given error, nil-able xruntime.TraceStack.
 func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceStack, options ...logop.LoggerOption) {
-	errMsg := fmt.Sprintf("%v", err)
-	extra := logop.NewLoggerExtra(options...)
+	param := getLoggerParam(err, stack)
+	extra := logop.NewLoggerOptions(options)
 
-	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMsg)
+	msg := formatLogger(param)
 	extra.AddToMessage(&msg)
 	logger.Println(msg)
+}
+
+// formatLogger formats loggerParam to logger string.
+// Logs like:
+// 	[Recovery] panic recovered: test error | xxx.go:12
+// 	                           |----------| |---------|
+func formatLogger(param *loggerParam) string {
+	msg := fmt.Sprintf("[Recovery] panic recovered: %s", param.errorMessage)
+	if len(param.traceStack) > 0 {
+		s := param.traceStack[0]
+		msg += fmt.Sprintf(" | %s:%d", s.Filename, s.LineIndex)
+	}
+	return msg
 }

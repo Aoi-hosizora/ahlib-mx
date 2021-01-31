@@ -9,31 +9,31 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// WithExtraText creates an option for logger to log with extra text.
+// WithExtraText creates a logger option to log with extra text.
 func WithExtraText(text string) logop.LoggerOption {
 	return logop.WithExtraText(text)
 }
 
-// WithExtraFields creates an option for logger to log with extra fields.
+// WithExtraFields creates a logger option to log with extra fields.
 func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
 	return logop.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV creates an option for logger to log with extra fields in vararg.
+// WithExtraFieldsV creates a logger option to log with extra fields in vararg.
 func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
 	return logop.WithExtraFieldsV(fields...)
 }
 
-// loggerParam stores some send-event logger parameters, used in LogSendToLogrus and LogSendToLogger.
+// loggerParam stores some logger parameters, used in LogSendToLogrus and LogSendToLogger.
 type loggerParam struct {
-	sckey string
-	title string
+	sckey string // masked sckey
+	title string // masked title
 }
 
 // getLoggerParam returns loggerParam from given sckey and title.
 func getLoggerParam(sckey, title string) *loggerParam {
 	sckeyLen := len(sckey)
-	indices := append(xslice.Range(5, sckeyLen/2-4, 1), xslice.Range(sckeyLen/2+3, sckeyLen-6, 1)...) // xxxxx...xxxxxx...xxxxx
+	indices := append(xslice.Range(5, sckeyLen/2-4, 1), xslice.Range(sckeyLen/2+3, sckeyLen-6, 1)...) // .....***......***..... (5 6 5)
 	masked := xstring.MaskToken(sckey, '*', indices...)
 
 	return &loggerParam{
@@ -42,10 +42,10 @@ func getLoggerParam(sckey, title string) *loggerParam {
 	}
 }
 
-// LogSendToLogrus logs a send-event message to logrus.Logger using given sckey and title.
-func LogSendToLogrus(logger *logrus.Logger, sckey, title string, err error, options ...logop.LoggerOption) {
+// LogToLogrus logs a send-event message to logrus.Logger using given sckey and title.
+func LogToLogrus(logger *logrus.Logger, sckey, title string, err error, options ...logop.LoggerOption) {
 	param := getLoggerParam(sckey, title)
-	extra := logop.NewLoggerExtra(options...)
+	extra := logop.NewLoggerOptions(options)
 
 	if err != nil {
 		var msg string
@@ -71,10 +71,10 @@ func LogSendToLogrus(logger *logrus.Logger, sckey, title string, err error, opti
 	entry.Info(msg)
 }
 
-// LogSendToLogger logs a send-event message to logrus.StdLogger using given sckey and title.
-func LogSendToLogger(logger logrus.StdLogger, sckey, title string, err error, options ...logop.LoggerOption) {
+// LogToLogger logs a send-event message to logrus.StdLogger using given sckey and title.
+func LogToLogger(logger logrus.StdLogger, sckey, title string, err error, options ...logop.LoggerOption) {
 	param := getLoggerParam(sckey, title)
-	extra := logop.NewLoggerExtra(options...)
+	extra := logop.NewLoggerOptions(options)
 
 	if err != nil {
 		var msg string
@@ -92,7 +92,7 @@ func LogSendToLogger(logger logrus.StdLogger, sckey, title string, err error, op
 	logger.Println(msg)
 }
 
-// formatLogger formats loggerParam to string for logger.
+// formatLogger formats loggerParam to logger string.
 // Logs like:
 // 	[Serverchan] SCU12*******************89abcd*******************56789 | te******le
 func formatLogger(param *loggerParam) string {

@@ -11,10 +11,10 @@
 
 ### Packages
 
-+ xgin (waiting for refactoring)
-+ xrecovery
-+ xserverchan (waiting for refactoring)
-+ xtelebot (waiting for refactoring)
++ xgin (waiting for testing)
++ xrecovery (waiting for testing)
++ xserverchan (waiting for testing)
++ xtelebot (waiting for testing)
 
 ### Dependencies
 
