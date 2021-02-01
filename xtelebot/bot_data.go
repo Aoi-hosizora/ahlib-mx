@@ -122,7 +122,7 @@ func (b *BotData) DeleteStatus(chatID int64) {
 // cache
 // =====
 
-// GetStatusChats returns all ids from chats which has been set cache, the returned slice has no order.
+// GetCacheChats returns all ids from chats which has been set cache, the returned slice has no order.
 func (b *BotData) GetCacheChats() []int64 {
 	b.muc.RLock()
 	ids := make([]int64, 0, len(b.caches))
@@ -191,8 +191,8 @@ func (b *BotData) RemoveCache(chatID int64, key string) {
 	b.muc.Unlock()
 }
 
-// DeleteChatCaches deletes a chat's all caches.
-func (b *BotData) DeleteChatCaches(chatID int64) {
+// ClearCaches clears a chat's all caches.
+func (b *BotData) ClearCaches(chatID int64) {
 	b.muc.Lock()
 	delete(b.caches, chatID)
 	b.muc.Unlock()

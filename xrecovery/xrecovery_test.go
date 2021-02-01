@@ -1,7 +1,8 @@
 package xrecovery
 
 import (
-	"fmt"
+	"errors"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -15,17 +16,29 @@ func TestLogger(t *testing.T) {
 	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
 	l2 := log.New(os.Stderr, "", log.LstdFlags)
 
-	LogToLogrus(l1, fmt.Errorf("test error"), nil)
-	LogToLogrus(l1, fmt.Errorf("test error"), xruntime.RuntimeTraceStack(0))
-	LogToLogrus(l1, fmt.Errorf("test error"), nil, WithExtraText("123"))
-	LogToLogrus(l1, fmt.Errorf("test error"), xruntime.RuntimeTraceStack(0), WithExtraText("123"))
-	LogToLogrus(l1, fmt.Errorf("test error"), nil, WithExtraFields(map[string]interface{}{"a": "b"}))
-	LogToLogrus(l1, fmt.Errorf("test error"), nil, WithExtraFieldsV("a", "b"))
-	LogToLogrus(l1, fmt.Errorf("test error"), nil, WithExtraText("123"), WithExtraFields(map[string]interface{}{"a": "b"}))
+	for _, std := range []bool{false, true} {
+		for _, tc := range []struct {
+			giveErr     interface{}
+			giveStack   xruntime.TraceStack
+			giveOptions []logop.LoggerOption
+		}{
+			{nil, nil, nil},
+			{"test string", nil, nil},
+			{errors.New("test error"), nil, nil},
+			{nil, xruntime.RuntimeTraceStack(0), nil},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), nil},
 
-	LogToLogger(l2, fmt.Errorf("test error"), nil)
-	LogToLogger(l2, fmt.Errorf("test error"), xruntime.RuntimeTraceStack(0))
-	LogToLogger(l2, fmt.Errorf("test error"), nil, WithExtraText("123"))
-	LogToLogger(l2, fmt.Errorf("test error"), xruntime.RuntimeTraceStack(0), WithExtraText("123"))
-	LogToLogger(l2, fmt.Errorf("test error"), nil, WithExtraFields(map[string]interface{}{"a": "b"}))
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraText("extra")}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+		} {
+			if !std {
+				LogToLogrus(l1, tc.giveErr, tc.giveStack, tc.giveOptions...)
+			} else {
+				LogToLogger(l2, tc.giveErr, tc.giveStack, tc.giveOptions...)
+			}
+		}
+	}
 }

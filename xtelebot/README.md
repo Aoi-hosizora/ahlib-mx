@@ -50,4 +50,4 @@
 + `func (b *BotData) GetChatCaches(chatID int64) (map[string]interface{}, bool)`
 + `func (b *BotData) SetCache(chatID int64, key string, value interface{})`
 + `func (b *BotData) RemoveCache(chatID int64, key string)`
-+ `func (b *BotData) DeleteChatCaches(chatID int64)`
++ `func (b *BotData) ClearCaches(chatID int64)`

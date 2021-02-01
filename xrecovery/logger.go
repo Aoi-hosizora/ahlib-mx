@@ -42,9 +42,9 @@ func LogToLogrus(logger *logrus.Logger, err interface{}, stack xruntime.TraceSta
 	extra := logop.NewLoggerOptions(options)
 
 	fields := logrus.Fields{
-		"module": "recovery",
-		"error":  param.errorMessage,
-		"stack":  param.traceStack.String(),
+		"module":        "recovery",
+		"error_message": param.errorMessage,
+		"trace_stack":   param.traceStack.String(),
 	}
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
@@ -61,7 +61,7 @@ func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceS
 
 	msg := formatLogger(param)
 	extra.AddToMessage(&msg)
-	logger.Println(msg)
+	logger.Print(msg)
 }
 
 // formatLogger formats loggerParam to logger string.

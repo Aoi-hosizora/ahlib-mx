@@ -1,13 +1,17 @@
 package xgin
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 	"log"
+	"math/rand"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -20,51 +24,7 @@ func TestDumpRequest(t *testing.T) {
 			log.Println(s)
 		}
 	})
-	_ = app.Run(":1234")
-}
-
-func TestLogger(t *testing.T) {
-	app := gin.New()
-
-	l1 := logrus.New()
-	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
-	l2 := log.New(os.Stderr, "", log.LstdFlags)
-
-	PprofWrap(app)
-	app.Use(func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
-		end := time.Now()
-
-		LogToLogrus(l1, c, start, end)
-		LogToLogrus(l1, c, start, end, WithExtraText("abc"))
-		LogToLogrus(l1, c, start, end, WithExtraFields(map[string]interface{}{"a": "b"}))
-		LogToLogrus(l1, c, start, end, WithExtraFieldsV("a", "b"))
-		LogToLogrus(l1, c, start, end, WithExtraText("abc"), WithExtraFieldsV("a", "b"))
-
-		LogToLogger(l2, c, start, end)
-		LogToLogger(l2, c, start, end, WithExtraText("abc"))
-		LogToLogger(l2, c, start, end, WithExtraFields(map[string]interface{}{"a": "b"}))
-	})
-	app.GET("", func(c *gin.Context) {
-		c.JSON(200, &gin.H{"ok": true})
-	})
-
-	_ = app.Run(":1234")
-}
-
-func TestGinLogger(t *testing.T) {
-	app := gin.New()
-	gin.ForceConsoleColor()
-	app.Use(gin.Logger())
-	app.GET("", func(c *gin.Context) {})
-	app.GET("a", func(c *gin.Context) {})
-	app.GET("a/:id", func(c *gin.Context) {})
-	_ = app.Run(":1234")
-	/*
-		[GIN] 2021/01/26 - 12:03:53 | 200 |       956.9µs |             ::1 | GET      "/a/b"
-		[GIN] 2021/01/26 - 12:04:28 | 404 |            0s |             ::1 | POST     "/a"
-	*/
+	// _ = app.Run(":1234")
 }
 
 // func TestBinding(t *testing.T) {
@@ -142,7 +102,7 @@ func TestAppRouter(t *testing.T) {
 		ar.Register()
 	})
 
-	_ = app.Run(":1234")
+	// _ = app.Run(":1234")
 }
 
 func TestRequiredAndOmitempty(t *testing.T) {
@@ -217,4 +177,50 @@ func TestRequiredAndOmitempty(t *testing.T) {
 	log.Println(v.Struct(unmarshal(&S6{}, `{"A": null, "B": null}`)) == nil) // false
 	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 0, "B": ""}`)) == nil)      // true
 	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 1, "B": " "}`)) == nil)     // true
+}
+
+func TestLogger(t *testing.T) {
+	l1 := logrus.New()
+	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
+	l2 := log.New(os.Stderr, "", log.LstdFlags)
+	std := false
+
+	rand.Seed(time.Now().UnixNano())
+	gin.SetMode(gin.ReleaseMode)
+	app := gin.New()
+	app.Use(func(c *gin.Context) {
+		start := time.Now()
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(20))) // fake duration
+		c.Next()
+		end := time.Now()
+
+		if !std {
+			LogToLogrus(l1, c, start, end)
+			LogToLogrus(l1, c, start, end, WithExtraText("extra"))
+			LogToLogrus(l1, c, start, end, WithExtraFields(map[string]interface{}{"k": "v"}))
+			LogToLogrus(l1, c, start, end, WithExtraFieldsV("k", "v"))
+		} else {
+			LogToLogger(l2, c, start, end)
+			LogToLogger(l2, c, start, end, WithExtraText("extra"))
+			LogToLogger(l2, c, start, end, WithExtraFields(map[string]interface{}{"k": "v"}))
+			LogToLogger(l2, c, start, end, WithExtraFieldsV("k", "v"))
+		}
+	})
+	app.GET("/200", func(c *gin.Context) { c.JSON(200, &gin.H{"status": "200 success"}) })
+	app.GET("/304", func(c *gin.Context) { c.Status(304) })
+	app.GET("/403", func(c *gin.Context) { c.JSON(403, &gin.H{"status": "403 forbidden"}) })
+	app.GET("/500", func(c *gin.Context) { c.JSON(500, &gin.H{"status": "500 internal server error"}) })
+	app.POST("/XX", func(c *gin.Context) { _ = c.Error(errors.New("test error")) })
+
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+	for _, s := range []bool{false, true} {
+		std = s
+		_, _ = http.Get("http://127.0.0.1:12345/200")
+		_, _ = http.Get("http://127.0.0.1:12345/403?query=string")
+		_, _ = http.Get("http://127.0.0.1:12345/304")
+		_, _ = http.Get("http://127.0.0.1:12345/500#anchor")
+		_, _ = http.Post("http://127.0.0.1:12345/XX", "application/json", nil)
+	}
+	_ = server.Shutdown(context.Background())
 }

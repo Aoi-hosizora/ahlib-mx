@@ -6,6 +6,7 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"strings"
 	"time"
 )
 
@@ -34,7 +35,7 @@ type loggerParam struct {
 	latency      time.Duration
 	length       int
 	clientIP     string
-	errorMessage string
+	contextError string
 }
 
 // getLoggerParam returns loggerParam from given gin.Context.
@@ -47,6 +48,8 @@ func getLoggerParam(c *gin.Context, start, end time.Time) *loggerParam {
 	if length < 0 {
 		length = 0
 	}
+	errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
+	errorMessage = strings.TrimSpace(errorMessage)
 
 	return &loggerParam{
 		method:       c.Request.Method,
@@ -57,7 +60,7 @@ func getLoggerParam(c *gin.Context, start, end time.Time) *loggerParam {
 		latency:      end.Sub(start),
 		length:       length,
 		clientIP:     c.ClientIP(),
-		errorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
+		contextError: errorMessage,
 	}
 }
 
@@ -76,24 +79,20 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 		"latency":    param.latency,
 		"length":     param.length,
 		"client_ip":  param.clientIP,
+		"ctx_error":  param.contextError,
 	}
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
-	if len(c.Errors) != 0 {
-		msg := fmt.Sprintf("[Gin] %s", param.errorMessage)
+	msg := formatLogger(param)
+	extra.AddToMessage(&msg)
+	switch {
+	case param.status >= 500:
 		entry.Error(msg)
-	} else {
-		msg := formatLogger(param)
-		extra.AddToMessage(&msg)
-		switch {
-		case param.status >= 500:
-			entry.Error(msg)
-		case param.status >= 400:
-			entry.Warn(msg)
-		default:
-			entry.Info(msg)
-		}
+	case param.status >= 400:
+		entry.Warn(msg)
+	default:
+		entry.Info(msg)
 	}
 }
 
@@ -102,14 +101,9 @@ func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, 
 	param := getLoggerParam(c, start, end)
 	extra := logop.NewLoggerOptions(options)
 
-	if len(c.Errors) != 0 {
-		msg := fmt.Sprintf("[Gin] %s", param.errorMessage)
-		logger.Print(msg)
-	} else {
-		msg := formatLogger(param)
-		extra.AddToMessage(&msg)
-		logger.Print(msg)
-	}
+	msg := formatLogger(param)
+	extra.AddToMessage(&msg)
+	logger.Print(msg)
 }
 
 // formatLogger formats loggerParam to logger string.
@@ -118,6 +112,10 @@ func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, 
 // 	     |--------| |------------| |---------------| |----------| |-------|-----|
 // 	         8            12               15             10          7     ...
 func formatLogger(param *loggerParam) string {
-	return fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s",
+	msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s",
 		param.status, param.latency.String(), param.clientIP, xnumber.RenderByte(float64(param.length)), param.method, param.path)
+	if param.contextError != "" {
+		msg = fmt.Sprintf("%s | (%s)", msg, param.contextError)
+	}
+	return msg
 }
