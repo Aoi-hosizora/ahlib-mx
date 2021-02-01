@@ -270,6 +270,8 @@ func TestReplyLogger(t *testing.T) {
 			{text, text2, nil, []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
 			{text, text2, nil, []logop.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
 			{text, text2, nil, []logop.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+			{text, text2, telebot.ErrBlockedByUser, []logop.LoggerOption{WithExtraText("extra")}},
+			{text, text2, telebot.ErrBlockedByUser, []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogReplyToLogrus(l1, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
@@ -297,11 +299,14 @@ func TestSendLogger(t *testing.T) {
 			{chat, nil, telebot.ErrBlockedByUser, nil},
 
 			{chat, text, nil, nil},
+
 			{chat, text, nil, []logop.LoggerOption{WithExtraText("extra")}},
 			{chat, text, nil, []logop.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
 			{chat, text, nil, []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
 			{chat, text, nil, []logop.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
 			{chat, text, nil, []logop.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+			{chat, text, telebot.ErrBlockedByUser, []logop.LoggerOption{WithExtraText("extra")}},
+			{chat, text, telebot.ErrBlockedByUser, []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogSendToLogrus(l1, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)

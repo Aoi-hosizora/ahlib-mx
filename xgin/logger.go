@@ -38,8 +38,8 @@ type loggerParam struct {
 	contextError string
 }
 
-// getLoggerParam returns loggerParam from given gin.Context.
-func getLoggerParam(c *gin.Context, start, end time.Time) *loggerParam {
+// getLoggerParamAndFields returns loggerParam and logrus.Fields from given gin.Context and times.
+func getLoggerParamAndFields(c *gin.Context, start, end time.Time) (*loggerParam, logrus.Fields) {
 	path := c.Request.URL.Path
 	if raw := c.Request.URL.RawQuery; raw != "" {
 		path = path + "?" + raw
@@ -51,7 +51,7 @@ func getLoggerParam(c *gin.Context, start, end time.Time) *loggerParam {
 	errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
 	errorMessage = strings.TrimSpace(errorMessage)
 
-	return &loggerParam{
+	param := &loggerParam{
 		method:       c.Request.Method,
 		path:         path,
 		status:       c.Writer.Status(),
@@ -62,25 +62,25 @@ func getLoggerParam(c *gin.Context, start, end time.Time) *loggerParam {
 		clientIP:     c.ClientIP(),
 		contextError: errorMessage,
 	}
-}
-
-// LogToLogrus logs gin's request and response information to logrus.Logger using given gin.Context.
-func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
-	param := getLoggerParam(c, start, end)
-	extra := logop.NewLoggerOptions(options)
-
 	fields := logrus.Fields{
 		"module":     "gin",
 		"method":     param.method,
 		"path":       param.path,
 		"status":     param.status,
-		"start_time": param.startTime,
-		"end_time":   param.endTime,
+		"start_time": param.startTime.Format(time.RFC3339),
+		"end_time":   param.endTime.Format(time.RFC3339),
 		"latency":    param.latency,
 		"length":     param.length,
 		"client_ip":  param.clientIP,
 		"ctx_error":  param.contextError,
 	}
+	return param, fields
+}
+
+// LogToLogrus logs gin's request and response information to logrus.Logger using given gin.Context and times.
+func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
+	param, fields := getLoggerParamAndFields(c, start, end)
+	extra := logop.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
@@ -96,9 +96,9 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 	}
 }
 
-// LogToLogrus logs gin's request and response information to logrus.StdLogger using given gin.Context.
+// LogToLogrus logs gin's request and response information to logrus.StdLogger using given gin.Context and times.
 func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
-	param := getLoggerParam(c, start, end)
+	param, _ := getLoggerParamAndFields(c, start, end)
 	extra := logop.NewLoggerOptions(options)
 
 	msg := formatLogger(param)

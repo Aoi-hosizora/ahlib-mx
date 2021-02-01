@@ -29,7 +29,7 @@ func TestLogger(t *testing.T) {
 			giveOptions []logop.LoggerOption
 		}{
 			{"", "", "", nil, nil},
-			{"KEY", "title", "body",  nil, nil},
+			{"KEY", "title", "body", nil, nil},
 			{key, "title", "body", nil, nil},
 			{key, title, body, nil, nil},
 
@@ -43,6 +43,8 @@ func TestLogger(t *testing.T) {
 			{"KEY", "title", "body", serverchan.ErrBadPushToken, nil},
 			{key, "title", "body", serverchan.ErrNotSuccess, nil},
 			{key, title, body, serverchan.ErrDuplicateMessage, nil},
+			{key, title, body, serverchan.ErrDuplicateMessage, []logop.LoggerOption{WithExtraText("extra")}},
+			{key, title, body, serverchan.ErrDuplicateMessage, []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogToLogrus(l1, tc.giveKey, tc.giveTitle, tc.giveBody, tc.giveErr, tc.giveOptions...)

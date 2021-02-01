@@ -31,14 +31,23 @@ type receiveLoggerParam struct {
 	chatUsername string
 }
 
-// getReceiveLoggerParam returns receiveLoggerParam from given endpoint and handler's telebot.Message.
-func getReceiveLoggerParam(endpoint string, message *telebot.Message) *receiveLoggerParam {
-	return &receiveLoggerParam{
+// getReceiveLoggerParamAndFields returns receiveLoggerParam and logrus.Fields from given endpoint and handler's telebot.Message.
+func getReceiveLoggerParamAndFields(endpoint string, message *telebot.Message) (*receiveLoggerParam, logrus.Fields) {
+	param := &receiveLoggerParam{
 		endpoint:     endpoint,
 		messageID:    message.ID,
 		chatID:       message.Chat.ID,
 		chatUsername: message.Chat.Username,
 	}
+	fields := logrus.Fields{
+		"module":        "telebot",
+		"action":        "receive",
+		"endpoint":      param.endpoint,
+		"message_id":    param.messageID,
+		"chat_id":       param.chatID,
+		"chat_username": param.chatUsername,
+	}
+	return param, fields
 }
 
 // replyLoggerParam stores some reply-event logger parameters, used in LogReplyToLogrus and LogReplyToLogger.
@@ -53,18 +62,48 @@ type replyLoggerParam struct {
 	chatUsername      string
 }
 
-// getReplyLoggerParam returns replyLoggerParam from given received and replied telebot.Message.
-func getReplyLoggerParam(received, replied *telebot.Message) *replyLoggerParam {
-	return &replyLoggerParam{
-		receivedMessageID: received.ID,
-		repliedMessageID:  replied.ID,
-		repliedType:       renderMessageType(replied),
-		receivedTime:      received.Time(), // <<< UnixTime
-		repliedTime:       replied.Time(),
-		latency:           replied.Time().Sub(received.Time()),
-		chatID:            replied.Chat.ID,
-		chatUsername:      replied.Chat.Username,
+// getReplyLoggerParamAndFields returns replyLoggerParam and logrus.Fields from given received, replied telebot.Message and error.
+func getReplyLoggerParamAndFields(received, replied *telebot.Message, err error) (*replyLoggerParam, logrus.Fields) {
+	var param *replyLoggerParam
+	var fields logrus.Fields
+
+	if err == nil {
+		param = &replyLoggerParam{
+			receivedMessageID: received.ID,
+			repliedMessageID:  replied.ID,
+			repliedType:       renderMessageType(replied),
+			receivedTime:      received.Time(), // <<< UnixTime
+			repliedTime:       replied.Time(),
+			latency:           replied.Time().Sub(received.Time()),
+			chatID:            replied.Chat.ID,
+			chatUsername:      replied.Chat.Username,
+		}
+		fields = logrus.Fields{
+			"module":              "telebot",
+			"action":              "reply",
+			"received_message_id": param.receivedMessageID,
+			"replied_message_id":  param.repliedMessageID,
+			"replied_type":        param.repliedType,
+			"received_time":       param.receivedTime.Format(time.RFC3339),
+			"replied_time":        param.repliedTime.Format(time.RFC3339),
+			"latency":             param.latency,
+			"chat_id":             param.chatID,
+			"chat_username":       param.chatUsername,
+		}
+	} else {
+		param = nil // return nil directly
+		fields = logrus.Fields{
+			"module":              "telebot",
+			"action":              "reply",
+			"received_message_id": received.ID,
+			"received_time":       received.Time().Format(time.RFC3339),
+			"chat_id":             received.Chat.ID, // use received message for nil replied message
+			"chat_username":       received.Chat.Username,
+			"error":               err, // <<<
+		}
 	}
+
+	return param, fields
 }
 
 // sendLoggerParam stores some send-event logger parameters, used in LogSendToLogrus and LogSendToLogger.
@@ -76,130 +115,111 @@ type sendLoggerParam struct {
 	chatUsername  string
 }
 
-// getSendLoggerParam returns sendLoggerParam from given sent telebot.Message.
-func getSendLoggerParam(sent *telebot.Message) *sendLoggerParam {
-	return &sendLoggerParam{
-		sentMessageID: sent.ID,
-		sentType:      renderMessageType(sent),
-		sentTime:      sent.Time(),
-		chatID:        sent.Chat.ID,
-		chatUsername:  sent.Chat.Username,
-	}
-}
+// getSendLoggerParamAndFields returns sendLoggerParam and logrus.Fields from given telebot.Chat, sent telebot.Message and error.
+func getSendLoggerParamAndFields(chat *telebot.Chat, sent *telebot.Message, err error) (*sendLoggerParam, logrus.Fields) {
+	var param *sendLoggerParam
+	var fields logrus.Fields
 
-// LogReceiveToLogrus logs a receive-event message to logrus.Logger using given endpoint and telebot.Message (for string, telebot.InlineButton, telebot.ReplyButton).
-func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
-	epStr, ok := renderEndpoint(endpoint)
-	if !ok || message == nil {
-		return // unsupported endpoint || ignore
-	}
-
-	param := getReceiveLoggerParam(epStr, message)
-	extra := logop.NewLoggerOptions(options)
-
-	fields := logrus.Fields{
-		"module":        "telebot",
-		"action":        "receive",
-		"endpoint":      param.endpoint,
-		"message_id":    param.messageID,
-		"chat_id":       param.chatID,
-		"chat_username": param.chatUsername,
-	}
-	extra.AddToFields(fields)
-	entry := logger.WithFields(fields)
-
-	msg := formatReceiveLogger(param)
-	extra.AddToMessage(&msg)
-	entry.Info(msg)
-}
-
-// LogReplyToLogrus logs a reply-event message to logrus.Logger using given received and replied telebot.Message with error.
-func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...logop.LoggerOption) {
-	if received == nil || (replied == nil && err == nil) {
-		return // ignore
-	}
-	if err != nil {
-		msg := formatReplyErrorLogger(received, err)
-		logger.WithFields(logrus.Fields{
-			"module":              "telebot",
-			"action":              "reply",
-			"received_message_id": received.ID,
-			"received_time":       received.Time(),
-			"chat_id":             received.Chat.ID,
-			"chat_username":       received.Chat.Username,
-			"error":               err,
-		}).Error(msg)
-		return
-	}
-
-	param := getReplyLoggerParam(received, replied)
-	extra := logop.NewLoggerOptions(options)
-
-	fields := logrus.Fields{
-		"module":              "telebot",
-		"action":              "reply",
-		"received_message_id": param.receivedMessageID,
-		"replied_message_id":  param.repliedMessageID,
-		"replied_type":        param.repliedType,
-		"received_time":       param.receivedTime,
-		"replied_time":        param.repliedTime,
-		"latency":             param.latency,
-		"chat_id":             param.chatID,
-		"chat_username":       param.chatUsername,
-	}
-	extra.AddToFields(fields)
-	entry := logger.WithFields(fields)
-
-	msg := formatReplyLogger(param)
-	extra.AddToMessage(&msg)
-	entry.Info(msg)
-}
-
-// LogSendToLogrus logs a send-event message to logrus.Logger using given telebot.Chat and sent telebot.Message with error.
-func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption) {
-	if chat == nil || (sent == nil && err == nil) {
-		return // ignore
-	}
-	if err != nil {
-		msg := formatSendErrorLogger(chat, err)
-		logger.WithFields(logrus.Fields{
+	if err == nil {
+		param = &sendLoggerParam{
+			sentMessageID: sent.ID,
+			sentType:      renderMessageType(sent),
+			sentTime:      sent.Time(),
+			chatID:        sent.Chat.ID, // no use of given chat
+			chatUsername:  sent.Chat.Username,
+		}
+		fields = logrus.Fields{
+			"module":          "telebot",
+			"action":          "send",
+			"sent_message_id": param.sentMessageID,
+			"sent_type":       param.sentType,
+			"sent_time":       param.sentTime,
+			"chat_id":         param.chatID,
+			"chat_username":   param.chatUsername,
+		}
+	} else {
+		param = nil // return nil directly
+		fields = logrus.Fields{
 			"module":        "telebot",
 			"action":        "send",
-			"chat_id":       chat.ID,
+			"chat_id":       chat.ID, // use given chat for nil sent message
 			"chat_username": chat.Username,
-			"error":         err,
-		}).Error(msg)
+			"error":         err, // <<<
+		}
+	}
+
+	return param, fields
+}
+
+// LogReceiveToLogrus logs a receive-event message to logrus.Logger using given endpoint and handler's telebot.Message.
+func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
+	endpointString, ok := renderEndpoint(endpoint)
+	if !ok || message == nil {
 		return
 	}
 
-	param := getSendLoggerParam(sent) // no use of chat
+	param, fields := getReceiveLoggerParamAndFields(endpointString, message)
 	extra := logop.NewLoggerOptions(options)
-
-	fields := logrus.Fields{
-		"module":          "telebot",
-		"action":          "send",
-		"sent_message_id": param.sentMessageID,
-		"sent_type":       param.sentType,
-		"sent_time":       param.sentTime,
-		"chat_id":         param.chatID,
-		"chat_username":   param.chatUsername,
-	}
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
-	msg := formatSendLogger(param)
+	msg := formatReceiveLogger(param)
 	extra.AddToMessage(&msg)
 	entry.Info(msg)
 }
 
-// LogReceiveToLogger logs a receive-event message to logrus.StdLogger using given endpoint and telebot.Message.
-func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
-	epStr, ok := renderEndpoint(endpoint)
-	if !ok || message == nil {
-		return // unsupported endpoint || ignore
+// LogReplyToLogrus logs a reply-event message to logrus.Logger using given received, replied telebot.Message and error.
+func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...logop.LoggerOption) {
+	if received == nil || (replied == nil && err == nil) {
+		return
 	}
 
-	param := getReceiveLoggerParam(epStr, message)
+	param, fields := getReplyLoggerParamAndFields(received, replied, err)
+	extra := logop.NewLoggerOptions(options)
+	extra.AddToFields(fields)
+	entry := logger.WithFields(fields)
+
+	if err != nil {
+		msg := formatReplyErrorLogger(received, err)
+		extra.AddToMessage(&msg)
+		entry.Error(msg)
+	} else {
+		msg := formatReplyLogger(param)
+		extra.AddToMessage(&msg)
+		entry.Info(msg)
+	}
+}
+
+// LogSendToLogrus logs a send-event message to logrus.Logger using given telebot.Chat, sent telebot.Message and error.
+func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption) {
+	if chat == nil || (sent == nil && err == nil) {
+		return
+	}
+
+	param, fields := getSendLoggerParamAndFields(chat, sent, err)
+	extra := logop.NewLoggerOptions(options)
+	extra.AddToFields(fields)
+	entry := logger.WithFields(fields)
+
+	if err != nil {
+		msg := formatSendErrorLogger(chat, err)
+		extra.AddToMessage(&msg)
+		entry.Error(msg)
+	} else {
+		msg := formatSendLogger(param)
+		extra.AddToMessage(&msg)
+		entry.Info(msg)
+	}
+}
+
+// LogReceiveToLogger logs a receive-event message to logrus.StdLogger using given endpoint and handler's telebot.Message.
+func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
+	endpointString, ok := renderEndpoint(endpoint)
+	if !ok || message == nil {
+		return
+	}
+
+	param, _ := getReceiveLoggerParamAndFields(endpointString, message)
 	extra := logop.NewLoggerOptions(options)
 
 	msg := formatReceiveLogger(param)
@@ -207,42 +227,44 @@ func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *
 	logger.Print(msg)
 }
 
-// LogReplyToLogger logs a reply-event message to logrus.StdLogger using given received and replied telebot.Message with error.
+// LogReplyToLogger logs a reply-event message to logrus.StdLogger using given received, replied telebot.Message and error.
 func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...logop.LoggerOption) {
 	if received == nil || (err == nil && replied == nil) {
-		return // ignore
+		return
 	}
+
+	param, _ := getReplyLoggerParamAndFields(received, replied, err)
+	extra := logop.NewLoggerOptions(options)
+
 	if err != nil {
 		msg := formatReplyErrorLogger(received, err)
+		extra.AddToMessage(&msg)
 		logger.Print(msg)
-		return
+	} else {
+		msg := formatReplyLogger(param)
+		extra.AddToMessage(&msg)
+		logger.Print(msg)
 	}
-
-	param := getReplyLoggerParam(received, replied)
-	extra := logop.NewLoggerOptions(options)
-
-	msg := formatReplyLogger(param)
-	extra.AddToMessage(&msg)
-	logger.Print(msg)
 }
 
-// LogSendToLogger logs a send-event message to logrus.StdLogger using given telebot.Chat and sent telebot.Message with error.
+// LogSendToLogger logs a send-event message to logrus.StdLogger using given telebot.Chat, sent telebot.Message and error.
 func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption) {
 	if chat == nil || (sent == nil && err == nil) {
-		return // ignore
-	}
-	if err != nil {
-		msg := formatSendErrorLogger(chat, err)
-		logger.Print(msg)
 		return
 	}
 
-	param := getSendLoggerParam(sent) // no use of chat
+	param, _ := getSendLoggerParamAndFields(chat, sent, err)
 	extra := logop.NewLoggerOptions(options)
 
-	msg := formatSendLogger(param)
-	extra.AddToMessage(&msg)
-	logger.Print(msg)
+	if err != nil {
+		msg := formatSendErrorLogger(chat, err)
+		extra.AddToMessage(&msg)
+		logger.Print(msg)
+	} else {
+		msg := formatSendLogger(param)
+		extra.AddToMessage(&msg)
+		logger.Print(msg)
+	}
 }
 
 // formatReceiveLogger formats receiveLoggerParam to logger string.
@@ -260,7 +282,6 @@ func formatReceiveLogger(param *receiveLoggerParam) string {
 // formatReplyLogger formats replyLoggerParam to logger string.
 // Logs like:
 // 	[Telebot] 3345 |           2s |   t:text | 3344 | 12345678 Aoi-hosizora
-// 	[Telebot] 3345 |           2s |  t:photo | 3344 | 12345678 Aoi-hosizora
 // 	         |----| |------------| |--------| |----| |--------|------------|
 // 	           4          12            8       4        ...       ...
 func formatReplyLogger(param *replyLoggerParam) string {
@@ -278,7 +299,7 @@ func formatSendLogger(param *sendLoggerParam) string {
 		param.sentMessageID, "x", param.sentType, "x", param.chatID, param.chatUsername)
 }
 
-// formatReplyErrorLogger formats replied telebot.Message and error to logger string.
+// formatReplyErrorLogger formats received telebot.Message and error to logger string.
 // Logs like:
 // 	[Telebot] Reply to '12345678 Aoi-hosizora' failed | telegram: bot was blocked by the user (401)
 func formatReplyErrorLogger(received *telebot.Message, err error) string {

@@ -39,67 +39,71 @@ var (
 	_asteriskRe = regexp.MustCompile(`\*+`)
 )
 
-// getLoggerParam returns loggerParam from given sckey, title and body.
-func getLoggerParam(sckey, title, body string) *loggerParam {
+// getLoggerParamAndFields returns loggerParam and logrus.Fields from given sckey, title, body and error.
+func getLoggerParamAndFields(sckey, title, body string, err error) (*loggerParam, logrus.Fields) {
 	indices := append(xslice.Range(6, 15, 1), append(xslice.Range(22, 31, 1), xslice.Range(38, 47, 1)...)...)
 	maskedSckey := xstring.MaskToken(sckey, '*', indices...) // XXXXXX**********XXXXXX**********XXXXXX**********XXXXXX
-
 	maskedTitle := xstring.DefaultMaskToken(title)
 	maskedTitle = _asteriskRe.ReplaceAllString(maskedTitle, "**")
 
-	return &loggerParam{
+	param := &loggerParam{
 		maskedSckey: maskedSckey,
 		maskedTitle: maskedTitle,
 		titleLength: len(title),
 		bodyLength:  len(body),
 	}
-}
-
-// LogToLogrus logs a send-event message to logrus.Logger using given sckey, title and body.
-func LogToLogrus(logger *logrus.Logger, sckey, title, body string, err error, options ...logop.LoggerOption) {
-	param := getLoggerParam(sckey, title, body)
-	extra := logop.NewLoggerOptions(options)
-
-	if err != nil {
-		msg := formatErrorLogger(param, err)
-		logger.WithFields(logrus.Fields{
+	var fields logrus.Fields
+	if err == nil {
+		fields = logrus.Fields{
 			"module":       "serverchan",
 			"masked_sckey": param.maskedSckey,
 			"masked_title": param.maskedTitle,
-			"error":        err,
-		}).Error(msg)
-		return
+			"title_length": param.titleLength, // <<<
+			"body_length":  param.bodyLength,  // <<<
+		}
+	} else {
+		fields = logrus.Fields{
+			"module":       "serverchan",
+			"masked_sckey": param.maskedSckey,
+			"masked_title": param.maskedTitle,
+			"error":        err, // <<<
+		}
 	}
+	return param, fields
+}
 
-	fields := logrus.Fields{
-		"module":       "serverchan",
-		"masked_sckey": param.maskedSckey,
-		"masked_title": param.maskedTitle,
-		"title_length": param.titleLength, // <<<
-		"body_length":  param.bodyLength,  // <<<
-	}
+// LogToLogrus logs a send-event message to logrus.Logger using given sckey, title, body and error.
+func LogToLogrus(logger *logrus.Logger, sckey, title, body string, err error, options ...logop.LoggerOption) {
+	param, fields := getLoggerParamAndFields(sckey, title, body, err)
+	extra := logop.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
-	msg := formatLogger(param)
-	extra.AddToMessage(&msg)
-	entry.Info(msg)
+	if err != nil {
+		msg := formatErrorLogger(param, err)
+		extra.AddToMessage(&msg)
+		entry.Error(msg)
+	} else {
+		msg := formatLogger(param)
+		extra.AddToMessage(&msg)
+		entry.Info(msg)
+	}
 }
 
 // LogToLogger logs a send-event message to logrus.StdLogger using given sckey, title and body.
 func LogToLogger(logger logrus.StdLogger, sckey, title, body string, err error, options ...logop.LoggerOption) {
-	param := getLoggerParam(sckey, title, body)
+	param, _ := getLoggerParamAndFields(sckey, title, body, err)
 	extra := logop.NewLoggerOptions(options)
 
 	if err != nil {
 		msg := formatErrorLogger(param, err)
+		extra.AddToMessage(&msg)
 		logger.Print(msg)
-		return
+	} else {
+		msg := formatLogger(param)
+		extra.AddToMessage(&msg)
+		logger.Print(msg)
 	}
-
-	msg := formatLogger(param)
-	extra.AddToMessage(&msg)
-	logger.Print(msg)
 }
 
 // formatLogger formats loggerParam to logger string.
