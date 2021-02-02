@@ -10,6 +10,7 @@
 
 ### Types
 
++ `type DumpRequestOption func`
 + `type AppRouter struct`
 
 ### Variables
@@ -22,7 +23,12 @@
 
 ### Functions
 
-+ `func DumpRequest(c *gin.Context, ignoreHeaders []string) []string`
++ `func WithRetainHeaders(headers ...string) DumpRequestOption`
++ `func WithIgnoreHeaders(headers ...string) DumpRequestOption`
++ `func WithSecretHeaders(headers ...string) DumpRequestOption`
++ `func WithSecretReplace(secret string) DumpRequestOption`
++ `func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string`
++ `func PprofWrap(router *gin.Engine)`
 + `func GetValidatorEngine() (*validator.Validate, error)`
 + `func GetValidatorTranslator(locTrans locales.Translator, registerFn xvalidator.TranslationRegisterHandler) (ut.Translator, error)`
 + `func AddBinding(tag string, fn validator.Func) error`
@@ -33,7 +39,6 @@
 + `func EnableRFC3339DateBindingTranslator(translator ut.Translator) error`
 + `func EnableRFC3339DateTimeBinding() error`
 + `func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
-+ `func PprofWrap(router *gin.Engine)`
 + `func NewAppRouter(engine *gin.Engine, router gin.IRouter) *AppRouter`
 + `func WithExtraText(text string) logop.LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) logop.LoggerOption`
