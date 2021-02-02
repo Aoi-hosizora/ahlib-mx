@@ -1,14 +1,6 @@
 package xfiber
 
-import (
-	"fmt"
-	"github.com/gofiber/fiber"
-	logrus2 "github.com/sirupsen/logrus"
-	"log"
-	"os"
-	"testing"
-	"time"
-)
+/*
 
 func TestDumpRequest(t *testing.T) {
 	app := fiber.New()
@@ -66,3 +58,5 @@ func TestLogger(t *testing.T) {
 
 	_ = app.Listen("1234")
 }
+
+*/
