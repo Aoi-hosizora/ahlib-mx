@@ -6,9 +6,6 @@ import (
 	"time"
 )
 
-// TODO waiting for ahlib-more v1.5.0 published
-
-// ParamRegexpValidator represents regexp validator with param, just like `regexp: xxx`.
 func ParamRegexpValidator() validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		regexpParam := fl.Param() // param
@@ -19,13 +16,23 @@ func ParamRegexpValidator() validator.Func {
 		}
 		re, err := regexp.Compile(regexpParam)
 		if err != nil {
+			return false // return false
+		}
+		return re.MatchString(text)
+	}
+}
+
+func RegexpValidator(re *regexp.Regexp) validator.Func {
+	return func(fl validator.FieldLevel) bool {
+		i := fl.Field().Interface()
+		text, ok := i.(string)
+		if !ok {
 			return false
 		}
 		return re.MatchString(text)
 	}
 }
 
-// DateTimeValidator represents datetime validator using given layout.
 func DateTimeValidator(layout string) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()

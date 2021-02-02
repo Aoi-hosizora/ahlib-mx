@@ -30,7 +30,7 @@
 + `func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string`
 + `func PprofWrap(router *gin.Engine)`
 + `func GetValidatorEngine() (*validator.Validate, error)`
-+ `func GetValidatorTranslator(locTrans locales.Translator, registerFn xvalidator.TranslationRegisterHandler) (ut.Translator, error)`
++ `func GetValidatorTranslator(locTranslator locales.Translator, registerFn xvalidator.TranslationRegisterHandler) (ut.Translator, error)`
 + `func AddBinding(tag string, fn validator.Func) error`
 + `func AddTranslator(translator ut.Translator, tag, message string, override bool) error`
 + `func EnableRegexpBinding() error`
