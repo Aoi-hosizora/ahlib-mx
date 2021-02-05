@@ -43,14 +43,14 @@ func WithIgnoreHeaders(headers ...string) DumpRequestOption {
 	}
 }
 
-// WithIgnoreHeaders creates a DumpRequestOption for secret headers, such as Authorization.
+// WithSecretHeaders creates a DumpRequestOption for secret headers, such as Authorization.
 func WithSecretHeaders(headers ...string) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
 		o.secretHeaders = headers
 	}
 }
 
-// WithIgnoreHeaders creates a DumpRequestOption for secret header replace string, defaults to "*".
+// WithSecretReplace creates a DumpRequestOption for secret header replace string, defaults to "*".
 func WithSecretReplace(secret string) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
 		o.secretReplace = secret

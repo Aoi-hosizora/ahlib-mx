@@ -96,7 +96,7 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 	}
 }
 
-// LogToLogrus logs gin's request and response information to logrus.StdLogger using given gin.Context and times.
+// LogToLogger logs gin's request and response information to logrus.StdLogger using given gin.Context and times.
 func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
 	param, _ := getLoggerParamAndFields(c, start, end)
 	extra := logop.NewLoggerOptions(options)
