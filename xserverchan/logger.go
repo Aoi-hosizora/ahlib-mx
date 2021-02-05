@@ -118,13 +118,17 @@ func formatLogger(param *loggerParam) string {
 
 // formatErrorLogger formats loggerParam and error to logger string.
 // Logs like:
-// 	[Serverchan] Send message 't**e' to 'SCU0ab**********jklmn4**********9uvwxy**********g456ab' failed | serverchan: respond with not success
+// 	[Serverchan] Send message 't**e' to bad push token 'KEY'
 // 	[Serverchan] Send duplicate message 'te**st' to 'SCU0ab**********jklmn4**********9uvwxy**********g456ab'
+// 	[Serverchan] Send message 't**e' to 'SCU0ab**********jklmn4**********9uvwxy**********g456ab' failed | serverchan: respond with not success
 func formatErrorLogger(param *loggerParam, err error) string {
 	var msg string
-	if err == serverchan.ErrDuplicateMessage {
+	switch {
+	case err == serverchan.ErrBadPushToken:
+		msg = fmt.Sprintf("[Serverchan] Send message '%s' to bad push token '%s'", param.maskedTitle, param.maskedSckey)
+	case err == serverchan.ErrDuplicateMessage:
 		msg = fmt.Sprintf("[Serverchan] Send duplicate message '%s' to '%s'", param.maskedTitle, param.maskedSckey)
-	} else {
+	default:
 		msg = fmt.Sprintf("[Serverchan] Send message '%s' to '%s' failed | %v", param.maskedTitle, param.maskedSckey, err)
 	}
 	return msg

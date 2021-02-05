@@ -91,14 +91,19 @@ func getReplyLoggerParamAndFields(received, replied *telebot.Message, err error)
 			"chat_username":       param.chatUsername,
 		}
 	} else {
-		param = nil // return nil directly
+		param = &replyLoggerParam{
+			receivedMessageID: received.ID,
+			receivedTime:      received.Time(),  // <<< UnixTime
+			chatID:            received.Chat.ID, // use received message for nil replied message
+			chatUsername:      received.Chat.Username,
+		}
 		fields = logrus.Fields{
 			"module":              "telebot",
 			"action":              "reply",
-			"received_message_id": received.ID,
-			"received_time":       received.Time().Format(time.RFC3339),
-			"chat_id":             received.Chat.ID, // use received message for nil replied message
-			"chat_username":       received.Chat.Username,
+			"received_message_id": param.receivedMessageID,
+			"received_time":       param.receivedTime.Format(time.RFC3339),
+			"chat_id":             param.chatID,
+			"chat_username":       param.chatUsername,
 			"error":               err, // <<<
 		}
 	}
@@ -138,12 +143,15 @@ func getSendLoggerParamAndFields(chat *telebot.Chat, sent *telebot.Message, err 
 			"chat_username":   param.chatUsername,
 		}
 	} else {
-		param = nil // return nil directly
+		param = &sendLoggerParam{
+			chatID:       chat.ID, // use given chat for nil sent message
+			chatUsername: chat.Username,
+		}
 		fields = logrus.Fields{
 			"module":        "telebot",
 			"action":        "send",
-			"chat_id":       chat.ID, // use given chat for nil sent message
-			"chat_username": chat.Username,
+			"chat_id":       param.chatID,
+			"chat_username": param.chatUsername,
 			"error":         err, // <<<
 		}
 	}

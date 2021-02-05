@@ -39,12 +39,12 @@
 + `func EnableRFC3339DateBindingTranslator(translator ut.Translator) error`
 + `func EnableRFC3339DateTimeBinding() error`
 + `func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
-+ `func NewAppRouter(engine *gin.Engine, router gin.IRouter) *AppRouter`
 + `func WithExtraText(text string) logop.LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) logop.LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption`
 + `func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption)`
 + `func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption)`
++ `func NewAppRouter(engine *gin.Engine, router gin.IRouter) *AppRouter`
 
 ### Methods
 

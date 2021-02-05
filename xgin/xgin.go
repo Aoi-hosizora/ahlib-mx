@@ -2,8 +2,7 @@ package xgin
 
 import (
 	"errors"
-	"github.com/Aoi-hosizora/ahlib-web/internal/_temp/xvalidator"
-	// "github.com/Aoi-hosizora/ahlib-more/xvalidator"
+	"github.com/Aoi-hosizora/ahlib-more/xvalidator"
 	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
