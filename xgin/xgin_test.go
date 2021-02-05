@@ -1,148 +1,137 @@
 package xgin
 
-/*
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"github.com/Aoi-hosizora/ahlib-more/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xtesting"
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/locales"
+	"github.com/go-playground/validator/v10"
+	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"log"
+	"math/rand"
+	"net/http"
+	"os"
+	"regexp"
+	"testing"
+	"time"
+)
 
 func TestDumpRequest(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
-	app.GET("a", func(c *gin.Context) {
-		for _, s := range DumpRequest(c) {
-			log.Println(s)
+	app.GET("nil", func(c *gin.Context) {
+		c.JSON(200, DumpRequest(nil))
+	})
+	app.GET("all", func(c *gin.Context) {
+		c.JSON(200, DumpRequest(c))
+	})
+	app.GET("retain", func(c *gin.Context) {
+		c.JSON(200, DumpRequest(c, WithRetainHeaders("Host")))
+	})
+	app.GET("ignore", func(c *gin.Context) {
+		c.JSON(200, DumpRequest(c, WithIgnoreHeaders("Host")))
+	})
+	app.GET("secret1", func(c *gin.Context) {
+		c.JSON(200, DumpRequest(c, WithSecretHeaders("Host")))
+	})
+	app.GET("secret2", func(c *gin.Context) {
+		c.JSON(200, DumpRequest(c, WithSecretHeaders("Host"), WithSecretReplace("***")))
+	})
+
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
+
+	req := func(method, url string) []string {
+		req, _ := http.NewRequest(method, url, nil)
+		req.Header = http.Header{
+			"Host":            []string{"localhost:12345"},
+			"Accept-Encoding": []string{"gzip"},
+			"User-Agent":      []string{"Go-http-client/1.1"},
 		}
-	})
-	_ = app.Run(":1234")
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return []string{}
+		}
+
+		bs, _ := ioutil.ReadAll(resp.Body)
+		arr := make([]string, 0)
+		_ = json.Unmarshal(bs, &arr)
+		return arr
+	}
+
+	for _, tc := range []struct {
+		giveEp  string
+		wantArr []string
+	}{
+		{"nil", []string{}},
+		{"all", []string{"GET /all HTTP/1.1", "Host: localhost:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1"}},
+		{"retain", []string{"GET /retain HTTP/1.1", "Host: localhost:12345"}},
+		{"ignore", []string{"GET /ignore HTTP/1.1", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1"}},
+		{"secret1", []string{"GET /secret1 HTTP/1.1", "Host: *", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1"}},
+		{"secret2", []string{"GET /secret2 HTTP/1.1", "Host: ***", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1"}},
+	} {
+		xtesting.Equal(t, req("GET", "http://localhost:12345/"+tc.giveEp), tc.wantArr)
+	}
 }
 
-func TestBuildErrorDto(t *testing.T) {
+func TestPprofWrap(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
-	app.Use(func(c *gin.Context) {
-		defer func() {
-			if err := recover(); err != nil {
-				e := BuildErrorDto(err, c, 2, true)
-				e.Others = map[string]interface{}{"a": "b"}
-				c.JSON(200, e)
-			}
-		}()
-		c.Next()
-	})
-	app.GET("panic", func(c *gin.Context) {
-		panic("test panic")
-	})
-	app.GET("error", func(c *gin.Context) {
-		c.JSON(200, BuildBasicErrorDto(fmt.Errorf("test error"), c))
-	})
-	_ = app.Run(":1234")
-}
-
-func TestLogger(t *testing.T) {
-	app := gin.New()
-
-	logger := log.New(os.Stderr, "", log.LstdFlags)
-	logrus := logrus2.New()
-
 	PprofWrap(app)
-	app.Use(func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
 
-		WithLogrus(logrus, start, c, nil)
-		WithLogrus(logrus, start, c, WithExtraString("abc"))
-		WithLogrus(logrus, start, c, WithExtraFields(map[string]interface{}{"a": "b"}))
-		WithLogrus(logrus, start, c, WithExtraFieldsV("a", "b"))
-		WithLogrus(logrus, start, c, WithExtraString("abc"), WithExtraFields(map[string]interface{}{"a": "b"}))
+	for _, tc := range []struct {
+		giveMethod string
+		giveUrl    string
+	}{
+		{"GET", "debug/pprof/"},
+		{"GET", "debug/pprof/heap"},
+		{"GET", "debug/pprof/goroutine"},
+		{"GET", "debug/pprof/allocs"},
+		{"GET", "debug/pprof/block"},
+		{"GET", "debug/pprof/threadcreate"},
+		{"GET", "debug/pprof/cmdline"},
+		// {"GET", "debug/pprof/profile"}, // <<< too slow
+		{"GET", "debug/pprof/symbol"},
+		{"POST", "debug/pprof/symbol"},
+		{"GET", "debug/pprof/trace"},
+		{"GET", "debug/pprof/mutex"},
+	} {
+		var resp *http.Response
+		var err error
+		url := "http://localhost:12345/" + tc.giveUrl
+		if tc.giveMethod == http.MethodGet {
+			resp, err = http.Get(url)
+		} else if tc.giveMethod == http.MethodPost {
+			resp, err = http.Post(url, "application/json", nil)
+		}
+		xtesting.Nil(t, err)
+		if err == nil {
+			xtesting.Equal(t, resp.StatusCode, 200)
+		}
+	}
 
-		WithLogger(logger, start, c, nil)
-		WithLogger(logger, start, c, WithExtraString("abc"))
-		WithLogger(logger, start, c, WithExtraFields(map[string]interface{}{"a": "b"}))
-	})
-
-	_ = app.Run(":1234")
-}
-
-*/
-
-// func TestBinding(t *testing.T) {
-// 	app := gin.New()
-// 	enTrans, err := GetTranslator(en.New(), en_translations.RegisterDefaultTranslations)
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
-//
-// 	log.Println(EnableRegexpBindingWithTranslator(enTrans))
-// 	log.Println(EnableRFC3339DateBindingWithTranslator(enTrans))
-// 	log.Println(EnableRFC3339DateTimeBindingWithTranslator(enTrans))
-//
-// 	type st struct {
-// 		A string `binding:"regexp=^[abc]+$"`
-// 		B string `binding:"date"`
-// 		C string `binding:"datetime"`
-// 		D string `binding:"gte=2"`
-// 	}
-//
-// 	app.GET("", func(ctx *gin.Context) {
-// 		log.Println(ctx.Request.RequestURI)
-// 		st := &st{}
-// 		err := ctx.ShouldBindQuery(st)
-// 		if err != nil {
-// 			translations := err.(validator.ValidationErrors).Translate(enTrans)
-// 			ctx.JSON(200, &gin.H{
-// 				"msg":    err.Error(),
-// 				"detail": translations,
-// 			})
-// 		}
-// 	})
-//
-// 	// http://localhost:1234/?A=a&B=2020-11-16&C=2020-11-16T21:44:03Z&D=555
-// 	/*
-// 		"detail": {
-// 			"st.A": "A must matches regexp /^[abc]+$/",
-// 			"st.B": "B must be an RFC3339 Date",
-// 			"st.C": "C must be an RFC3339 DateTime",
-// 			"st.D": "D must be at least 2 characters in length"
-// 		},
-// 	*/
-// 	_ = app.Run(":1234")
-// }
-
-/*
-
-func TestRoute(t *testing.T) {
-	app := gin.New()
-	app.HandleMethodNotAllowed = true
-	app.NoRoute(func(c *gin.Context) { c.String(200, "404 %s not found", c.Request.URL.String()) })
-	app.NoMethod(func(c *gin.Context) { c.String(200, "405 %s not allowed", c.Request.Method) })
-
-	g := app.Group("v1")
-	ar := NewAppRoute(app, g)
-
-	ar.GET("", func(c *gin.Context) { log.Println(0, c.FullPath()) })
-	ar.GET("a", func(c *gin.Context) { log.Println(1, c.FullPath()) })
-	ar.GET("b", func(c *gin.Context) { log.Println(2, c.FullPath()) })
-	ar.GET(":a", func(c *gin.Context) { log.Println(3, c.FullPath(), "|", c.Param("a")) })
-	ar.GET("a/b", func(c *gin.Context) { log.Println(4, c.FullPath()) })
-	ar.GET("c/d", func(c *gin.Context) { log.Println(5, c.FullPath()) })
-	ar.GET(":a/:b", func(c *gin.Context) { log.Println(6, c.FullPath(), "|", c.Param("a"), "|", c.Param("b")) })
-	ar.GET("a/b/c", func(c *gin.Context) { log.Println(7, c.FullPath()) })
-	ar.GET("d/e/f", func(c *gin.Context) { log.Println(8, c.FullPath()) })
-	ar.GET(":a/:b/:c", func(c *gin.Context) { log.Println(9, c.FullPath(), "|", c.Param("a"), "|", c.Param("b"), "|", c.Param("c")) })
-	ar.GET("a/b/c/d", func(c *gin.Context) { log.Println(10, c.FullPath()) })
-	ar.POST("a", func(c *gin.Context) { log.Println(11, c.FullPath()) }, func(c *gin.Context) { log.Println(11, c.FullPath()) })
-	ar.POST("a/b", func(c *gin.Context) { log.Println(12, c.FullPath()) })
-	ar.POST("a/b/:c", func(c *gin.Context) { log.Println(13, c.FullPath(), "|", c.Param("c")) })
-	ar.Do()
-
-	// TODO curl -X POST localhost:1234/v1/a/b/c/dd 405 POST not allowed
-
-	_ = app.Run(":1234")
+	// for slow debug/pprof/profile
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, "GET", "http://localhost:12345/debug/pprof/profile", nil) // after go113
+	client := &http.Client{}
+	_, _ = client.Do(req) // ignore result
 }
 
 func TestRequiredAndOmitempty(t *testing.T) {
-	unmarshal := func(obj interface{}, j string) interface{} {
-		err := json.Unmarshal([]byte(j), obj)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		return obj
-	}
+	v := validator.New()
+	v.SetTagName("binding")
+
 	type S1 struct {
 		A uint64 `binding:"required"`
 		B string `binding:"required"`
@@ -168,45 +157,244 @@ func TestRequiredAndOmitempty(t *testing.T) {
 		B *string `binding:"required,omitempty"`
 	}
 
-	v := validator.New()
-	v.SetTagName("binding")
-
-	// string required
-	fmt.Println()
-	log.Println(v.Struct(unmarshal(&S1{}, `{}`)) == nil)                     // false
-	log.Println(v.Struct(unmarshal(&S1{}, `{"A": null, "B": null}`)) == nil) // false
-	log.Println(v.Struct(unmarshal(&S1{}, `{"A": 0, "B": ""}`)) == nil)      // false
-	log.Println(v.Struct(unmarshal(&S1{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// *string required
-	fmt.Println()
-	log.Println(v.Struct(unmarshal(&S2{}, `{}`)) == nil)                     // false
-	log.Println(v.Struct(unmarshal(&S2{}, `{"A": null, "B": null}`)) == nil) // false
-	log.Println(v.Struct(unmarshal(&S2{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	log.Println(v.Struct(unmarshal(&S2{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// string omitempty
-	fmt.Println()
-	log.Println(v.Struct(unmarshal(&S3{}, `{}`)) == nil)                     // true
-	log.Println(v.Struct(unmarshal(&S3{}, `{"A": null, "B": null}`)) == nil) // true
-	log.Println(v.Struct(unmarshal(&S3{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	log.Println(v.Struct(unmarshal(&S3{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// *string omitempty => string omitempty
-	fmt.Println()
-	log.Println(v.Struct(unmarshal(&S4{}, `{}`)) == nil)                     // true
-	log.Println(v.Struct(unmarshal(&S4{}, `{"A": null, "B": null}`)) == nil) // true
-	log.Println(v.Struct(unmarshal(&S4{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	log.Println(v.Struct(unmarshal(&S4{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// string required,omitempty => string required
-	fmt.Println()
-	log.Println(v.Struct(unmarshal(&S5{}, `{}`)) == nil)                     // false
-	log.Println(v.Struct(unmarshal(&S5{}, `{"A": null, "B": null}`)) == nil) // false
-	log.Println(v.Struct(unmarshal(&S5{}, `{"A": 0, "B": ""}`)) == nil)      // false
-	log.Println(v.Struct(unmarshal(&S5{}, `{"A": 1, "B": " "}`)) == nil)     // true
-	// *string required,omitempty => *string required
-	fmt.Println()
-	log.Println(v.Struct(unmarshal(&S6{}, `{}`)) == nil)                     // false
-	log.Println(v.Struct(unmarshal(&S6{}, `{"A": null, "B": null}`)) == nil) // false
-	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 0, "B": ""}`)) == nil)      // true
-	log.Println(v.Struct(unmarshal(&S6{}, `{"A": 1, "B": " "}`)) == nil)     // true
+	for _, tc := range []struct {
+		giveObj interface{}
+		giveStr string
+		wantOk  bool
+	}{
+		// typ required
+		{&S1{}, `{}`, false},
+		{&S1{}, `{"A": null, "B": null}`, false},
+		{&S1{}, `{"A": 0, "B": ""}`, false},
+		{&S1{}, `{"A": 1, "B": " "}`, true},
+		// *typ required
+		{&S2{}, `{}`, false},
+		{&S2{}, `{"A": null, "B": null}`, false},
+		{&S2{}, `{"A": 0, "B": ""}`, true},
+		{&S2{}, `{"A": 1, "B": " "}`, true},
+		// typ omitempty
+		{&S3{}, `{}`, true},
+		{&S3{}, `{"A": null, "B": null}`, true},
+		{&S3{}, `{"A": 0, "B": ""}`, true},
+		{&S3{}, `{"A": 1, "B": " "}`, true},
+		// *typ omitempty => typ omitempty
+		{&S4{}, `{}`, true},
+		{&S4{}, `{"A": null, "B": null}`, true},
+		{&S4{}, `{"A": 0, "B": ""}`, true},
+		{&S4{}, `{"A": 1, "B": " "}`, true},
+		// typ required,omitempty => typ required
+		{&S5{}, `{}`, false},
+		{&S5{}, `{"A": null, "B": null}`, false},
+		{&S5{}, `{"A": 0, "B": ""}`, false},
+		{&S5{}, `{"A": 1, "B": " "}`, true},
+		// *typ required,omitempty => *typ required
+		{&S6{}, `{}`, false},
+		{&S6{}, `{"A": null, "B": null}`, false},
+		{&S6{}, `{"A": 0, "B": ""}`, true},
+		{&S6{}, `{"A": 1, "B": " "}`, true},
+	} {
+		_ = json.Unmarshal([]byte(tc.giveStr), tc.giveObj)
+		xtesting.Equal(t, v.Struct(tc.giveObj) == nil, tc.wantOk)
+	}
 }
 
-*/
+type mockValidator struct{}
+
+func (f mockValidator) ValidateStruct(interface{}) error {
+	return nil
+}
+
+func (f mockValidator) Engine() interface{} {
+	return nil // fake
+}
+
+func TestGetValidatorEngineAndGetValidatorTranslator(t *testing.T) {
+	// validator
+	val, err := GetValidatorEngine()
+	xtesting.Nil(t, err)
+	type testStruct1 struct {
+		String string `binding:"required"`
+	}
+	xtesting.NotNil(t, val.Struct(&testStruct1{}))
+	val.SetTagName("validate")      // change to use validate
+	defer val.SetTagName("binding") // default tag is binding
+	type testStruct2 struct {
+		String string `validate:"required"`
+	}
+	xtesting.NotNil(t, val.Struct(&testStruct2{}))
+
+	// translator
+	for _, tc := range []struct {
+		giveTranslator   locales.Translator
+		giveRegisterFn   xvalidator.TranslationRegisterHandler
+		wantRequiredText string
+	}{
+		{nil, nil, "Key: 'testStruct2.String' Error:Field validation for 'String' failed on the 'required' tag"},
+		{xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc(), "String is a required field"},
+		{xvalidator.FrLocaleTranslator(), xvalidator.FrTranslationRegisterFunc(), "String est un champ obligatoire"},
+		{xvalidator.JaLocaleTranslator(), xvalidator.JaTranslationRegisterFunc(), "Stringは必須フィールドです"},
+		{xvalidator.RuLocaleTranslator(), xvalidator.RuTranslationRegisterFunc(), "String обязательное поле"},
+		{xvalidator.ZhLocaleTranslator(), xvalidator.ZhTranslationRegisterFunc(), "String为必填字段"},
+		{xvalidator.ZhHantLocaleTranslator(), xvalidator.ZhTwTranslationRegisterFunc(), "String為必填欄位"},
+	} {
+		text := ""
+		if tc.giveTranslator == nil || tc.giveRegisterFn == nil {
+			text = val.Struct(&testStruct2{}).Error()
+		} else {
+			trans, err := GetValidatorTranslator(tc.giveTranslator, tc.giveRegisterFn)
+			xtesting.Nil(t, err)
+			var ok bool
+			text, ok = val.Struct(&testStruct2{}).(validator.ValidationErrors).Translate(trans)["testStruct2.String"]
+			xtesting.True(t, ok)
+		}
+		xtesting.Equal(t, text, tc.wantRequiredText)
+	}
+
+	// error
+	trans, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+	xtesting.Nil(t, err)
+	motoVal := binding.Validator
+	binding.Validator = &mockValidator{}
+	defer func() { binding.Validator = motoVal }()
+
+	_, err = GetValidatorEngine()
+	xtesting.NotNil(t, err)
+	_, err = GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+	xtesting.NotNil(t, err)
+	xtesting.NotNil(t, EnableParamRegexpBinding())
+	xtesting.NotNil(t, EnableParamRegexpBindingTranslator(trans))
+}
+
+func TestAddBindingAndAddTranslator(t *testing.T) {
+	trans, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+	xtesting.Nil(t, err)
+
+	xtesting.Nil(t, AddBinding("re_number", xvalidator.RegexpValidator(regexp.MustCompile(`[0-9]+`))))
+	xtesting.Nil(t, AddTranslator(trans, "re_number", "{0} must be a number string", true))
+	xtesting.Nil(t, EnableParamRegexpBinding())
+	xtesting.Nil(t, EnableParamRegexpBindingTranslator(trans))
+	xtesting.Nil(t, EnableRFC3339DateBinding())
+	xtesting.Nil(t, EnableRFC3339DateBindingTranslator(trans))
+	xtesting.Nil(t, EnableRFC3339DateTimeBinding())
+	xtesting.Nil(t, EnableRFC3339DateTimeBindingTranslator(trans))
+
+	type testStruct struct {
+		Number   string `json:"number"   form:"number"   binding:"re_number"`
+		Abc      string `json:"abc"      form:"abc"      binding:"regexp=^[abc]+$"`
+		Date     string `json:"date"     form:"date"     binding:"date"`
+		Datetime string `json:"datetime" form:"datetime" binding:"datetime"`
+		Gte2     int    `json:"gte2"     form:"gte2"     binding:"gte=2"`
+	}
+
+	gin.SetMode(gin.ReleaseMode)
+	app := gin.New()
+	app.GET("", func(ctx *gin.Context) {
+		test := &testStruct{}
+		err := ctx.ShouldBindQuery(test)
+		if err != nil {
+			translations := err.(validator.ValidationErrors).Translate(trans)
+			ctx.JSON(400, &gin.H{
+				"msg":    "failed",
+				"detail": translations,
+			})
+		} else {
+			ctx.JSON(200, &gin.H{
+				"msg": "success",
+			})
+		}
+	})
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
+
+	for _, tc := range []struct {
+		giveQuery string
+		wantMap   map[string]interface{}
+	}{
+		{"", map[string]interface{}{
+			"msg": "failed",
+			"detail": map[string]interface{}{
+				"testStruct.Number":   "Number must be a number string",
+				"testStruct.Abc":      "Abc must matches regexp /^[abc]+$/",
+				"testStruct.Date":     "Date must be an RFC3339 date",
+				"testStruct.Datetime": "Datetime must be an RFC3339 datetime",
+				"testStruct.Gte2":     "Gte2 must be 2 or greater",
+			},
+		}},
+		{"?number=aaa&abc=def&date=2021-02-03&datetime=2021-02-03T02%3A10%3A13%2B08%3A00&gte2=1", map[string]interface{}{ // 2021-02-03T02:10:13+08:00
+			"msg": "failed",
+			"detail": map[string]interface{}{
+				"testStruct.Number": "Number must be a number string",
+				"testStruct.Abc":    "Abc must matches regexp /^[abc]+$/",
+				"testStruct.Gte2":   "Gte2 must be 2 or greater",
+			},
+		}},
+		{"?number=0&abc=aabbcc&date=2021/02/03&datetime=2021-02-03T02%3A10%3A13&gte2=3", map[string]interface{}{
+			"msg": "failed",
+			"detail": map[string]interface{}{
+				"testStruct.Date":     "Date must be an RFC3339 date",
+				"testStruct.Datetime": "Datetime must be an RFC3339 datetime",
+			},
+		}},
+		{"?number=0&abc=aabbcc&date=2021-02-03&datetime=2021-02-03T02%3A10%3A13%2B08%3A00&gte2=2", map[string]interface{}{
+			"msg": "success",
+		}},
+	} {
+		resp, err := http.Get("http://localhost:12345" + tc.giveQuery)
+		xtesting.Nil(t, err)
+		bs, _ := ioutil.ReadAll(resp.Body)
+
+		resultMap := make(map[string]interface{})
+		err = json.Unmarshal(bs, &resultMap)
+		xtesting.Nil(t, err)
+		xtesting.Equal(t, resultMap, tc.wantMap)
+	}
+}
+
+func TestLogger(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
+	rand.Seed(time.Now().UnixNano())
+
+	l1 := logrus.New()
+	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
+	l2 := log.New(os.Stderr, "", log.LstdFlags)
+	std := false
+
+	app := gin.New()
+	app.Use(func(c *gin.Context) {
+		start := time.Now()
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(20))) // fake duration
+		c.Next()
+		end := time.Now()
+
+		if !std {
+			LogToLogrus(l1, c, start, end)
+			LogToLogrus(l1, c, start, end, WithExtraText("extra"))
+			LogToLogrus(l1, c, start, end, WithExtraFields(map[string]interface{}{"k": "v"}))
+			LogToLogrus(l1, c, start, end, WithExtraFieldsV("k", "v"))
+		} else {
+			LogToLogger(l2, c, start, end)
+			LogToLogger(l2, c, start, end, WithExtraText("extra"))
+			LogToLogger(l2, c, start, end, WithExtraFields(map[string]interface{}{"k": "v"}))
+			LogToLogger(l2, c, start, end, WithExtraFieldsV("k", "v"))
+		}
+	})
+	app.GET("/200", func(c *gin.Context) { c.JSON(200, &gin.H{"status": "200 success"}) })
+	app.GET("/304", func(c *gin.Context) { c.Status(304) })
+	app.GET("/403", func(c *gin.Context) { c.JSON(403, &gin.H{"status": "403 forbidden"}) })
+	app.GET("/500", func(c *gin.Context) { c.JSON(500, &gin.H{"status": "500 internal server error"}) })
+	app.POST("/XX", func(c *gin.Context) { _ = c.Error(errors.New("test error")) })
+
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
+
+	for _, s := range []bool{false, true} {
+		std = s
+		_, _ = http.Get("http://127.0.0.1:12345/200")
+		_, _ = http.Get("http://127.0.0.1:12345/403?query=string")
+		_, _ = http.Get("http://127.0.0.1:12345/304")
+		_, _ = http.Get("http://127.0.0.1:12345/500#anchor")
+		_, _ = http.Post("http://127.0.0.1:12345/XX", "application/json", nil)
+	}
+}

@@ -2,78 +2,78 @@ package xrecovery
 
 import (
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/internal/xmap"
-	"github.com/Aoi-hosizora/ahlib-web/internal/xwlogger"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
+	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/sirupsen/logrus"
-	"log"
 )
 
-// WithExtraString represents LoggerOption for logging extra string.
-func WithExtraString(s string) xwlogger.LoggerOption {
-	return func(ex *xwlogger.LoggerExtra) {
-		ex.ExtraString = &s
-	}
+// WithExtraText creates a logger option to log with extra text.
+func WithExtraText(text string) logop.LoggerOption {
+	return logop.WithExtraText(text)
 }
 
-// WithExtraFields represents LoggerOption for logging extra fields.
-func WithExtraFields(m map[string]interface{}) xwlogger.LoggerOption {
-	return func(ex *xwlogger.LoggerExtra) {
-		ex.ExtraFields = &m
-	}
+// WithExtraFields creates a logger option to log with extra fields.
+func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
+	return logop.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV represents LoggerOption for logging extra fields (vararg).
-func WithExtraFieldsV(m ...interface{}) xwlogger.LoggerOption {
-	return func(ex *xwlogger.LoggerExtra) {
-		m := xmap.SliceToStringMap(m)
-		ex.ExtraFields = &m
-	}
+// WithExtraFieldsV creates a logger option to log with extra fields in vararg.
+func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
+	return logop.WithExtraFieldsV(fields...)
 }
 
-// WithLogrus logs a panic message with logrus.Logger.
-func WithLogrus(logger *logrus.Logger, err interface{}, options ...xwlogger.LoggerOption) {
-	// information
-	errMessage := ""
-	if e, ok := err.(error); ok {
-		errMessage = e.Error()
-	} else {
-		errMessage = fmt.Sprintf("%v", err)
+// loggerParam stores some logger parameters, used in LogToLogrus and LogToLogger.
+type loggerParam struct {
+	errorMessage string
+	traceStack   xruntime.TraceStack
+}
+
+// getLoggerParamAndFields returns loggerParam and logrus.Fields using given error and xruntime.TraceStack.
+func getLoggerParamAndFields(err interface{}, stack xruntime.TraceStack) (*loggerParam, logrus.Fields) {
+	param := &loggerParam{
+		errorMessage: fmt.Sprintf("%v", err),
+		traceStack:   stack,
 	}
-
-	// extra
-	extra := &xwlogger.LoggerExtra{}
-	extra.ApplyOptions(options)
-
-	// fields
 	fields := logrus.Fields{
-		"module": "panic",
-		"error":  errMessage,
+		"module":        "recovery",
+		"error_message": param.errorMessage,
+		"trace_stack":   param.traceStack.String(),
 	}
+	return param, fields
+}
+
+// LogToLogrus logs a panic message to logrus.Logger from given error, nil-able xruntime.TraceStack.
+func LogToLogrus(logger *logrus.Logger, err interface{}, stack xruntime.TraceStack, options ...logop.LoggerOption) {
+	param, fields := getLoggerParamAndFields(err, stack)
+	extra := logop.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
-	// logger
-	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMessage)
-	extra.AddToString(&msg)
+	msg := formatLogger(param)
+	extra.AddToMessage(&msg)
 	entry.Error(msg)
 }
 
-// WithLogger logs a panic message with log.Logger.
-func WithLogger(logger *log.Logger, err interface{}, options ...xwlogger.LoggerOption) {
-	// information
-	errMessage := ""
-	if e, ok := err.(error); ok {
-		errMessage = e.Error()
-	} else {
-		errMessage = fmt.Sprintf("%v", err)
+// LogToLogger logs a panic message to logrus.StdLogger using given error, nil-able xruntime.TraceStack.
+func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceStack, options ...logop.LoggerOption) {
+	param, _ := getLoggerParamAndFields(err, stack)
+	extra := logop.NewLoggerOptions(options)
+
+	msg := formatLogger(param)
+	extra.AddToMessage(&msg)
+	logger.Print(msg)
+}
+
+// formatLogger formats loggerParam to logger string.
+// Logs like:
+// 	[Recovery] panic recovered: test error | xxx.go:12
+// 	                           |----------| |---------|
+// 	                                ...         ...
+func formatLogger(param *loggerParam) string {
+	msg := fmt.Sprintf("[Recovery] panic recovered: %s", param.errorMessage)
+	if len(param.traceStack) > 0 {
+		s := param.traceStack[0]
+		msg += fmt.Sprintf(" | %s:%d", s.Filename, s.LineIndex)
 	}
-
-	// extra
-	extra := &xwlogger.LoggerExtra{}
-	extra.ApplyOptions(options)
-
-	// logger
-	msg := fmt.Sprintf("[Recovery] panic recovered: %s", errMessage)
-	extra.AddToString(&msg)
-	logger.Println(msg)
+	return msg
 }
