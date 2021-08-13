@@ -2,8 +2,6 @@ github.com/Aoi-hosizora/ahlib v1.5.0 h1:M8oIN6Zl4zG9F5mwRjZqg1A8LHk9I7hMsIchlO3r
 github.com/Aoi-hosizora/ahlib v1.5.0/go.mod h1:69tHdnDy1yjwzNKV4jD0ltnGxTWgFra+sqbadYc0Dmk=
 github.com/Aoi-hosizora/ahlib-more v1.5.0 h1:9WJDPtOcSlzRJW0fkBDKFbatwqSP86s/H4tJAmND+XM=
 github.com/Aoi-hosizora/ahlib-more v1.5.0/go.mod h1:lMzopKk6XLNAsaLnE56z8hpEruN9/uT0Db2fguiBx+E=
-github.com/Aoi-hosizora/go-serverchan v1.0.1 h1:OgyS1xMKKxZA2PPQZkbkRHfV+08UIOsd1ejr9+waQAo=
-github.com/Aoi-hosizora/go-serverchan v1.0.1/go.mod h1:W7i410co8/IpvWb2VcFA+SqZqItG0P2twaReMDm3nSA=
 github.com/ah-forklib/lumberjack v0.0.0-20201027021347-0dae85f5680a/go.mod h1:DCC4i4s/q5FI7IFZWRZNf1xzQ+SmexT8+QdUODdPG8Y=
 github.com/ah-forklib/rotatelogs v0.0.0-20201027030445-0980b2e1e9b3/go.mod h1:U9XOQVrks/SqPaOzjGTU14Axa9zgqH0Kgsuz7+M56Kc=
 github.com/ah-forklib/strftime v0.0.0-20201027030051-f6e1a7ff7457/go.mod h1:OhiwFvwV+NqKibxZBh1/mJEXNVq1BLXuygRr0HzJcRY=
@@ -62,7 +60,6 @@ golang.org/x/sys v0.0.0-20191026070338-33540a1f6037/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200116001909-b77594299b42 h1:vEOn+mP2zCOVzKckCZy6YsCtDblrpj/w7B9nxGNELpg=
 golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
-golang.org/x/text v0.3.2 h1:tW2bmiBqwgJj/UpqtC8EpXEZVYOwU0yG4iWbprSVAcs=
 golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=

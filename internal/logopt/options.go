@@ -1,4 +1,4 @@
-package logop
+package logopt
 
 import (
 	"fmt"
@@ -15,21 +15,21 @@ type loggerOptions struct {
 // LoggerOption represents an option for loggerOptions, created by WithXXX functions.
 type LoggerOption func(*loggerOptions)
 
-// WithExtraText creates a logop.LoggerOption to log with extra text.
+// WithExtraText creates a logopt.LoggerOption to log with extra text.
 func WithExtraText(text string) LoggerOption {
 	return func(extra *loggerOptions) {
 		extra.Text = strings.TrimSpace(text)
 	}
 }
 
-// WithExtraFields creates a logop.LoggerOption to log with extra fields.
+// WithExtraFields creates a logopt.LoggerOption to log with extra fields.
 func WithExtraFields(fields map[string]interface{}) LoggerOption {
 	return func(extra *loggerOptions) {
 		extra.Fields = fields
 	}
 }
 
-// WithExtraFieldsV creates a logop.LoggerOption to log with extra fields in vararg.
+// WithExtraFieldsV creates a logopt.LoggerOption to log with extra fields in vararg.
 func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 	return func(extra *loggerOptions) {
 		extra.Fields = sliceToMap(fields)

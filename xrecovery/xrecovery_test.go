@@ -2,7 +2,7 @@ package xrecovery
 
 import (
 	"errors"
-	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logopt"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -20,7 +20,7 @@ func TestLogger(t *testing.T) {
 		for _, tc := range []struct {
 			giveErr     interface{}
 			giveStack   xruntime.TraceStack
-			giveOptions []logop.LoggerOption
+			giveOptions []logopt.LoggerOption
 		}{
 			{nil, nil, nil},
 			{"test string", nil, nil},
@@ -28,11 +28,11 @@ func TestLogger(t *testing.T) {
 			{nil, xruntime.RuntimeTraceStack(0), nil},
 			{errors.New("test error"), xruntime.RuntimeTraceStack(0), nil},
 
-			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraText("extra")}},
-			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
-			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logop.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logopt.LoggerOption{WithExtraText("extra")}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logopt.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logopt.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []logopt.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogToLogrus(l1, tc.giveErr, tc.giveStack, tc.giveOptions...)

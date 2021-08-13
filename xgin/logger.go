@@ -2,7 +2,7 @@ package xgin
 
 import (
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logopt"
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -11,18 +11,18 @@ import (
 )
 
 // WithExtraText creates a logger option to log with extra text.
-func WithExtraText(text string) logop.LoggerOption {
-	return logop.WithExtraText(text)
+func WithExtraText(text string) logopt.LoggerOption {
+	return logopt.WithExtraText(text)
 }
 
 // WithExtraFields creates a logger option to log with extra fields.
-func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
-	return logop.WithExtraFields(fields)
+func WithExtraFields(fields map[string]interface{}) logopt.LoggerOption {
+	return logopt.WithExtraFields(fields)
 }
 
 // WithExtraFieldsV creates a logger option to log with extra fields in vararg.
-func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
-	return logop.WithExtraFieldsV(fields...)
+func WithExtraFieldsV(fields ...interface{}) logopt.LoggerOption {
+	return logopt.WithExtraFieldsV(fields...)
 }
 
 // loggerParam stores some logger parameters, used in LogToLogrus and LogToLogger.
@@ -78,9 +78,9 @@ func getLoggerParamAndFields(c *gin.Context, start, end time.Time) (*loggerParam
 }
 
 // LogToLogrus logs gin's request and response information to logrus.Logger using given gin.Context and times.
-func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
+func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logopt.LoggerOption) {
 	param, fields := getLoggerParamAndFields(c, start, end)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
@@ -97,9 +97,9 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 }
 
 // LogToLogger logs gin's request and response information to logrus.StdLogger using given gin.Context and times.
-func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption) {
+func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logopt.LoggerOption) {
 	param, _ := getLoggerParamAndFields(c, start, end)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 
 	msg := formatLogger(param)
 	extra.AddToMessage(&msg)

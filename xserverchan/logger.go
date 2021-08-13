@@ -2,7 +2,7 @@ package xserverchan
 
 import (
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logopt"
 	"github.com/Aoi-hosizora/ahlib/xnumber"
 	"github.com/Aoi-hosizora/ahlib/xslice"
 	"github.com/Aoi-hosizora/ahlib/xstring"
@@ -12,18 +12,18 @@ import (
 )
 
 // WithExtraText creates a logger option to log with extra text.
-func WithExtraText(text string) logop.LoggerOption {
-	return logop.WithExtraText(text)
+func WithExtraText(text string) logopt.LoggerOption {
+	return logopt.WithExtraText(text)
 }
 
 // WithExtraFields creates a logger option to log with extra fields.
-func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
-	return logop.WithExtraFields(fields)
+func WithExtraFields(fields map[string]interface{}) logopt.LoggerOption {
+	return logopt.WithExtraFields(fields)
 }
 
 // WithExtraFieldsV creates a logger option to log with extra fields in vararg.
-func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
-	return logop.WithExtraFieldsV(fields...)
+func WithExtraFieldsV(fields ...interface{}) logopt.LoggerOption {
+	return logopt.WithExtraFieldsV(fields...)
 }
 
 // loggerParam stores some logger parameters, used in LogToLogrus and LogToLogger.
@@ -73,9 +73,9 @@ func getLoggerParamAndFields(sckey, title, body string, err error) (*loggerParam
 }
 
 // LogToLogrus logs a send-event message to logrus.Logger using given sckey, title, body and error.
-func LogToLogrus(logger *logrus.Logger, sckey, title, body string, err error, options ...logop.LoggerOption) {
+func LogToLogrus(logger *logrus.Logger, sckey, title, body string, err error, options ...logopt.LoggerOption) {
 	param, fields := getLoggerParamAndFields(sckey, title, body, err)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
@@ -91,9 +91,9 @@ func LogToLogrus(logger *logrus.Logger, sckey, title, body string, err error, op
 }
 
 // LogToLogger logs a send-event message to logrus.StdLogger using given sckey, title and body.
-func LogToLogger(logger logrus.StdLogger, sckey, title, body string, err error, options ...logop.LoggerOption) {
+func LogToLogger(logger logrus.StdLogger, sckey, title, body string, err error, options ...logopt.LoggerOption) {
 	param, _ := getLoggerParamAndFields(sckey, title, body, err)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 
 	if err != nil {
 		msg := formatErrorLogger(param, err)

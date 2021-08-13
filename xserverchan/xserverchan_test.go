@@ -1,7 +1,7 @@
 package xserverchan
 
 import (
-	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logopt"
 	"github.com/Aoi-hosizora/go-serverchan"
 	"github.com/sirupsen/logrus"
 	"log"
@@ -26,25 +26,25 @@ func TestLogger(t *testing.T) {
 			giveTitle   string
 			giveBody    string
 			giveErr     error
-			giveOptions []logop.LoggerOption
+			giveOptions []logopt.LoggerOption
 		}{
 			{"", "", "", nil, nil},
 			{"KEY", "title", "body", nil, nil},
 			{key, "title", "body", nil, nil},
 			{key, title, body, nil, nil},
 
-			{key, title, body, nil, []logop.LoggerOption{WithExtraText("extra")}},
-			{key, title, body, nil, []logop.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{key, title, body, nil, []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
-			{key, title, body, nil, []logop.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{key, title, body, nil, []logop.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+			{key, title, body, nil, []logopt.LoggerOption{WithExtraText("extra")}},
+			{key, title, body, nil, []logopt.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{key, title, body, nil, []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
+			{key, title, body, nil, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{key, title, body, nil, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
 
 			{"", "", "", serverchan.ErrEmptyTitle, nil},
 			{"KEY", "title", "body", serverchan.ErrBadPushToken, nil},
 			{key, "title", "body", serverchan.ErrNotSuccess, nil},
 			{key, title, body, serverchan.ErrDuplicateMessage, nil},
-			{key, title, body, serverchan.ErrDuplicateMessage, []logop.LoggerOption{WithExtraText("extra")}},
-			{key, title, body, serverchan.ErrDuplicateMessage, []logop.LoggerOption{WithExtraFieldsV("k", "v")}},
+			{key, title, body, serverchan.ErrDuplicateMessage, []logopt.LoggerOption{WithExtraText("extra")}},
+			{key, title, body, serverchan.ErrDuplicateMessage, []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogToLogrus(l1, tc.giveKey, tc.giveTitle, tc.giveBody, tc.giveErr, tc.giveOptions...)

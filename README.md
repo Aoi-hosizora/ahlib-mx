@@ -6,7 +6,7 @@
 [![License](http://img.shields.io/badge/license-mit-blue.svg)](./LICENSE)
 [![Release](https://img.shields.io/github/v/release/Aoi-hosizora/ahlib-web)](https://github.com/Aoi-hosizora/ahlib-web/releases)
 
-+ A personal golang library for web development, including gin, telebot, serverchan.
++ A personal golang library for web development, including gin, recovery, telebot.
 
 ### Related libraries
 

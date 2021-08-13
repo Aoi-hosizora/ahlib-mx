@@ -1,4 +1,4 @@
-package logop
+package logopt
 
 import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"

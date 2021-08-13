@@ -2,25 +2,25 @@ package xtelebot
 
 import (
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/internal/logop"
+	"github.com/Aoi-hosizora/ahlib-web/internal/logopt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/tucnak/telebot.v2"
 	"time"
 )
 
 // WithExtraText creates a logger option to log with extra text.
-func WithExtraText(text string) logop.LoggerOption {
-	return logop.WithExtraText(text)
+func WithExtraText(text string) logopt.LoggerOption {
+	return logopt.WithExtraText(text)
 }
 
 // WithExtraFields creates a logger option to log with extra fields.
-func WithExtraFields(fields map[string]interface{}) logop.LoggerOption {
-	return logop.WithExtraFields(fields)
+func WithExtraFields(fields map[string]interface{}) logopt.LoggerOption {
+	return logopt.WithExtraFields(fields)
 }
 
 // WithExtraFieldsV creates a logger option to log with extra fields in vararg.
-func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption {
-	return logop.WithExtraFieldsV(fields...)
+func WithExtraFieldsV(fields ...interface{}) logopt.LoggerOption {
+	return logopt.WithExtraFieldsV(fields...)
 }
 
 // receiveLoggerParam stores some receive-event logger parameters, used in LogReceiveToLogrus and LogReceiveToLogger.
@@ -160,14 +160,14 @@ func getSendLoggerParamAndFields(chat *telebot.Chat, sent *telebot.Message, err 
 }
 
 // LogReceiveToLogrus logs a receive-event message to logrus.Logger using given endpoint and handler's telebot.Message.
-func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
+func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logopt.LoggerOption) {
 	endpointString, ok := renderEndpoint(endpoint)
 	if !ok || message == nil {
 		return
 	}
 
 	param, fields := getReceiveLoggerParamAndFields(endpointString, message)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
@@ -177,13 +177,13 @@ func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *te
 }
 
 // LogReplyToLogrus logs a reply-event message to logrus.Logger using given received, replied telebot.Message and error.
-func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...logop.LoggerOption) {
+func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...logopt.LoggerOption) {
 	if received == nil || (replied == nil && err == nil) {
 		return
 	}
 
 	param, fields := getReplyLoggerParamAndFields(received, replied, err)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
@@ -199,13 +199,13 @@ func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message,
 }
 
 // LogSendToLogrus logs a send-event message to logrus.Logger using given telebot.Chat, sent telebot.Message and error.
-func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption) {
+func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logopt.LoggerOption) {
 	if chat == nil || (sent == nil && err == nil) {
 		return
 	}
 
 	param, fields := getSendLoggerParamAndFields(chat, sent, err)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 	extra.AddToFields(fields)
 	entry := logger.WithFields(fields)
 
@@ -221,14 +221,14 @@ func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Me
 }
 
 // LogReceiveToLogger logs a receive-event message to logrus.StdLogger using given endpoint and handler's telebot.Message.
-func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption) {
+func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logopt.LoggerOption) {
 	endpointString, ok := renderEndpoint(endpoint)
 	if !ok || message == nil {
 		return
 	}
 
 	param, _ := getReceiveLoggerParamAndFields(endpointString, message)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 
 	msg := formatReceiveLogger(param)
 	extra.AddToMessage(&msg)
@@ -236,13 +236,13 @@ func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *
 }
 
 // LogReplyToLogger logs a reply-event message to logrus.StdLogger using given received, replied telebot.Message and error.
-func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...logop.LoggerOption) {
+func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...logopt.LoggerOption) {
 	if received == nil || (err == nil && replied == nil) {
 		return
 	}
 
 	param, _ := getReplyLoggerParamAndFields(received, replied, err)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 
 	if err != nil {
 		msg := formatReplyErrorLogger(received, err)
@@ -256,13 +256,13 @@ func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Messag
 }
 
 // LogSendToLogger logs a send-event message to logrus.StdLogger using given telebot.Chat, sent telebot.Message and error.
-func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption) {
+func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logopt.LoggerOption) {
 	if chat == nil || (sent == nil && err == nil) {
 		return
 	}
 
 	param, _ := getSendLoggerParamAndFields(chat, sent, err)
-	extra := logop.NewLoggerOptions(options)
+	extra := logopt.NewLoggerOptions(options)
 
 	if err != nil {
 		msg := formatSendErrorLogger(chat, err)
