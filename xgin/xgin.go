@@ -2,12 +2,12 @@ package xgin
 
 import (
 	"errors"
-	"github.com/Aoi-hosizora/ahlib-more/xvalidator"
+	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
 	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/locales"
-	"github.com/go-playground/universal-translator"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"net/http/httputil"
 	"net/http/pprof"
@@ -61,7 +61,7 @@ func WithSecretReplace(secret string) DumpRequestOption {
 // "METHOD /ENDPOINT HTTP/1.1", and the remaining elements are the request headers "XXX: YYY", returns an empty slice when using nil gin.Context.
 func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string {
 	if c == nil {
-		return []string{}
+		return make([]string, 0)
 	}
 
 	opt := &dumpRequestOptions{
@@ -76,7 +76,6 @@ func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string {
 	bs, _ := httputil.DumpRequest(c.Request, false) // ignore error
 	params := strings.Split(string(bs), "\r\n")     // split by \r\n
 	result := make([]string, 0, len(params))
-
 	for idx, param := range params {
 		if idx == 0 {
 			result = append(result, param) // METHOD /ENDPOINT HTTP/1.1
@@ -84,7 +83,7 @@ func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string {
 		}
 		param = strings.TrimSpace(param)
 		if param == "" {
-			// after the first line, there is /r/n/r/n, and has a blank line
+			// after the first line, there is \r\n\r\n, and has a blank line
 			continue
 		}
 
@@ -141,97 +140,44 @@ func PprofWrap(router *gin.Engine) {
 		path    string
 		handler gin.HandlerFunc
 	}{
-		{"GET", "/debug/pprof/", indexHandler()},
-		{"GET", "/debug/pprof/heap", heapHandler()},
-		{"GET", "/debug/pprof/goroutine", goroutineHandler()},
-		{"GET", "/debug/pprof/allocs", allocsHandler()},
-		{"GET", "/debug/pprof/block", blockHandler()},
-		{"GET", "/debug/pprof/threadcreate", threadCreateHandler()},
-		{"GET", "/debug/pprof/cmdline", cmdlineHandler()},
-		{"GET", "/debug/pprof/profile", profileHandler()},
-		{"GET", "/debug/pprof/symbol", symbolHandler()},
-		{"POST", "/debug/pprof/symbol", symbolHandler()},
-		{"GET", "/debug/pprof/trace", traceHandler()},
-		{"GET", "/debug/pprof/mutex", mutexHandler()},
+		{"GET", "/debug/pprof/", func(ctx *gin.Context) {
+			pprof.Index(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/heap", func(ctx *gin.Context) {
+			pprof.Handler("heap").ServeHTTP(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/goroutine", func(ctx *gin.Context) {
+			pprof.Handler("goroutine").ServeHTTP(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/allocs", func(ctx *gin.Context) {
+			pprof.Handler("allocs").ServeHTTP(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/block", func(ctx *gin.Context) {
+			pprof.Handler("block").ServeHTTP(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/threadcreate", func(ctx *gin.Context) {
+			pprof.Handler("threadcreate").ServeHTTP(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/cmdline", func(ctx *gin.Context) {
+			pprof.Cmdline(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/profile", func(ctx *gin.Context) {
+			pprof.Profile(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/symbol", func(ctx *gin.Context) {
+			pprof.Symbol(ctx.Writer, ctx.Request)
+		}},
+		{"POST", "/debug/pprof/symbol", func(ctx *gin.Context) {
+			pprof.Symbol(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/trace", func(ctx *gin.Context) {
+			pprof.Trace(ctx.Writer, ctx.Request)
+		}},
+		{"GET", "/debug/pprof/mutex", func(ctx *gin.Context) {
+			pprof.Handler("mutex").ServeHTTP(ctx.Writer, ctx.Request)
+		}},
 	} {
 		router.Handle(r.method, r.path, r.handler) // use path directly
-	}
-}
-
-// indexHandler is used for GET /debug/pprof to pprof.
-func indexHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Index(ctx.Writer, ctx.Request)
-	}
-}
-
-// heapHandler is for GET /debug/pprof/heap to pprof.
-func heapHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Handler("heap").ServeHTTP(ctx.Writer, ctx.Request)
-	}
-}
-
-// goroutineHandler is used for GET /debug/pprof/goroutine to pprof.
-func goroutineHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Handler("goroutine").ServeHTTP(ctx.Writer, ctx.Request)
-	}
-}
-
-// allocsHandler is used for GET /debug/pprof/allocs to pprof.
-func allocsHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Handler("allocs").ServeHTTP(ctx.Writer, ctx.Request)
-	}
-}
-
-// blockHandler is used for GET /debug/pprof/block to pprof.
-func blockHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Handler("block").ServeHTTP(ctx.Writer, ctx.Request)
-	}
-}
-
-// threadCreateHandler is used for GET /debug/pprof/threadcreate to pprof.
-func threadCreateHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Handler("threadcreate").ServeHTTP(ctx.Writer, ctx.Request)
-	}
-}
-
-// cmdlineHandler is used for GET /debug/pprof/cmdline to pprof.
-func cmdlineHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Cmdline(ctx.Writer, ctx.Request)
-	}
-}
-
-// profileHandler is used for GET /debug/pprof/profile to pprof.
-func profileHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Profile(ctx.Writer, ctx.Request)
-	}
-}
-
-// symbolHandler is used for GET, POST /debug/pprof/symbol to pprof.
-func symbolHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Symbol(ctx.Writer, ctx.Request)
-	}
-}
-
-// traceHandler is used for GET /debug/pprof/trace to pprof.
-func traceHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Trace(ctx.Writer, ctx.Request)
-	}
-}
-
-// mutexHandler is used for GET /debug/pprof/mutex to pprof.
-func mutexHandler() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		pprof.Handler("mutex").ServeHTTP(ctx.Writer, ctx.Request)
 	}
 }
 
@@ -240,10 +186,11 @@ func mutexHandler() gin.HandlerFunc {
 // ================================
 
 var (
-	errValidatorNotSupported = errors.New("xgin: validator is not github.com/go-playground/validator/v10, which is not supported")
+	errValidatorNotSupported = errors.New("xgin: gin's validator engine is not github.com/go-playground/validator/v10")
 )
 
-// GetValidatorEngine returns gin's binding validator engine, which only supports validator.Validate from github.com/go-playground/validator/v10, see binding.Validator.
+// GetValidatorEngine returns gin's binding validator engine, which only supports validator.Validate from github.com/go-playground/validator/v10.
+// Also see binding.Validator.
 func GetValidatorEngine() (*validator.Validate, error) {
 	val, ok := binding.Validator.Engine().(*validator.Validate)
 	if !ok {
@@ -257,8 +204,7 @@ func GetValidatorEngine() (*validator.Validate, error) {
 //
 // Example:
 // 	translator, _ := xgin.GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-// 	val := validator.New()
-// 	result := val.Struct(&testStruct{}).(validator.ValidationErrors).Translate(translator) // validator.ValidationErrorsTranslations
+// 	result := validator.New().Struct(&testStruct{}).(validator.ValidationErrors).Translate(translator)
 func GetValidatorTranslator(locTranslator locales.Translator, registerFn xvalidator.TranslationRegisterHandler) (ut.Translator, error) {
 	val, err := GetValidatorEngine()
 	if err != nil {
@@ -267,42 +213,17 @@ func GetValidatorTranslator(locTranslator locales.Translator, registerFn xvalida
 	return xvalidator.ApplyTranslator(val, locTranslator, registerFn) // create translator and do register
 }
 
-// AddBinding adds user defined binding to gin's validator engine. You can use your custom validator.Func or xvalidator's functions
-// such as xvalidator.RegexpValidator and xvalidator.DateTimeValidator.
+// AddBinding adds user defined binding to gin's validator engine. You can use your custom validator.Func or functions provided by xvalidator's such as
+// xvalidator.RegexpValidator and xvalidator.DateTimeValidator.
 //
-// Binding notes:
-//
-// 1. `required` + non-pointer (common)
-// 	A uint64 `binding:"required"` // cannot be nil and 0
-// 	B string `binding:"required"` // cannot be nil and ""
-//
-// 2. `required` + pointer (common)
-// 	A *uint64 `binding:"required"` // cannot be nil, can be 0
-// 	B *string `binding:"required"` // cannot be nil, can be ""
-//
-// 3. `omitempty` + non-pointer (common)
-// 	A uint64 `binding:"omitempty"` // can be nil and 0
-// 	B string `binding:"omitempty"` // can be nil and ""
-//
-// 4. `omitempty` + pointer => same as 3
-// 	A *uint64 `binding:"omitempty"` // can be nil and 0
-// 	B *string `binding:"omitempty"` // can be nil and ""
-//
-// 5. `required` + `omitempty` + non-pointer => same as 1
-// 	A uint64 `binding:"required,omitempty"` // cannot be nil and 0
-// 	B string `binding:"required,omitempty"` // cannot be nil and ""
-//
-// 6. `required` + `omitempty` + pointer => same as 2
-// 	A *uint64 `binding:"required,omitempty"` // cannot be nil, can be 0
-// 	B *string `binding:"required,omitempty"` // cannot be nil, can be ""
-//
-// Also see https://godoc.org/github.com/go-playground/validator.
+// Example:
+// 	err := xgin.AddBinding("regexp", xvalidator.ParamRegexpValidator())
+// 	err := xgin.AddBinding("xxx", func(fl validator.FieldLevel) bool { /* ... */ })
 func AddBinding(tag string, fn validator.Func) error {
 	v, err := GetValidatorEngine()
 	if err != nil {
 		return err
 	}
-
 	return v.RegisterValidation(tag, fn)
 }
 
@@ -310,7 +231,6 @@ func AddBinding(tag string, fn validator.Func) error {
 // xvalidator.AddToTranslatorFunc and xvalidator.DefaultTranslateFunc.
 //
 // Example:
-// 	translator, _ := xgin.GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
 // 	err := xgin.AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", true)
 // 	err := xgin.AddTranslator(translator, "email", "{0} must be an email", true)
 func AddTranslator(translator ut.Translator, tag, message string, override bool) error {
@@ -318,7 +238,6 @@ func AddTranslator(translator ut.Translator, tag, message string, override bool)
 	if err != nil {
 		return err
 	}
-
 	fn := xvalidator.AddToTranslatorFunc(tag, message, override)
 	return v.RegisterTranslation(tag, translator, fn, xvalidator.DefaultTranslateFunc())
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/Aoi-hosizora/ahlib-more/xvalidator"
+	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -129,6 +129,34 @@ func TestPprofWrap(t *testing.T) {
 }
 
 func TestRequiredAndOmitempty(t *testing.T) {
+	// Binding notes:
+	//
+	// 1. `required` + non-pointer (common)
+	// 	A uint64 `binding:"required"` // cannot be nil and 0
+	// 	B string `binding:"required"` // cannot be nil and ""
+	//
+	// 2. `required` + pointer (common)
+	// 	A *uint64 `binding:"required"` // cannot be nil, can be 0
+	// 	B *string `binding:"required"` // cannot be nil, can be ""
+	//
+	// 3. `omitempty` + non-pointer (common)
+	// 	A uint64 `binding:"omitempty"` // can be nil and 0
+	// 	B string `binding:"omitempty"` // can be nil and ""
+	//
+	// 4. `omitempty` + pointer => same as 3
+	// 	A *uint64 `binding:"omitempty"` // can be nil and 0
+	// 	B *string `binding:"omitempty"` // can be nil and ""
+	//
+	// 5. `required` + `omitempty` + non-pointer => same as 1
+	// 	A uint64 `binding:"required,omitempty"` // cannot be nil and 0
+	// 	B string `binding:"required,omitempty"` // cannot be nil and ""
+	//
+	// 6. `required` + `omitempty` + pointer => same as 2
+	// 	A *uint64 `binding:"required,omitempty"` // cannot be nil, can be 0
+	// 	B *string `binding:"required,omitempty"` // cannot be nil, can be ""
+	//
+	// Also see https://godoc.org/github.com/go-playground/validator.
+
 	v := validator.New()
 	v.SetTagName("binding")
 

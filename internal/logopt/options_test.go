@@ -2,7 +2,7 @@ package logopt
 
 import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
-	"github.com/sirupsen/logrus"
+	// "github.com/sirupsen/logrus"
 	"testing"
 )
 
