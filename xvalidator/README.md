@@ -12,6 +12,7 @@
 ### Types
 
 + `type UtTranslator = ut.Translator`
++ `type LocaleTranslator = locales.Translator`
 + `type TranslationRegisterHandler func`
 
 ### Variables
@@ -24,24 +25,8 @@
 
 ### Functions
 
-+ `func IsValidationError(err error) bool`
-+ `func IsRequiredError(err error) bool`
-+ `func ParamRegexpValidator() validator.Func`
-+ `func RegexpValidator(re *regexp.Regexp) validator.Func`
-+ `func DateTimeValidator(layout string) validator.Func`
-+ `func And(fns ...validator.Func) validator.Func`
-+ `func Or(fns ...validator.Func) validator.Func`
-+ `func EqualValidator(p interface{}) validator.Func`
-+ `func NotEqualValidator(p interface{}) validator.Func`
-+ `func LenValidator(p interface{}) validator.Func`
-+ `func GreaterThenValidator(p interface{}) validator.Func`
-+ `func LessThenValidator(p interface{}) validator.Func`
-+ `func GreaterThenOrEqualValidator(p interface{}) validator.Func`
-+ `func LessThenOrEqualValidator(p interface{}) validator.Func`
-+ `func LengthInRangeValidator(min, max interface{}) validator.Func`
-+ `func LengthOutOfRangeValidator(min, max interface{}) validator.Func`
-+ `func OneofValidator(ps ...interface{}) validator.Func`
 + `func ApplyTranslator(validator *validator.Validate, locTranslator locales.Translator, registerFn TranslationRegisterHandler) (ut.Translator, error)`
++ `func UseJsonTagAsFieldName(validator *validator.Validate)`
 + `func AddToTranslatorFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc`
 + `func DefaultTranslateFunc() validator.TranslationFunc`
 + `func EnLocaleTranslator() locales.Translator`
@@ -65,6 +50,23 @@
 + `func TrTranslationRegisterFunc() TranslationRegisterHandler`
 + `func ZhTranslationRegisterFunc() TranslationRegisterHandler`
 + `func ZhTwTranslationRegisterFunc() TranslationRegisterHandler`
++ `func IsValidationError(err error) bool`
++ `func IsRequiredError(err error) bool`
++ `func ParamRegexpValidator() validator.Func`
++ `func RegexpValidator(re *regexp.Regexp) validator.Func`
++ `func DateTimeValidator(layout string) validator.Func`
++ `func And(fns ...validator.Func) validator.Func`
++ `func Or(fns ...validator.Func) validator.Func`
++ `func EqualValidator(p interface{}) validator.Func`
++ `func NotEqualValidator(p interface{}) validator.Func`
++ `func LenValidator(p interface{}) validator.Func`
++ `func GreaterThenValidator(p interface{}) validator.Func`
++ `func LessThenValidator(p interface{}) validator.Func`
++ `func GreaterThenOrEqualValidator(p interface{}) validator.Func`
++ `func LessThenOrEqualValidator(p interface{}) validator.Func`
++ `func LengthInRangeValidator(min, max interface{}) validator.Func`
++ `func LengthOutOfRangeValidator(min, max interface{}) validator.Func`
++ `func OneofValidator(ps ...interface{}) validator.Func`
 
 ### Methods
 

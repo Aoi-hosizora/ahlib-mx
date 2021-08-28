@@ -24,15 +24,25 @@ import (
 	trans_tr "github.com/go-playground/validator/v10/translations/tr"
 	trans_zh "github.com/go-playground/validator/v10/translations/zh"
 	trans_zh_tw "github.com/go-playground/validator/v10/translations/zh_tw"
+	"reflect"
+	"strings"
 )
 
-// UtTranslator represents an alias type of ut.Translator.
+// UtTranslator represents an alias type of ut.Translator, and this represent the translator of validator.Validate.
 type UtTranslator = ut.Translator
 
-// TranslationRegisterHandler represents a translation register function, which is the type of en.RegisterDefaultTranslations,
-// zh.RegisterDefaultTranslations and so on, here `en` and `zh` packages are from github.com/go-playground/validator/v10/translations.
+// LocaleTranslator represents an alias type of locales.Translator, which will be used in ApplyTranslator. These kind of values can be get
+// from xvalidator.EnLocaleTranslator, xvalidator.ZhLocaleTranslator and so on.
 //
-// These kind of values can be get from xvalidator.EnTranslationRegisterFunc, xvalidator.ZhTranslationRegisterFunc and so on.
+// Note: Without using this package, locales.Translator can be get from en.New(), zh.New() and so on, here `en` and `zh` packages are
+// from github.com/go-playground/locales.
+type LocaleTranslator = locales.Translator
+
+// TranslationRegisterHandler represents a translation register function, which will be used in ApplyTranslator. These kind of values can be get
+// from xvalidator.EnTranslationRegisterFunc, xvalidator.ZhTranslationRegisterFunc and so on.
+//
+// Note: Without using this package, xvalidator.TranslationRegisterHandler can be get from en.RegisterDefaultTranslations, zh.RegisterDefaultTranslations
+// and so on, here `en` and `zh` packages are from github.com/go-playground/validator/v10/translations.
 type TranslationRegisterHandler func(v *validator.Validate, trans ut.Translator) error
 
 const (
@@ -41,25 +51,16 @@ const (
 	panicNilTranslationRegisterFn = "xvalidator: nil translation register function"
 )
 
-// ApplyTranslator applies translator to validator.Validate using given locales.Translator and TranslationRegisterHandler, and
-// returns a ut.Translator (universal translator). Also see xvalidator.AddToTranslatorFunc and xvalidator.DefaultTranslateFunc.
-//
-// Note:
-//
-// 1. locales.Translator can be get from en.New(), zh.New() and so on, here `en` and `zh` packages are from github.com/go-playground/locales.
-// These kind of values can also be get from xvalidator.EnLocaleTranslator, xvalidator.ZhLocaleTranslator and so on.
-//
-// 2. xvalidator.TranslationRegisterHandler can be get from en.RegisterDefaultTranslations, zh.RegisterDefaultTranslations and so on, here
-// `en` and `zh` packages are from github.com/go-playground/validator/v10/translations. These kind of values can also be get from
-// xvalidator.EnTranslationRegisterFunc, xvalidator.ZhTranslationRegisterFunc and so on.
+// ApplyTranslator applies translator to validator.Validate using given locales.Translator and TranslationRegisterHandler, this will return
+// a ut.Translator (universal translator). Also see xvalidator.AddToTranslatorFunc and xvalidator.DefaultTranslateFunc.
 //
 // Example:
-// 	validator := validator.New()
 // 	// apply default translation to validator
 // 	translator := xvalidator.ApplyTranslator(validator, xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc()) // ut.Translator
-// 	// use validator.RegisterTranslationsFunc and validator.TranslationFunc to register translation
-// 	translationFunc := xvalidator.AddToTranslatorFunc("tag", "{0} has {1}", false) // validator.RegisterTranslationsFunc
-// 	validator.RegisterTranslation("tag", translator, translationFunc, xvalidator.DefaultTranslateFunc())
+//
+// 	// register custom translation to validator
+// 	fn := xvalidator.AddToTranslatorFunc("tag", "{0} has {1}", false) // validator.RegisterTranslationsFunc
+// 	validator.RegisterTranslation("tag", translator, fn, xvalidator.DefaultTranslateFunc())
 func ApplyTranslator(validator *validator.Validate, locTranslator locales.Translator, registerFn TranslationRegisterHandler) (ut.Translator, error) {
 	if validator == nil {
 		panic(panicNilValidator)
@@ -71,9 +72,8 @@ func ApplyTranslator(validator *validator.Validate, locTranslator locales.Transl
 		panic(panicNilTranslationRegisterFn)
 	}
 
-	uniTranslator := ut.New(locTranslator, locTranslator)
-	translator, _ := uniTranslator.GetTranslator(locTranslator.Locale()) // must found
-	err := registerFn(validator, translator)                             // register translator to validator
+	translator, _ := ut.New(locTranslator, locTranslator).GetTranslator(locTranslator.Locale())
+	err := registerFn(validator, translator) // register translator to validator
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +81,28 @@ func ApplyTranslator(validator *validator.Validate, locTranslator locales.Transl
 	return translator, nil
 }
 
-// ====================
-// register & translate
-// ====================
+// UseJsonTagAsFieldName sets json tag as struct field's alternate name using validator.Validate's RegisterTagNameFunc method. This alternate field name will
+// be used in validator.FieldError's Namespace() and Field() methods, and will change validator.FieldError's error message and the translator result.
+func UseJsonTagAsFieldName(validator *validator.Validate) {
+	if validator == nil {
+		panic(panicNilValidator)
+	}
+	validator.RegisterTagNameFunc(func(field reflect.StructField) string {
+		jsonTag, ok := field.Tag.Lookup("json")
+		if !ok {
+			return ""
+		}
+		name := strings.SplitN(jsonTag, ",", 2)[0]
+		if name == "" || name == "-" {
+			return ""
+		}
+		return name // fe.Field() -> json tag
+	})
+}
+
+// =========================
+// register & translate func
+// =========================
 
 // AddToTranslatorFunc returns a validator.RegisterTranslationsFunc function, it uses the given tag, translation and override parameters
 // to **register translation information** for a ut.Translator and will be used within the validator.TranslationFunc.

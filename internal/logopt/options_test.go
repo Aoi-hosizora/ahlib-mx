@@ -2,7 +2,7 @@ package logopt
 
 import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
-	// "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"testing"
 )
 
@@ -39,10 +39,17 @@ func TestLoggerOptions(t *testing.T) {
 		{[]LoggerOption{WithExtraText("")}, "", logrus.Fields{}},
 		{[]LoggerOption{WithExtraText("test")}, " | test", logrus.Fields{}},
 		{[]LoggerOption{WithExtraText("test1"), WithExtraText("test2")}, " | test2", logrus.Fields{}},
+
 		{[]LoggerOption{WithExtraFields(map[string]interface{}{})}, "", logrus.Fields{}},
 		{[]LoggerOption{WithExtraFields(map[string]interface{}{"true": 2, "3": 4.4})}, "", logrus.Fields{"true": 2, "3": 4.4}},
-		{[]LoggerOption{WithExtraFields(map[string]interface{}{"true": 2, "3": 4.4}), WithExtraFields(map[string]interface{}{"k": "v"})}, "", logrus.Fields{"k": "v"}},
+		{[]LoggerOption{WithExtraFields(map[string]interface{}{"true": 2, "3": 4.4}),
+			WithExtraFields(map[string]interface{}{"k": "v"})}, "", logrus.Fields{"k": "v"}},
+
 		{[]LoggerOption{WithExtraFieldsV()}, "", logrus.Fields{}},
+		{[]LoggerOption{WithExtraFieldsV(nil)}, "", logrus.Fields{}},
+		{[]LoggerOption{WithExtraFieldsV(nil, "a", nil)}, "", logrus.Fields{"a": nil}},
+		{[]LoggerOption{WithExtraFieldsV(nil, nil, "a")}, "", logrus.Fields{}},
+		{[]LoggerOption{WithExtraFieldsV(nil, nil, 1, nil)}, "", logrus.Fields{"1": nil}},
 		{[]LoggerOption{WithExtraFieldsV(true, 2, 3.3, 4, 5)}, "", logrus.Fields{"true": 2, "3.3": 4}},
 		{[]LoggerOption{WithExtraFieldsV(true, 2, 3.3, 4, 5), WithExtraFieldsV("k", "v")}, "", logrus.Fields{"k": "v"}},
 

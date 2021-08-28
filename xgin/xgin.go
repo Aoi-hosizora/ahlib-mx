@@ -3,6 +3,7 @@ package xgin
 import (
 	"errors"
 	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xstring"
 	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -64,17 +65,18 @@ func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string {
 		return make([]string, 0)
 	}
 
-	opt := &dumpRequestOptions{
-		secretReplace: "*",
-	}
+	opt := &dumpRequestOptions{secretReplace: "*"}
 	for _, op := range options {
 		if op != nil {
 			op(opt)
 		}
 	}
 
-	bs, _ := httputil.DumpRequest(c.Request, false) // ignore error
-	params := strings.Split(string(bs), "\r\n")     // split by \r\n
+	bs, err := httputil.DumpRequest(c.Request, false) // ignore error
+	if err != nil {
+		return make([]string, 0)
+	}
+	params := strings.Split(xstring.FastBtos(bs), "\r\n") // split by \r\n
 	result := make([]string, 0, len(params))
 	for idx, param := range params {
 		if idx == 0 {
@@ -87,35 +89,31 @@ func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string {
 			continue
 		}
 
-		// ignore
-		if len(opt.retainHeaders) != 0 {
-			// use retainHeaders
-			retained := false
+		// headers
+		if len(opt.retainHeaders) != 0 { // use retainHeaders to filter
+			exists := false
 			for _, header := range opt.retainHeaders {
 				if strings.HasPrefix(param, header+": ") {
-					retained = true
+					exists = true
 					break
 				}
 			}
-			if !retained {
+			if !exists {
 				continue
 			}
-		} else {
-			// use ignoreHeaders
-			ignored := false
+		} else { // use ignoreHeaders to filter
+			exists := false
 			for _, header := range opt.ignoreHeaders {
 				if strings.HasPrefix(param, header+": ") {
-					ignored = true
+					exists = true
 					break
 				}
 			}
-			if ignored {
+			if exists {
 				continue
 			}
 		}
-
-		// secret
-		for _, header := range opt.secretHeaders {
+		for _, header := range opt.secretHeaders { // rewrite header that is secret
 			if strings.HasPrefix(param, header+": ") {
 				param = header + ": " + opt.secretReplace
 				break
@@ -249,7 +247,7 @@ func EnableParamRegexpBinding() error {
 
 // EnableParamRegexpBindingTranslator enables parametered regexp validator (`regexp`)'s translator to given ut.Translator.
 func EnableParamRegexpBindingTranslator(translator ut.Translator) error {
-	return AddTranslator(translator, "regexp", "{0} must matches regexp /{1}/", true)
+	return AddTranslator(translator, "regexp", "{0} must match regexp /{1}/", true)
 }
 
 // EnableRFC3339DateBinding enables rfc3339 date validator to `date`, see xvalidator.DateTimeValidator.

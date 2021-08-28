@@ -236,7 +236,7 @@ func (f mockValidator) Engine() interface{} {
 	return nil // fake
 }
 
-func TestGetValidatorEngineAndGetValidatorTranslator(t *testing.T) {
+func TestValidatorAndTranslator(t *testing.T) {
 	// validator
 	val, err := GetValidatorEngine()
 	xtesting.Nil(t, err)
@@ -377,6 +377,10 @@ func TestAddBindingAndAddTranslator(t *testing.T) {
 		xtesting.Nil(t, err)
 		xtesting.Equal(t, resultMap, tc.wantMap)
 	}
+}
+
+func TestCustomStructValidatorAndTranslate(t *testing.T) {
+	// ...
 }
 
 func TestLogger(t *testing.T) {

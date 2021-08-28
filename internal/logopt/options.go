@@ -70,25 +70,20 @@ func sliceToMap(args []interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, l/2)
 
 	for i := 0; i < l; i += 2 {
-		ki := i
-		vi := i + 1
 		if i+1 >= l {
 			break // ignore the final arg
 		}
-
-		key := "" // string
-		keyItf := args[ki]
-		value := args[vi] // interface{}
-		if keyItf == nil || value == nil {
+		key := ""
+		keyItf, value := args[i], args[i+1]
+		if keyItf == nil {
 			i--
-			continue // skip nil key and value
+			continue
 		}
 		if k, ok := keyItf.(string); ok {
 			key = k
 		} else {
 			key = fmt.Sprintf("%v", keyItf) // %v
 		}
-
 		out[key] = value
 	}
 

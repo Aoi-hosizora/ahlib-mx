@@ -11,11 +11,10 @@
 ### Types
 
 + `type DumpRequestOption func`
-+ `type AppRouter struct`
 
 ### Variables
 
-+ `var PrintAppRouterRegisterFunc func(index, count int, method, relativePath, handlerFuncname string, handlersCount int, layerFakePath string)`
++ None
 
 ### Constants
 
@@ -44,16 +43,7 @@
 + `func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption`
 + `func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption)`
 + `func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logop.LoggerOption)`
-+ `func NewAppRouter(engine *gin.Engine, router gin.IRouter) *AppRouter`
 
 ### Methods
 
-+ `func (a *AppRouter) GET(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) POST(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) DELETE(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) PATCH(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) PUT(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) OPTIONS(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) HEAD(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) Any(relativePath string, handlers ...gin.HandlerFunc)`
-+ `func (a *AppRouter) Register()`
++ None

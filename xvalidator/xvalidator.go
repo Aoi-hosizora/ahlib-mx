@@ -15,19 +15,36 @@ func IsValidationError(err error) bool {
 	return ok
 }
 
-// IsRequiredError returns true if the error is validator.ValidationErrors with required tag.
+// IsRequiredError returns true if the error is validator.ValidationErrors containing required tag.
 func IsRequiredError(err error) bool {
-	errs, ok := err.(validator.ValidationErrors)
+	ve, ok := err.(validator.ValidationErrors)
 	if !ok {
 		return false
 	}
 
-	for _, field := range errs {
-		if field.Tag() == "required" {
+	for _, fe := range ve {
+		if fe.Tag() == "required" {
 			return true
 		}
 	}
 	return false
+}
+
+type CustomError struct {
+	domain      string // such as "strconv" and "json"
+	readableMsg string // such as "router id must be larger than zero"
+}
+
+func (c *CustomError) Domain() string {
+	return c.domain
+}
+
+func (c *CustomError) Error() string {
+	return c.readableMsg
+}
+
+func NewCustomError(domain, readableMsg string) *CustomError {
+	return &CustomError{domain: domain, readableMsg: readableMsg}
 }
 
 // =================
@@ -35,6 +52,7 @@ func IsRequiredError(err error) bool {
 // =================
 
 // ParamRegexpValidator represents regexp validator with param, just like `regexp: xxx`.
+// For more regexp, see https://github.com/go-playground/validator/blob/master/regexes.go.
 func ParamRegexpValidator() validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		regexpParam := fl.Param() // param
@@ -152,7 +170,7 @@ func NotEqualValidator(p interface{}) validator.Func {
 func LenValidator(p interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		return compLenHelper(i, p, func(i, p int64) bool {
+		return lenHelper(i, p, func(i, p int64) bool {
 			return i == p
 		}, func(i, p uint64) bool {
 			return i == p
@@ -169,7 +187,7 @@ func LenValidator(p interface{}) validator.Func {
 func GreaterThenValidator(p interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		return compLenHelper(i, p, func(i, p int64) bool {
+		return lenHelper(i, p, func(i, p int64) bool {
 			return i > p
 		}, func(i, p uint64) bool {
 			return i > p
@@ -186,7 +204,7 @@ func GreaterThenValidator(p interface{}) validator.Func {
 func LessThenValidator(p interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		return compLenHelper(i, p, func(i, p int64) bool {
+		return lenHelper(i, p, func(i, p int64) bool {
 			return i < p
 		}, func(i, p uint64) bool {
 			return i < p
@@ -203,7 +221,7 @@ func LessThenValidator(p interface{}) validator.Func {
 func GreaterThenOrEqualValidator(p interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		return compLenHelper(i, p, func(i, p int64) bool {
+		return lenHelper(i, p, func(i, p int64) bool {
 			return i >= p
 		}, func(i, p uint64) bool {
 			return i >= p
@@ -220,7 +238,7 @@ func GreaterThenOrEqualValidator(p interface{}) validator.Func {
 func LessThenOrEqualValidator(p interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		return compLenHelper(i, p, func(i, p int64) bool {
+		return lenHelper(i, p, func(i, p int64) bool {
 			return i <= p
 		}, func(i, p uint64) bool {
 			return i <= p
@@ -245,7 +263,7 @@ func LengthOutOfRangeValidator(min, max interface{}) validator.Func {
 func OneofValidator(ps ...interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		return oneOfHelper(i, ps...)
+		return oneofHelper(i, ps)
 	}
 }
 
@@ -273,7 +291,7 @@ func eqHelper(i, p interface{}) (bool, bool) {
 		return ok && v.Bool() == p, true
 	case reflect.String:
 		p, ok := xreflect.GetString(p)
-		return ok && v.String() == p, true // validate the string value
+		return ok && v.String() == p, true
 	case reflect.Slice, reflect.Array, reflect.Map:
 		p, ok := xreflect.GetInt(p)
 		return ok && v.Len() == int(p), true
@@ -281,11 +299,11 @@ func eqHelper(i, p interface{}) (bool, bool) {
 	return false, false
 }
 
-// compLenHelper is a helper function for length comparison used for LenValidator, GreaterThenValidator, LessThenValidator, GreaterThenOrEqualValidator and LessThenOrEqualValidator.
+// lenHelper is a helper function for length comparison used for LenValidator, GreaterThenValidator, LessThenValidator, GreaterThenOrEqualValidator and LessThenOrEqualValidator.
 // For numbers, it validates the value.
 // For strings, it validates the length of string.
 // For slices, arrays, and maps, it validates the length.
-func compLenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) bool, ff func(i, p float64) bool) bool {
+func lenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) bool, ff func(i, p float64) bool) bool {
 	v := reflect.ValueOf(i)
 	switch k := v.Kind(); k {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -302,7 +320,7 @@ func compLenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint
 		return ok && fi(int64(xnumber.Bool(v.Bool())), int64(xnumber.Bool(p)))
 	case reflect.String:
 		p, ok := xreflect.GetInt(p)
-		return ok && fi(int64(len([]rune(v.String()))), p) // validate the string length
+		return ok && fi(int64(len([]rune(v.String()))), p)
 	case reflect.Slice, reflect.Array, reflect.Map:
 		p, ok := xreflect.GetInt(p)
 		return ok && fi(int64(v.Len()), p)
@@ -310,9 +328,9 @@ func compLenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint
 	return false
 }
 
-// oneOfHelper is a helper function for oneof used for OneofValidator.
+// oneofHelper is a helper function for oneof used for OneofValidator.
 // For numbers & strings, it validates the value.
-func oneOfHelper(i interface{}, ps ...interface{}) bool {
+func oneofHelper(i interface{}, ps []interface{}) bool {
 	v := reflect.ValueOf(i)
 
 	switch k := v.Kind(); k {
