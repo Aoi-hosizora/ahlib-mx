@@ -15,29 +15,36 @@ import (
 	"sync"
 )
 
+// TranslatableValidateFieldError represents an alias type of validator.FieldError interface, and this is the error for normal single field's validator error.
 type TranslatableValidateFieldError = validator.FieldError
 
+// CustomMessageValidateFieldError represents a message wrapped TranslatableValidateFieldError, and this is the error for those fields which can have specific message.
 type CustomMessageValidateFieldError struct {
 	origin  TranslatableValidateFieldError
 	message string
 }
 
+// Origin returns the origin TranslatableValidateFieldError from CustomMessageValidateFieldError.
 func (v *CustomMessageValidateFieldError) Origin() TranslatableValidateFieldError {
 	return v.origin
 }
 
+// Error returns the error message from CustomMessageValidateFieldError.
 func (v *CustomMessageValidateFieldError) Error() string {
 	return v.message
 }
 
+// FieldsValidateError represents the struct fields' validator errors slice, and this error may be returned by CustomStructValidator.ValidateStruct.
 type FieldsValidateError struct {
 	fields []error // TranslatableValidateFieldError or CustomMessageValidateFieldError
 }
 
+// Fields returns the fields' errors from FieldsValidateError.
 func (v *FieldsValidateError) Fields() []error {
 	return v.fields
 }
 
+// Error returns the error message from FieldsValidateError.
 func (v *FieldsValidateError) Error() string {
 	msgs := make([]string, 0, len(v.fields))
 	for _, fe := range v.fields {
@@ -46,6 +53,7 @@ func (v *FieldsValidateError) Error() string {
 	return strings.Join(msgs, "\n")
 }
 
+// Translate translates FieldsValidateError to a field-message map, using given ut.Translator and two kinds of error.
 func (v *FieldsValidateError) Translate(translator ut.Translator) map[string]string {
 	result := make(map[string]string, len(v.fields))
 	for _, err := range v.fields {
@@ -58,6 +66,14 @@ func (v *FieldsValidateError) Translate(translator ut.Translator) map[string]str
 	return result
 }
 
+// CustomStructValidator represents a custom validator.Validate as binding.StructValidator, which allows fields to specify their custom error messages.
+//
+// Example:
+// 	type User struct {
+//		Id   uint64  `json:"id"   form:"id"   binding:"required,gt=1"          validator_message:"required|id is required|gt|id must larger than one"`
+//		Name string  `json:"name" form:"name" binding:"required,gt=4,lt=20"    validator_message:"*|name is invalid"`
+//		Bio  *string `json:"bio"  form:"bio"  binding:"required,gte=0,lte=255" validator_message:"xxx"`
+// 	}
 type CustomStructValidator struct {
 	once       sync.Once
 	validate   *validator.Validate
@@ -66,35 +82,43 @@ type CustomStructValidator struct {
 
 var _ binding.StructValidator = (*CustomStructValidator)(nil)
 
+// lazyinit initializes CustomStructValidator.validate in lazy.
 func (v *CustomStructValidator) lazyinit() {
 	v.once.Do(func() {
 		v.validate = validator.New()
-		v.messageTag = "validator_message"
 		v.validate.SetTagName("binding")
+		v.messageTag = "validator_message"
 	})
 }
 
+// SetValidatorTagName sets the validator tag name for CustomStructValidator.
 func (v *CustomStructValidator) SetValidatorTagName(name string) {
 	v.validate.SetTagName(name)
 }
 
+// SetMessageTagName sets the message tag name for CustomStructValidator.
 func (v *CustomStructValidator) SetMessageTagName(name string) {
 	v.messageTag = name
 }
 
+// ValidatorTagName returns the validator tag name of CustomStructValidator.
 func (v *CustomStructValidator) ValidatorTagName() string {
-	return xreflect.GetUnexportedField(reflect.ValueOf(v.validate).Elem().FieldByName("tagName")).Interface().(string)
+	val := reflect.ValueOf(v.validate).Elem()
+	return xreflect.GetUnexportedField(val.FieldByName("tagName")).Interface().(string)
 }
 
+// MessageTagName returns the validator tag name of CustomStructValidator.
 func (v *CustomStructValidator) MessageTagName() string {
 	return v.messageTag
 }
 
+// Engine returns the internal validator.Validate engine from CustomStructValidator.
 func (v *CustomStructValidator) Engine() interface{} {
 	v.lazyinit()
 	return v.validate
 }
 
+// ValidateStruct validates the given struct and returns the error, the type of error can be validator.InvalidValidationError or xgin.FieldsValidateError.
 func (v *CustomStructValidator) ValidateStruct(obj interface{}) error {
 	val, ok := v.extractToStruct(obj)
 	if !ok {
@@ -114,15 +138,16 @@ func (v *CustomStructValidator) ValidateStruct(obj interface{}) error {
 	typ := reflect.TypeOf(val)
 	errs := make([]error, 0, len(ve))
 	for _, fe := range ve {
-		if ce, found := v.applyCustomMessage(typ, fe); !found {
-			errs = append(errs, fe)
+		if ce, found := v.applyCustomMessage(typ, fe); found {
+			errs = append(errs, ce) // TranslatableValidateFieldError -> CustomMessageValidateFieldError
 		} else {
-			errs = append(errs, ce)
+			errs = append(errs, fe) // TranslatableValidateFieldError (validator.FieldError)
 		}
 	}
 	return &FieldsValidateError{fields: errs}
 }
 
+// extractToStruct checks and extracts the given interface to struct type.
 func (v *CustomStructValidator) extractToStruct(obj interface{}) (interface{}, bool) {
 	if obj == nil {
 		return nil, false
@@ -140,7 +165,9 @@ func (v *CustomStructValidator) extractToStruct(obj interface{}) (interface{}, b
 	return val.Interface(), true
 }
 
-func (v *CustomStructValidator) applyCustomMessage(typ reflect.Type, fe validator.FieldError) (error, bool) {
+// applyCustomMessage checks the struct field and wraps TranslatableValidateFieldError to CustomMessageValidateFieldError. Note that "||" is used to
+// represent a single "|", such as "*|name ||is|| invalid" means the message for "*" is set to "name |is| invalid".
+func (v *CustomStructValidator) applyCustomMessage(typ reflect.Type, fe TranslatableValidateFieldError) (error, bool) {
 	sf, ok := typ.FieldByName(fe.StructField())
 	if !ok {
 		return nil, false // unreachable
@@ -164,24 +191,34 @@ func (v *CustomStructValidator) applyCustomMessage(typ reflect.Type, fe validato
 	return nil, false // not found
 }
 
+// RouterDecodeError represents an error type for router parameter decoding, and this error can specify custom translate message and error string.
+// At most of the time, Err field is in strconv.NumError type generated by strconv.ParseInt, etc.
 type RouterDecodeError struct {
-	Field     string
-	Input     string
-	Err       error
-	Translate string
+	Field       string
+	Input       string
+	Err         error
+	Translation string
+
+	CustomErrorFn func(error) string
 }
 
+// Error returns the error message from RouterDecodeError.
 func (r *RouterDecodeError) Error() string {
+	if r.CustomErrorFn != nil {
+		return r.CustomErrorFn(r.Err)
+	}
 	if nErr, ok := r.Err.(*strconv.NumError); ok {
 		return nErr.Error()
 	}
 	return fmt.Sprintf("parsing %s \"%s\": %v", r.Input, r.Input, r.Err)
 }
 
+// Unwrap returns the wrapped error from RouterDecodeError.
 func (r *RouterDecodeError) Unwrap() error {
 	return r.Err
 }
 
+// translateOptions represents some TranslateBindingError function options, set by TranslateOption.
 type translateOptions struct {
 	utTranslator                ut.Translator
 	jsonInvalidUnmarshalErrorFn func(*json.InvalidUnmarshalError) (result map[string]string, isUserErr bool)
@@ -196,74 +233,88 @@ type translateOptions struct {
 	extraErrorsTranslateFn      func(error) (result map[string]string, isUserErr bool)
 }
 
+// TranslateOption represents an option for translateOptions, created by WithXXX functions.
 type TranslateOption func(*translateOptions)
 
+// WithUtTranslator creates a TranslateOption to specific ut.Translator as the translation of validator.ValidationErrors and xgin.FieldsValidateError.
 func WithUtTranslator(translator ut.Translator) TranslateOption {
 	return func(o *translateOptions) {
 		o.utTranslator = translator
 	}
 }
 
+// WithJsonInvalidUnmarshalError creates a translation function for json.InvalidUnmarshalError.
 func WithJsonInvalidUnmarshalError(fn func(*json.InvalidUnmarshalError) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.jsonInvalidUnmarshalErrorFn = fn
 	}
 }
 
+// WithJsonUnmarshalTypeError creates a translation function for json.UnmarshalTypeError.
 func WithJsonUnmarshalTypeError(fn func(*json.UnmarshalTypeError) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.jsonUnmarshalTypeErrorFn = fn
 	}
 }
 
+// WithJsonSyntaxError creates a translation function for json.SyntaxError.
 func WithJsonSyntaxError(fn func(*json.SyntaxError) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.jsonSyntaxErrorFn = fn
 	}
 }
 
-func WithIoEOFError(fn func(error) (result map[string]string, isUserErr bool)) TranslateOption {
+// WithIOEOFError creates a translation function for io.EOF and io.ErrUnexpectedEOF.
+func WithIOEOFError(fn func(error) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.ioEOFErrorFn = fn
 	}
 }
 
+// WithStrconvNumErrorError creates a translation function for strconv.NumError.
 func WithStrconvNumErrorError(fn func(*strconv.NumError) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.strconvNumErrorFn = fn
 	}
 }
 
+// WithXginRouterDecodeError creates a translation function for xgin.RouterDecodeError.
 func WithXginRouterDecodeError(fn func(*RouterDecodeError) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.xginRouterDecodeErrorFn = fn
 	}
 }
 
+// WithValidatorInvalidTypeError creates a translation function for validator.InvalidValidationError.
 func WithValidatorInvalidTypeError(fn func(*validator.InvalidValidationError) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.validatorInvalidTypeErrorFn = fn
 	}
 }
 
+// WithValidatorFieldsError creates a translation function for validator.ValidationErrors.
 func WithValidatorFieldsError(fn func(validator.ValidationErrors, ut.Translator) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.validatorFieldsErrorFn = fn
 	}
 }
 
+// WithXginFieldsValidateError creates a translation function for xgin.FieldsValidateError.
 func WithXginFieldsValidateError(fn func(*FieldsValidateError, ut.Translator) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.xginFieldsValidateErrorFn = fn
 	}
 }
 
+// WithExtraErrorsTranslate creates a translation function for other errors, and it is the default translation function for extra error types.
 func WithExtraErrorsTranslate(fn func(error) (result map[string]string, isUserErr bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.extraErrorsTranslateFn = fn
 	}
 }
 
+// TranslateBindingError translates the given error and TranslateOption-s to a field-message map, note that the returned boolean value means that if the given
+// error can be regarded as an HTTP 4xx status code (user induced error).
 func TranslateBindingError(err error, options ...TranslateOption) (result map[string]string, isUserErr bool) {
 	if err == nil {
 		return nil, false
@@ -292,8 +343,8 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 			return nil, false
 		},
 		xginRouterDecodeErrorFn: func(e *RouterDecodeError) (result map[string]string, isUserErr bool) {
-			reason := e.Translate
-			if sErr, ok := e.Err.(*strconv.NumError); ok {
+			reason := e.Translation
+			if sErr, ok := e.Err.(*strconv.NumError); ok && reason == "" {
 				if errors.Is(sErr.Err, strconv.ErrSyntax) {
 					reason = "is not a number"
 				} else if errors.Is(sErr.Err, strconv.ErrRange) {
@@ -301,7 +352,7 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 				}
 			}
 			if reason == "" {
-				return nil, false
+				return nil, false // <<<
 			}
 			if e.Field == "" {
 				return map[string]string{"router parameter": fmt.Sprintf("router parameter %s", reason)}, true
@@ -322,7 +373,7 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 			return e.Translate(trans), true
 		},
 		extraErrorsTranslateFn: func(e error) (result map[string]string, isUserErr bool) {
-			return map[string]string{"_error": fmt.Sprintf("%T: %v", err, err)}, false
+			return nil, false
 		},
 	}
 	for _, op := range options {

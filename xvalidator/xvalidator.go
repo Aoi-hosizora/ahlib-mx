@@ -1,13 +1,36 @@
 package xvalidator
 
 import (
-	"github.com/Aoi-hosizora/ahlib/xnumber"
-	"github.com/Aoi-hosizora/ahlib/xreflect"
+	"github.com/go-playground/locales"
+	loc_en "github.com/go-playground/locales/en"
+	loc_fr "github.com/go-playground/locales/fr"
+	loc_id "github.com/go-playground/locales/id"
+	loc_ja "github.com/go-playground/locales/ja"
+	loc_nl "github.com/go-playground/locales/nl"
+	loc_pt_BR "github.com/go-playground/locales/pt_BR"
+	loc_ru "github.com/go-playground/locales/ru"
+	loc_tr "github.com/go-playground/locales/tr"
+	loc_zh "github.com/go-playground/locales/zh"
+	loc_zh_Hant "github.com/go-playground/locales/zh_Hant"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	trans_en "github.com/go-playground/validator/v10/translations/en"
+	trans_fr "github.com/go-playground/validator/v10/translations/fr"
+	trans_id "github.com/go-playground/validator/v10/translations/id"
+	trans_ja "github.com/go-playground/validator/v10/translations/ja"
+	trans_nl "github.com/go-playground/validator/v10/translations/nl"
+	trans_pt_BR "github.com/go-playground/validator/v10/translations/pt_BR"
+	trans_ru "github.com/go-playground/validator/v10/translations/ru"
+	trans_tr "github.com/go-playground/validator/v10/translations/tr"
+	trans_zh "github.com/go-playground/validator/v10/translations/zh"
+	trans_zh_tw "github.com/go-playground/validator/v10/translations/zh_tw"
 	"reflect"
-	"regexp"
-	"time"
+	"strings"
 )
+
+// =================
+// validator related
+// =================
 
 // IsValidationError returns true if the error is validator.ValidationErrors.
 func IsValidationError(err error) bool {
@@ -15,7 +38,7 @@ func IsValidationError(err error) bool {
 	return ok
 }
 
-// IsRequiredError returns true if the error is validator.ValidationErrors containing required tag.
+// IsRequiredError returns true if the error is validator.ValidationErrors which contains "required" tag.
 func IsRequiredError(err error) bool {
 	ve, ok := err.(validator.ValidationErrors)
 	if !ok {
@@ -30,357 +53,208 @@ func IsRequiredError(err error) bool {
 	return false
 }
 
-type CustomError struct {
-	domain      string // such as "strconv" and "json"
-	readableMsg string // such as "router id must be larger than zero"
-}
-
-func (c *CustomError) Domain() string {
-	return c.domain
-}
-
-func (c *CustomError) Error() string {
-	return c.readableMsg
-}
-
-func NewCustomError(domain, readableMsg string) *CustomError {
-	return &CustomError{domain: domain, readableMsg: readableMsg}
-}
-
-// =================
-// regexp & datetime
-// =================
-
-// ParamRegexpValidator represents regexp validator with param, just like `regexp: xxx`.
-// For more regexp, see https://github.com/go-playground/validator/blob/master/regexes.go.
-func ParamRegexpValidator() validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		regexpParam := fl.Param() // param
-		i := fl.Field().Interface()
-		text, ok := i.(string)
-		if !ok {
-			return false
-		}
-		re, err := regexp.Compile(regexpParam)
-		if err != nil {
-			return false // return false
-		}
-		return re.MatchString(text)
-	}
-}
-
-// RegexpValidator represents regexp validator using given regexp.
-func RegexpValidator(re *regexp.Regexp) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		text, ok := i.(string)
-		if !ok {
-			return false
-		}
-		return re.MatchString(text)
-	}
-}
-
-// DateTimeValidator represents datetime validator using given layout.
-func DateTimeValidator(layout string) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		text, ok := i.(string)
-		if !ok {
-			return false
-		}
-		_, err := time.Parse(layout, text)
-		return err == nil
-	}
-}
-
-// ==============
-// and & or & not
-// ==============
-
 const (
-	panicNilValidatorFunc = "xvalidator: nil validator function"
+	panicNilValidator = "xvalidator: nil validator"
 )
 
-// And represents the intersection of multiple validator, just like ',' in validator tag.
-func And(fns ...validator.Func) validator.Func {
-	for _, fn := range fns {
-		if fn == nil {
-			panic(panicNilValidatorFunc)
+// UseTagAsFieldName sets a specific tag as struct field's alternate name. This field name will be used in validator.FieldError's Namespace() and Field()
+// methods, and will change validator.FieldError's error message and the translator result.
+func UseTagAsFieldName(validator *validator.Validate, tagName string) {
+	if validator == nil {
+		panic(panicNilValidator)
+	}
+	validator.RegisterTagNameFunc(func(field reflect.StructField) string {
+		tagMsg, ok := field.Tag.Lookup(tagName)
+		if !ok {
+			return ""
 		}
-	}
-	return func(fl validator.FieldLevel) bool {
-		for _, fn := range fns {
-			if !fn(fl) {
-				return false
-			}
+		name := strings.SplitN(tagMsg, ",", 2)[0]
+		if name == "" || name == "-" {
+			return ""
 		}
-		return true
+		return name // fe.Field() -> tag msg
+	})
+}
+
+// ==================
+// translator related
+// ==================
+
+// UtTranslator represents an alias type of ut.Translator, and this represents the translator of validator.Validate.
+type UtTranslator = ut.Translator
+
+// LocaleTranslator represents an alias type of locales.Translator, which will be used in ApplyTranslator. These kinds of values can be got
+// from xvalidator.EnLocaleTranslator, xvalidator.ZhLocaleTranslator and so on.
+type LocaleTranslator = locales.Translator
+
+// TranslationRegisterHandler represents a translation register function, which will be used in ApplyTranslator. These kinds of values can be got
+// from xvalidator.EnTranslationRegisterFunc, xvalidator.ZhTranslationRegisterFunc and so on.
+type TranslationRegisterHandler func(v *validator.Validate, translator ut.Translator) error
+
+const (
+	panicNilLocaleTranslator      = "xvalidator: nil locale translator"
+	panicNilTranslationRegisterFn = "xvalidator: nil translation register function"
+)
+
+// ApplyTranslator applies translator to validator.Validate using given locales.Translator and TranslationRegisterHandler, this function will return
+// a ut.Translator (universal translator). Also see xvalidator.AddToTranslatorFunc and xvalidator.DefaultTranslateFunc.
+//
+// Example:
+// 	// apply default translation to validator
+// 	translator := xvalidator.ApplyTranslator(validator, xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc()) // ut.Translator
+//
+// 	// register custom translation to validator
+// 	fn := xvalidator.AddToTranslatorFunc("tag", "{0} has {1}", false) // validator.RegisterTranslationsFunc
+// 	validator.RegisterTranslation("tag", translator, fn, xvalidator.DefaultTranslateFunc())
+func ApplyTranslator(validator *validator.Validate, locTranslator locales.Translator, registerFn TranslationRegisterHandler) (ut.Translator, error) {
+	if validator == nil {
+		panic(panicNilValidator)
+	}
+	if locTranslator == nil {
+		panic(panicNilLocaleTranslator)
+	}
+	if registerFn == nil {
+		panic(panicNilTranslationRegisterFn)
+	}
+
+	translator, _ := ut.New(locTranslator, locTranslator).GetTranslator(locTranslator.Locale())
+	err := registerFn(validator, translator) // register translator to validator
+	if err != nil {
+		return nil, err
+	}
+
+	return translator, nil
+}
+
+// AddToTranslatorFunc returns a validator.RegisterTranslationsFunc function, it uses the given tag, translation and override switcher parameters
+// to **register translation information** for a ut.Translator and will be used in validator.TranslationFunc.
+//
+// This function can be used for validator.Validate RegisterTranslation() method's translationFn (the second) parameter, also see ApplyTranslator.
+func AddToTranslatorFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc {
+	return func(ut ut.Translator) error {
+		return ut.Add(tag, translation, override)
 	}
 }
 
-// Or represents the union of multiple validator, just like '|' in validator tag.
-// See https://godoc.org/github.com/go-playground/validator#hdr-Or_Operator.
-func Or(fns ...validator.Func) validator.Func {
-	for _, fn := range fns {
-		if fn == nil {
-			panic(panicNilValidatorFunc)
+// DefaultTranslateFunc returns a validator.TranslationFunc function, it uses the field name (validator.FieldError's field) as {0} and the field param
+// (validator.FieldError's param) as {1} to **create translation for the given tag**.
+//
+// This function can be used for validator.Validate RegisterTranslation() method's registerFn (the third) parameter, also see ApplyTranslator.
+func DefaultTranslateFunc() validator.TranslationFunc {
+	return func(ut ut.Translator, fe validator.FieldError) string {
+		t, err := ut.T(fe.Tag(), fe.Field(), fe.Param()) // field to {0}, param to {1}
+		if err != nil {
+			// ut.ErrUnknownTranslation
+			return fe.(error).Error()
 		}
-	}
-	return func(fl validator.FieldLevel) bool {
-		for _, fn := range fns {
-			if fn(fl) {
-				return true
-			}
-		}
-		return false
+		return t
 	}
 }
 
-// ==========
-// validators
-// ==========
+// =================
+// locale translator
+// =================
 
-// EqualValidator represents `eq` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-Equals.
-// For strings & numbers, eq will ensure that the value is equal to the parameter given.
-// For slices, arrays, and maps, validates the number of items.
-func EqualValidator(p interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		eq, ok := eqHelper(i, p)
-		return ok && eq
-	}
+// EnLocaleTranslator is a locales.Translator generated by en.New() from github.com/go-playground/locales/en.
+func EnLocaleTranslator() locales.Translator {
+	return loc_en.New()
 }
 
-// NotEqualValidator represents `ne` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-Not_Equal.
-// For strings & numbers, ne will ensure that the value is not equal to the parameter given.
-// For slices, arrays, and maps, validates the number of items.
-func NotEqualValidator(p interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		eq, ok := eqHelper(i, p)
-		return ok && !eq
-	}
+// FrLocaleTranslator is a locales.Translator generated by fr.New() from github.com/go-playground/locales/fr.
+func FrLocaleTranslator() locales.Translator {
+	return loc_fr.New()
 }
 
-// LenValidator represents `len` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-Length.
-// For numbers, length will ensure that the value is equal to the parameter given.
-// For strings, it checks that the string length is exactly that number of characters.
-// For slices, arrays, and maps, validates the number of items.
-func LenValidator(p interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		return lenHelper(i, p, func(i, p int64) bool {
-			return i == p
-		}, func(i, p uint64) bool {
-			return i == p
-		}, func(i, p float64) bool {
-			return xnumber.EqualInAccuracy(i, p)
-		})
-	}
+// IdLocaleTranslator is a locales.Translator generated by id.New() from github.com/go-playground/locales/id.
+func IdLocaleTranslator() locales.Translator {
+	return loc_id.New()
 }
 
-// GreaterThenValidator represents `gt` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-Greater_Than.
-// For numbers, this will ensure that the value is greater than the parameter given.
-// For strings, it checks that the string length is greater than that number of characters.
-// For slices, arrays and maps it validates the number of items.
-func GreaterThenValidator(p interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		return lenHelper(i, p, func(i, p int64) bool {
-			return i > p
-		}, func(i, p uint64) bool {
-			return i > p
-		}, func(i, p float64) bool {
-			return xnumber.GreaterInAccuracy(i, p)
-		})
-	}
+// JaLocaleTranslator is a locales.Translator generated by ja.New() from github.com/go-playground/locales/ja.
+func JaLocaleTranslator() locales.Translator {
+	return loc_ja.New()
 }
 
-// LessThenValidator represents `lt` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-Less_Than.
-// For numbers, this will ensure that the value is less than the parameter given.
-// For strings, it checks that the string length is less than that number of characters.
-// For slices, arrays, and maps it validates the number of items.
-func LessThenValidator(p interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		return lenHelper(i, p, func(i, p int64) bool {
-			return i < p
-		}, func(i, p uint64) bool {
-			return i < p
-		}, func(i, p float64) bool {
-			return xnumber.LessInAccuracy(i, p)
-		})
-	}
+// NlLocaleTranslator is a locales.Translator generated by nl.New() from github.com/go-playground/locales/nl.
+func NlLocaleTranslator() locales.Translator {
+	return loc_nl.New()
 }
 
-// GreaterThenOrEqualValidator represents `gte` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-Greater_Than_or_Equal.
-// For numbers, gte will ensure that the value is greater or equal to the parameter given.
-// For strings, it checks that the string length is at least that number of characters.
-// For slices, arrays, and maps, validates the number of items.
-func GreaterThenOrEqualValidator(p interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		return lenHelper(i, p, func(i, p int64) bool {
-			return i >= p
-		}, func(i, p uint64) bool {
-			return i >= p
-		}, func(i, p float64) bool {
-			return xnumber.GreaterOrEqualInAccuracy(i, p)
-		})
-	}
+// PtBrLocaleTranslator is a locales.Translator generated by pt_BR.New() from github.com/go-playground/locales/pt_BR.
+func PtBrLocaleTranslator() locales.Translator {
+	return loc_pt_BR.New()
 }
 
-// LessThenOrEqualValidator represents `lte` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-Less_Than_or_Equal.
-// For numbers, lte will ensure that the value is less than or equal to the parameter given.
-// For strings, it checks that the string length is at most that number of characters.
-// For slices, arrays, and maps, validates the number of items.
-func LessThenOrEqualValidator(p interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		return lenHelper(i, p, func(i, p int64) bool {
-			return i <= p
-		}, func(i, p uint64) bool {
-			return i <= p
-		}, func(i, p float64) bool {
-			return xnumber.LessOrEqualInAccuracy(i, p)
-		})
-	}
+// RuLocaleTranslator is a locales.Translator generated by ru.New() from github.com/go-playground/locales/ru.
+func RuLocaleTranslator() locales.Translator {
+	return loc_ru.New()
 }
 
-// LengthInRangeValidator represents `min,max` validator tag, equals to combine GreaterThenOrEqualValidator and LessThenOrEqualValidator with And.
-func LengthInRangeValidator(min, max interface{}) validator.Func {
-	return And(GreaterThenOrEqualValidator(min), LessThenOrEqualValidator(max)) // min <= p && p <= max
+// TrLocaleTranslator is a locales.Translator generated by tr.New() from github.com/go-playground/locales/tr.
+func TrLocaleTranslator() locales.Translator {
+	return loc_tr.New()
 }
 
-// LengthOutOfRangeValidator represents `min|max` validator tag, equals to combine GreaterThenOrEqualValidator and LessThenOrEqualValidator with Or.
-func LengthOutOfRangeValidator(min, max interface{}) validator.Func {
-	return Or(GreaterThenValidator(max), LessThenValidator(min)) // p <= min || max <= p
+// ZhLocaleTranslator is a locales.Translator generated by zh.New() from github.com/go-playground/locales/zh.
+func ZhLocaleTranslator() locales.Translator {
+	return loc_zh.New()
 }
 
-// OneofValidator represents `oneof` validator tag. See https://godoc.org/github.com/go-playground/validator#hdr-One_Of.
-// For strings, ints, uints, and floats, oneof will ensure that the value is one of the values in the parameter.
-func OneofValidator(ps ...interface{}) validator.Func {
-	return func(fl validator.FieldLevel) bool {
-		i := fl.Field().Interface()
-		return oneofHelper(i, ps)
-	}
+// ZhHantLocaleTranslator is a locales.Translator generated by zh_Hant.New() from github.com/go-playground/locales/zh_Hant.
+func ZhHantLocaleTranslator() locales.Translator {
+	return loc_zh_Hant.New()
 }
 
-// =======
-// helpers
-// =======
+// =========================
+// translation register func
+// =========================
 
-// eqHelper is a helper function for equality used for EqualValidator and NotEqualValidator.
-// For numbers & strings, it validates the value.
-// For slices, arrays, and maps, it validates the length.
-func eqHelper(i, p interface{}) (bool, bool) {
-	v := reflect.ValueOf(i)
-	switch k := v.Kind(); k {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		p, ok := xreflect.GetInt(p)
-		return ok && v.Int() == p, true
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		p, ok := xreflect.GetUint(p)
-		return ok && v.Uint() == p, true
-	case reflect.Float32, reflect.Float64:
-		p, ok := xreflect.GetFloat(p)
-		return ok && xnumber.EqualInAccuracy(v.Float(), p), true
-	case reflect.Bool:
-		p, ok := xreflect.GetBool(p)
-		return ok && v.Bool() == p, true
-	case reflect.String:
-		p, ok := xreflect.GetString(p)
-		return ok && v.String() == p, true
-	case reflect.Slice, reflect.Array, reflect.Map:
-		p, ok := xreflect.GetInt(p)
-		return ok && v.Len() == int(p), true
-	}
-	return false, false
+// EnTranslationRegisterFunc is a TranslationRegisterHandler generated by en.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/en.
+func EnTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_en.RegisterDefaultTranslations
 }
 
-// lenHelper is a helper function for length comparison used for LenValidator, GreaterThenValidator, LessThenValidator, GreaterThenOrEqualValidator and LessThenOrEqualValidator.
-// For numbers, it validates the value.
-// For strings, it validates the length of string.
-// For slices, arrays, and maps, it validates the length.
-func lenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) bool, ff func(i, p float64) bool) bool {
-	v := reflect.ValueOf(i)
-	switch k := v.Kind(); k {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		p, ok := xreflect.GetInt(p)
-		return ok && fi(v.Int(), p)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		p, ok := xreflect.GetUint(p)
-		return ok && fu(v.Uint(), p)
-	case reflect.Float32, reflect.Float64:
-		p, ok := xreflect.GetFloat(p)
-		return ok && ff(v.Float(), p)
-	case reflect.Bool:
-		p, ok := xreflect.GetBool(p)
-		return ok && fi(int64(xnumber.Bool(v.Bool())), int64(xnumber.Bool(p)))
-	case reflect.String:
-		p, ok := xreflect.GetInt(p)
-		return ok && fi(int64(len([]rune(v.String()))), p)
-	case reflect.Slice, reflect.Array, reflect.Map:
-		p, ok := xreflect.GetInt(p)
-		return ok && fi(int64(v.Len()), p)
-	}
-	return false
+// FrTranslationRegisterFunc is a TranslationRegisterHandler generated by fr.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/fr.
+func FrTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_fr.RegisterDefaultTranslations
 }
 
-// oneofHelper is a helper function for oneof used for OneofValidator.
-// For numbers & strings, it validates the value.
-func oneofHelper(i interface{}, ps []interface{}) bool {
-	v := reflect.ValueOf(i)
+// IdTranslationRegisterFunc is a TranslationRegisterHandler generated by id.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/id.
+func IdTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_id.RegisterDefaultTranslations
+}
 
-	switch k := v.Kind(); k {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v := v.Int()
-		for _, p := range ps {
-			p, ok := xreflect.GetInt(p)
-			if ok && v == p {
-				return true
-			}
-		}
-		return false
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		v := v.Uint()
-		for _, p := range ps {
-			p, ok := xreflect.GetUint(p)
-			if ok && v == p {
-				return true
-			}
-		}
-		return false
-	case reflect.Float32, reflect.Float64:
-		v := v.Float()
-		for _, p := range ps {
-			p, ok := xreflect.GetFloat(p)
-			if ok && xnumber.EqualInAccuracy(v, p) {
-				return true
-			}
-		}
-		return false
-	case reflect.Bool:
-		v := v.Bool()
-		for _, p := range ps {
-			p, ok := xreflect.GetBool(p)
-			if ok && v == p {
-				return true
-			}
-		}
-		return false
-	case reflect.String:
-		v := v.String()
-		for _, p := range ps {
-			p, ok := xreflect.GetString(p)
-			if ok && v == p {
-				return true
-			}
-		}
-		return false
-	}
+// JaTranslationRegisterFunc is a TranslationRegisterHandler generated by ja.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/ja.
+func JaTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_ja.RegisterDefaultTranslations
+}
 
-	// other types
-	return false
+// NlTranslationRegisterFunc is a TranslationRegisterHandler generated by nl.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/nl.
+func NlTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_nl.RegisterDefaultTranslations
+}
+
+// PtBrTranslationRegisterFunc is a TranslationRegisterHandler generated by pt_BR.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/pt_BR.
+func PtBrTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_pt_BR.RegisterDefaultTranslations
+}
+
+// RuTranslationRegisterFunc is a TranslationRegisterHandler generated by ru.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translation/ru.
+func RuTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_ru.RegisterDefaultTranslations
+}
+
+// TrTranslationRegisterFunc is a TranslationRegisterHandler generated by tr.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/tr.
+func TrTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_tr.RegisterDefaultTranslations
+}
+
+// ZhTranslationRegisterFunc is a TranslationRegisterHandler generated by zh.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/zh.
+func ZhTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_zh.RegisterDefaultTranslations
+}
+
+// ZhTwTranslationRegisterFunc is a TranslationRegisterHandler generated by zh_tw.RegisterDefaultTranslations from github.com/go-playground/validator/v10/translations/zh_tw.
+func ZhTwTranslationRegisterFunc() TranslationRegisterHandler {
+	return trans_zh_tw.RegisterDefaultTranslations
 }

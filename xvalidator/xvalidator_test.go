@@ -1,13 +1,112 @@
 package xvalidator
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
-	"github.com/Aoi-hosizora/ahlib/xtime"
+	"github.com/go-playground/locales"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
-	"regexp"
+	"reflect"
 	"testing"
+	"unsafe"
 )
+
+func TestRequiredAndOmitempty(t *testing.T) {
+	// 1. `required` + non-pointer (common)
+	// 	A uint64 `binding:"required"` // cannot be nil and 0
+	// 	B string `binding:"required"` // cannot be nil and ""
+	//
+	// 2. `required` + pointer (common)
+	// 	A *uint64 `binding:"required"` // cannot be nil, can be 0
+	// 	B *string `binding:"required"` // cannot be nil, can be ""
+	//
+	// 3. `omitempty` + non-pointer (common)
+	// 	A uint64 `binding:"omitempty"` // can be nil and 0
+	// 	B string `binding:"omitempty"` // can be nil and ""
+	//
+	// 4. `omitempty` + pointer => same as 3
+	// 	A *uint64 `binding:"omitempty"` // can be nil and 0
+	// 	B *string `binding:"omitempty"` // can be nil and ""
+	//
+	// 5. `required` + `omitempty` + non-pointer => same as 1
+	// 	A uint64 `binding:"required,omitempty"` // cannot be nil and 0
+	// 	B string `binding:"required,omitempty"` // cannot be nil and ""
+	//
+	// 6. `required` + `omitempty` + pointer => same as 2
+	// 	A *uint64 `binding:"required,omitempty"` // cannot be nil, can be 0
+	// 	B *string `binding:"required,omitempty"` // cannot be nil, can be ""
+	//
+	// Also see https://godoc.org/github.com/go-playground/validator.
+
+	v := validator.New()
+	v.SetTagName("binding")
+
+	type S1 struct {
+		A uint64 `binding:"required"`
+		B string `binding:"required"`
+	}
+	type S2 struct {
+		A *uint64 `binding:"required"`
+		B *string `binding:"required"`
+	}
+	type S3 struct {
+		A uint64 `binding:"omitempty"`
+		B string `binding:"omitempty"`
+	}
+	type S4 struct {
+		A *uint64 `binding:"omitempty"`
+		B *string `binding:"omitempty"`
+	}
+	type S5 struct {
+		A uint64 `binding:"required,omitempty"`
+		B string `binding:"required,omitempty"`
+	}
+	type S6 struct {
+		A *uint64 `binding:"required,omitempty"`
+		B *string `binding:"required,omitempty"`
+	}
+
+	for _, tc := range []struct {
+		giveObj interface{}
+		giveStr string
+		wantOk  bool
+	}{
+		// typ required
+		{&S1{}, `{}`, false},
+		{&S1{}, `{"A": null, "B": null}`, false},
+		{&S1{}, `{"A": 0, "B": ""}`, false},
+		{&S1{}, `{"A": 1, "B": " "}`, true},
+		// *typ required
+		{&S2{}, `{}`, false},
+		{&S2{}, `{"A": null, "B": null}`, false},
+		{&S2{}, `{"A": 0, "B": ""}`, true},
+		{&S2{}, `{"A": 1, "B": " "}`, true},
+		// typ omitempty
+		{&S3{}, `{}`, true},
+		{&S3{}, `{"A": null, "B": null}`, true},
+		{&S3{}, `{"A": 0, "B": ""}`, true},
+		{&S3{}, `{"A": 1, "B": " "}`, true},
+		// *typ omitempty => typ omitempty
+		{&S4{}, `{}`, true},
+		{&S4{}, `{"A": null, "B": null}`, true},
+		{&S4{}, `{"A": 0, "B": ""}`, true},
+		{&S4{}, `{"A": 1, "B": " "}`, true},
+		// typ required,omitempty => typ required
+		{&S5{}, `{}`, false},
+		{&S5{}, `{"A": null, "B": null}`, false},
+		{&S5{}, `{"A": 0, "B": ""}`, false},
+		{&S5{}, `{"A": 1, "B": " "}`, true},
+		// *typ required,omitempty => *typ required
+		{&S6{}, `{}`, false},
+		{&S6{}, `{"A": null, "B": null}`, false},
+		{&S6{}, `{"A": 0, "B": ""}`, true},
+		{&S6{}, `{"A": 1, "B": " "}`, true},
+	} {
+		_ = json.Unmarshal([]byte(tc.giveStr), tc.giveObj)
+		xtesting.Equal(t, v.Struct(tc.giveObj) == nil, tc.wantOk)
+	}
+}
 
 func TestIsXXXError(t *testing.T) {
 	val := validator.New()
@@ -33,557 +132,138 @@ func TestIsXXXError(t *testing.T) {
 	}
 }
 
-func TestRegexpAndDateTimeValidator(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("regexp", ParamRegexpValidator())
-	_ = val.RegisterValidation("abc", RegexpValidator(regexp.MustCompile(`^[abc].+$`)))
-	_ = val.RegisterValidation("date", DateTimeValidator(xtime.RFC3339Date))
-	_ = val.RegisterValidation("datetime", DateTimeValidator(xtime.RFC3339DateTime))
-
-	for _, tc := range []struct {
-		give    interface{}
-		wantErr bool
-	}{
-		{&struct{}{}, false},
-
-		{&struct {
-			Int int `validate:"regexp=^[abc]+$"`
-		}{}, true},
-		{&struct {
-			String string `validate:"regexp=^[$"`
-		}{}, true},
-		{&struct {
-			String string `validate:"regexp=^[abc]+$"`
-		}{"abcd"}, true},
-		{&struct {
-			String string `validate:"regexp=^[abc]+$"`
-		}{"abc"}, false},
-
-		{&struct {
-			Int int `validate:"abc"`
-		}{}, true},
-		{&struct {
-			String string `validate:"abc"`
-		}{"dcba"}, true},
-		{&struct {
-			String string `validate:"abc"`
-		}{"abc"}, false},
-		{&struct {
-			String string `validate:"abc=dummy"`
-		}{"abc"}, false},
-
-		{&struct {
-			Date     int `validate:"date"`
-			DateTime int `validate:"datetime"`
-		}{}, true},
-		{&struct {
-			Date     string `validate:"date"`
-			DateTime string `validate:"datetime"`
-		}{"2021/01/24", "2021-01-24T02:55:29"}, true},
-		{&struct {
-			Date     string `validate:"date"`
-			DateTime string `validate:"datetime"`
-		}{"2021-01-24", "2021-01-24T02:55:29+08:00"}, false},
-		{&struct {
-			Date string `validate:"date=dummy"`
-		}{"2021-01-24"}, false},
-	} {
-		err := val.Struct(tc.give)
-		if tc.wantErr {
-			xtesting.NotNil(t, err)
-		} else {
-			xtesting.Nil(t, err)
-		}
-	}
-}
-
-func TestAndOr(t *testing.T) {
-	val := validator.New()
-
-	xtesting.NotPanic(t, func() { And() })
-	xtesting.Panic(t, func() { And(nil, nil, nil) })
-	xtesting.Panic(t, func() { And(ParamRegexpValidator(), nil, nil) })
-	xtesting.NotPanic(t, func() { Or() })
-	xtesting.Panic(t, func() { Or(nil, nil, nil) })
-	xtesting.Panic(t, func() { Or(ParamRegexpValidator(), nil, nil) })
-
-	_ = val.RegisterValidation("re", And(RegexpValidator(regexp.MustCompile(`^[abc].+$`)), RegexpValidator(regexp.MustCompile(`^[abc][def].+$`))))
-	_ = val.RegisterValidation("time", Or(DateTimeValidator(xtime.RFC3339Date), DateTimeValidator(xtime.RFC3339DateTime)))
-
+func TestApplyTranslator(t *testing.T) {
+	v := validator.New()
 	type testStruct struct {
-		Re   string `validate:"re"`
-		Time string `validate:"time"`
+		String string `validate:"required"`
 	}
 
 	for _, tc := range []struct {
-		give    *testStruct
-		wantErr bool
+		giveTranslator   locales.Translator
+		giveRegisterFn   TranslationRegisterHandler
+		wantRequiredText string
 	}{
-		{&testStruct{"", ""}, true},
-		{&testStruct{"aaa", "2021/01/24"}, true},
-		{&testStruct{"ada", "2021-01-24"}, false},
-		{&testStruct{"aef", "2021-01-24T15:51:22+08:00"}, false},
+		{EnLocaleTranslator(), EnTranslationRegisterFunc(), "String is a required field"},
+		{FrLocaleTranslator(), FrTranslationRegisterFunc(), "String est un champ obligatoire"},
+		{JaLocaleTranslator(), JaTranslationRegisterFunc(), "Stringは必須フィールドです"},
+		{ZhLocaleTranslator(), ZhTranslationRegisterFunc(), "String为必填字段"},
+		{ZhHantLocaleTranslator(), ZhTwTranslationRegisterFunc(), "String為必填欄位"},
 	} {
-		if tc.wantErr {
-			xtesting.NotNil(t, val.Struct(tc.give))
-		} else {
-			xtesting.Nil(t, val.Struct(tc.give))
-		}
+		translator, err := ApplyTranslator(v, tc.giveTranslator, tc.giveRegisterFn)
+		xtesting.Nil(t, err)
+		err = v.Struct(&testStruct{})
+		xtesting.NotNil(t, err)
+		xtesting.Equal(t, err.(validator.ValidationErrors).Translate(translator)["testStruct.String"], tc.wantRequiredText)
 	}
+
+	xtesting.Panic(t, func() { _, _ = ApplyTranslator(nil, EnLocaleTranslator(), EnTranslationRegisterFunc()) })
+	xtesting.Panic(t, func() { _, _ = ApplyTranslator(v, nil, EnTranslationRegisterFunc()) })
+	xtesting.Panic(t, func() { _, _ = ApplyTranslator(v, EnLocaleTranslator(), nil) })
+	_, err := ApplyTranslator(v, EnLocaleTranslator(), func(v *validator.Validate, trans ut.Translator) error {
+		return errors.New("test error")
+	})
+	xtesting.NotNil(t, err)
+	xtesting.Equal(t, err.Error(), "test error")
 }
 
-type testStruct struct {
-	Int    int     `validate:"int"`
-	Uint   uint    `validate:"uint"`
-	Float  float32 `validate:"float"`
-	Bool   bool    `validate:"bool"`
-	String string  `validate:"string"`
-	Slice  []int   `validate:"slice"`
-}
-
-type malformedStruct struct {
-	Complex complex128 `validate:"complex"`
-	Fn      func()     `validate:"fn"`
-}
-
-func getError(err error) []string {
-	errs, ok := err.(validator.ValidationErrors)
-	if !ok {
-		return nil
-	}
-	fields := make([]string, len(errs))
-	for idx, e := range errs {
-		fields[idx] = e.Tag()
-	}
-	return fields
-}
-
-func TestEqual(t *testing.T) {
+func TestTranslationRegister(t *testing.T) {
+	// 1. normal
 	val := validator.New()
-	_ = val.RegisterValidation("int", EqualValidator(5))
-	_ = val.RegisterValidation("uint", EqualValidator(uint(5)))
-	_ = val.RegisterValidation("float", EqualValidator(5.0))
-	_ = val.RegisterValidation("bool", EqualValidator(true))
-	_ = val.RegisterValidation("string", EqualValidator("5"))
-	_ = val.RegisterValidation("slice", EqualValidator(5))
-	_ = val.RegisterValidation("complex", EqualValidator(5i))
-	_ = val.RegisterValidation("fn", EqualValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    5,
-		Uint:   5,
-		Float:  5.0,
-		Bool:   true,
-		String: "5",
-		Slice:  []int{5, 5, 5, 5, 5}, // 5
+	type testStruct1 struct {
+		String string `validate:"required"`
 	}
-	s2 := &testStruct{
-		Int:    4,
-		Uint:   4,
-		Float:  4.0,
-		Bool:   false,
-		String: "4",
-		Slice:  []int{4, 4, 4, 4}, // 4
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.Nil(t, err1)
-	xtesting.NotNil(t, err2)
-	xtesting.ElementMatch(t, getError(err2), []string{"int", "uint", "float", "bool", "string", "slice"})
+	trans, _ := ApplyTranslator(val, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	fn := AddToTranslatorFunc("required", "required {0}!!!", true)
+	_ = val.RegisterTranslation("required", trans, fn, DefaultTranslateFunc())
 
-	s3 := &malformedStruct{Complex: 5i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
+	err := val.Struct(&testStruct1{}).(validator.ValidationErrors)
+	xtesting.NotNil(t, err)
+	transResults := err.Translate(trans)
+	xtesting.Equal(t, transResults["testStruct1.String"], "required String!!!")
+
+	// 2. error with ut.T
+	val = validator.New()
+	_ = val.RegisterValidation("test", EqualValidator("test"))
+	type testStruct2 struct {
+		String string `validate:"test"`
+	}
+	trans, _ = ApplyTranslator(val, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	fn = AddToTranslatorFunc("no_test", "translator for test tag", true)
+	_ = val.RegisterTranslation("test", trans, fn, DefaultTranslateFunc())
+
+	err = val.Struct(&testStruct2{}).(validator.ValidationErrors)
+	xtesting.NotNil(t, err)
+	transResults = err.Translate(trans)
+	xtesting.Equal(t, transResults["testStruct2.String"], "Key: 'testStruct2.String' Error:Field validation for 'String' failed on the 'test' tag")
+
+	// 3. param with no param
+	val = validator.New()
+	_ = val.RegisterValidation("test", EqualValidator("test"))
+	type testStruct3 struct {
+		String1 string `validate:"test"`
+		String2 string `validate:"test=hhh"`
+	}
+	trans, _ = ApplyTranslator(val, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	fn = AddToTranslatorFunc("test", "{0} <- {1}", true)
+	_ = val.RegisterTranslation("test", trans, fn, DefaultTranslateFunc())
+
+	err = val.Struct(&testStruct3{}).(validator.ValidationErrors)
+	xtesting.NotNil(t, err)
+	transResults = err.Translate(trans)
+	xtesting.Equal(t, transResults["testStruct3.String1"], "String1 <- ")
+	xtesting.Equal(t, transResults["testStruct3.String2"], "String2 <- hhh")
 }
 
-func TestNotEqual(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", NotEqualValidator(5))
-	_ = val.RegisterValidation("uint", NotEqualValidator(uint(5)))
-	_ = val.RegisterValidation("float", NotEqualValidator(5.0))
-	_ = val.RegisterValidation("bool", NotEqualValidator(true))
-	_ = val.RegisterValidation("string", NotEqualValidator("5"))
-	_ = val.RegisterValidation("slice", NotEqualValidator(5))
-	_ = val.RegisterValidation("complex", NotEqualValidator(5i))
-	_ = val.RegisterValidation("fn", NotEqualValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    5,
-		Uint:   5,
-		Float:  5.0,
-		Bool:   true,
-		String: "5",
-		Slice:  []int{5, 5, 5, 5, 5}, // 5
+func TestLocaleTranslators(t *testing.T) {
+	for _, tc := range []struct {
+		give     locales.Translator
+		wantName string
+	}{
+		{EnLocaleTranslator(), "en"},
+		{FrLocaleTranslator(), "fr"},
+		{IdLocaleTranslator(), "id"},
+		{JaLocaleTranslator(), "ja"},
+		{NlLocaleTranslator(), "nl"},
+		{PtBrLocaleTranslator(), "pt_BR"},
+		{RuLocaleTranslator(), "ru"},
+		{TrLocaleTranslator(), "tr"},
+		{ZhLocaleTranslator(), "zh"},
+		{ZhHantLocaleTranslator(), "zh_Hant"},
+	} {
+		xtesting.Equal(t, tc.give.Locale(), tc.wantName)
 	}
-	s2 := &testStruct{
-		Int:    4,
-		Uint:   4,
-		Float:  4.0,
-		Bool:   false,
-		String: "4",
-		Slice:  []int{4, 4, 4, 4}, // 4
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.NotNil(t, err1)
-	xtesting.Nil(t, err2)
-	xtesting.ElementMatch(t, getError(err1), []string{"int", "uint", "float", "bool", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 5i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
 }
 
-func TestLen(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", LenValidator(5))
-	_ = val.RegisterValidation("uint", LenValidator(uint(5)))
-	_ = val.RegisterValidation("float", LenValidator(5.0))
-	_ = val.RegisterValidation("bool", LenValidator(true))
-	_ = val.RegisterValidation("string", LenValidator(5))
-	_ = val.RegisterValidation("slice", LenValidator(5))
-	_ = val.RegisterValidation("complex", LenValidator(5i))
-	_ = val.RegisterValidation("fn", LenValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    5,
-		Uint:   5,
-		Float:  5.0,
-		Bool:   true,
-		String: "55555",              // 5
-		Slice:  []int{5, 5, 5, 5, 5}, // 5
+func TestTranslationRegisterFuncs(t *testing.T) {
+	type transText struct {
+		text    string
+		indexes []int
 	}
-	s2 := &testStruct{
-		Int:    4,
-		Uint:   4,
-		Float:  4.0,
-		Bool:   false,
-		String: "4444",            // 4
-		Slice:  []int{4, 4, 4, 4}, // 4
+
+	for _, tc := range []struct {
+		giveFn           TranslationRegisterHandler
+		wantRequiredText string
+	}{
+		{EnTranslationRegisterFunc(), "{0} is a required field"},
+		{FrTranslationRegisterFunc(), "{0} est un champ obligatoire"},
+		{IdTranslationRegisterFunc(), "{0} wajib diisi"},
+		{JaTranslationRegisterFunc(), "{0}は必須フィールドです"},
+		{NlTranslationRegisterFunc(), "{0} is een verplicht veld"},
+		{PtBrTranslationRegisterFunc(), "{0} é um campo requerido"},
+		{RuTranslationRegisterFunc(), "{0} обязательное поле"},
+		{TrTranslationRegisterFunc(), "{0} zorunlu bir alandır"},
+		{ZhTranslationRegisterFunc(), "{0}为必填字段"},
+		{ZhTwTranslationRegisterFunc(), "{0}為必填欄位"},
+	} {
+		val := validator.New()
+		uniTrans := ut.New(EnLocaleTranslator(), EnLocaleTranslator())
+		trans, _ := uniTrans.GetTranslator(EnLocaleTranslator().Locale())
+		err := tc.giveFn(val, trans)
+		xtesting.Nil(t, err)
+
+		field := reflect.ValueOf(trans).Elem().FieldByName("translations")
+		fieldValue := reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+		ptr := fieldValue.MapIndex(reflect.ValueOf("required"))
+		xtesting.Equal(t, (*transText)(unsafe.Pointer(ptr.Elem().UnsafeAddr())).text, tc.wantRequiredText)
 	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.Nil(t, err1)
-	xtesting.NotNil(t, err2)
-	xtesting.ElementMatch(t, getError(err2), []string{"int", "uint", "float", "bool", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 5i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
-}
-
-func TestGreaterThen(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", GreaterThenValidator(5))
-	_ = val.RegisterValidation("uint", GreaterThenValidator(uint(5)))
-	_ = val.RegisterValidation("float", GreaterThenValidator(5.0))
-	_ = val.RegisterValidation("bool", GreaterThenValidator(false))
-	_ = val.RegisterValidation("string", GreaterThenValidator(5))
-	_ = val.RegisterValidation("slice", GreaterThenValidator(5))
-	_ = val.RegisterValidation("complex", GreaterThenValidator(5i))
-	_ = val.RegisterValidation("fn", GreaterThenValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    5,
-		Uint:   5,
-		Float:  5.0,
-		Bool:   false,
-		String: "55555",              // 5
-		Slice:  []int{5, 5, 5, 5, 5}, // 5
-	}
-	s2 := &testStruct{
-		Int:    6,
-		Uint:   6,
-		Float:  6.0,
-		Bool:   true,
-		String: "666666",                // 6
-		Slice:  []int{6, 6, 6, 6, 6, 6}, // 6
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.NotNil(t, err1)
-	xtesting.Nil(t, err2)
-	xtesting.ElementMatch(t, getError(err1), []string{"int", "uint", "float", "bool", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 5i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 6i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
-}
-
-func TestGreaterThenOrEqual(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", GreaterThenOrEqualValidator(5))
-	_ = val.RegisterValidation("uint", GreaterThenOrEqualValidator(uint(5)))
-	_ = val.RegisterValidation("float", GreaterThenOrEqualValidator(5.0))
-	_ = val.RegisterValidation("bool", GreaterThenOrEqualValidator(false))
-	_ = val.RegisterValidation("string", GreaterThenOrEqualValidator(5))
-	_ = val.RegisterValidation("slice", GreaterThenOrEqualValidator(5))
-	_ = val.RegisterValidation("complex", GreaterThenOrEqualValidator(5i))
-	_ = val.RegisterValidation("fn", GreaterThenOrEqualValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    5,
-		Uint:   5,
-		Float:  5.0,
-		Bool:   false,
-		String: "55555",              // 5
-		Slice:  []int{5, 5, 5, 5, 5}, // 5
-	}
-	s2 := &testStruct{
-		Int:    4,
-		Uint:   4,
-		Float:  4.0,
-		Bool:   true,
-		String: "4444",            // 4
-		Slice:  []int{4, 4, 4, 4}, // 4
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.Nil(t, err1)
-	xtesting.NotNil(t, err2)
-	xtesting.ElementMatch(t, getError(err2), []string{"int", "uint", "float", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 5i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
-}
-
-func TestLessThen(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", LessThenValidator(5))
-	_ = val.RegisterValidation("uint", LessThenValidator(uint(5)))
-	_ = val.RegisterValidation("float", LessThenValidator(5.0))
-	_ = val.RegisterValidation("bool", LessThenValidator(true))
-	_ = val.RegisterValidation("string", LessThenValidator(5))
-	_ = val.RegisterValidation("slice", LessThenValidator(5))
-	_ = val.RegisterValidation("complex", LessThenValidator(5i))
-	_ = val.RegisterValidation("fn", LessThenValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    5,
-		Uint:   5,
-		Float:  5.0,
-		Bool:   true,
-		String: "55555",              // 5
-		Slice:  []int{5, 5, 5, 5, 5}, // 5
-	}
-	s2 := &testStruct{
-		Int:    4,
-		Uint:   4,
-		Float:  4.0,
-		Bool:   false,
-		String: "4444",            // 4
-		Slice:  []int{4, 4, 4, 4}, // 4
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.NotNil(t, err1)
-	xtesting.Nil(t, err2)
-	xtesting.ElementMatch(t, getError(err1), []string{"int", "uint", "float", "bool", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 5i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
-}
-
-func TestLessThenOrEqual(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", LessThenOrEqualValidator(5))
-	_ = val.RegisterValidation("uint", LessThenOrEqualValidator(uint(5)))
-	_ = val.RegisterValidation("float", LessThenOrEqualValidator(5.0))
-	_ = val.RegisterValidation("bool", LessThenOrEqualValidator(true))
-	_ = val.RegisterValidation("string", LessThenOrEqualValidator(5))
-	_ = val.RegisterValidation("slice", LessThenOrEqualValidator(5))
-	_ = val.RegisterValidation("complex", LessThenOrEqualValidator(5i))
-	_ = val.RegisterValidation("fn", LessThenOrEqualValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    5,
-		Uint:   5,
-		Float:  5.0,
-		Bool:   true,
-		String: "55555",              // 5
-		Slice:  []int{5, 5, 5, 5, 5}, // 5
-	}
-	s2 := &testStruct{
-		Int:    6,
-		Uint:   6,
-		Float:  6.0,
-		Bool:   false,
-		String: "666666",                // 6
-		Slice:  []int{6, 6, 6, 6, 6, 6}, // 6
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.Nil(t, err1)
-	xtesting.NotNil(t, err2)
-	xtesting.ElementMatch(t, getError(err2), []string{"int", "uint", "float", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 5i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 6i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
-}
-
-func TestLengthRange(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", LengthInRangeValidator(5, 6))
-	_ = val.RegisterValidation("uint", LengthInRangeValidator(uint(5), uint(6)))
-	_ = val.RegisterValidation("float", LengthInRangeValidator(5.0, 6.0))
-	_ = val.RegisterValidation("bool", LengthInRangeValidator(true, true))
-	_ = val.RegisterValidation("string", LengthInRangeValidator(5, 6))
-	_ = val.RegisterValidation("slice", LengthInRangeValidator(5, 6))
-	_ = val.RegisterValidation("complex", LengthInRangeValidator(5i, 6i))
-	_ = val.RegisterValidation("fn", LengthInRangeValidator(func() {}, func() {}))
-
-	s1 := &testStruct{
-		Int:    6,
-		Uint:   6,
-		Float:  6.0,
-		Bool:   true,
-		String: "666666",                // 6
-		Slice:  []int{6, 6, 6, 6, 6, 6}, // 6
-	}
-	s2 := &testStruct{
-		Int:    4,
-		Uint:   4,
-		Float:  4.0,
-		Bool:   false,
-		String: "4444",            // 4
-		Slice:  []int{4, 4, 4, 4}, // 4
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.Nil(t, err1)
-	xtesting.NotNil(t, err2)
-	xtesting.ElementMatch(t, getError(err2), []string{"int", "uint", "float", "bool", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 6i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
-}
-
-func TestLengthOutOfRange(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", LengthOutOfRangeValidator(5, 7))
-	_ = val.RegisterValidation("uint", LengthOutOfRangeValidator(uint(5), uint(7)))
-	_ = val.RegisterValidation("float", LengthOutOfRangeValidator(5.0, 7.0))
-	_ = val.RegisterValidation("bool", LengthInRangeValidator(true, true))
-	_ = val.RegisterValidation("string", LengthOutOfRangeValidator(5, 7))
-	_ = val.RegisterValidation("slice", LengthOutOfRangeValidator(5, 7))
-	_ = val.RegisterValidation("complex", LengthOutOfRangeValidator(5i, 6i))
-	_ = val.RegisterValidation("fn", LengthOutOfRangeValidator(func() {}, func() {}))
-
-	s1 := &testStruct{
-		Int:    4,
-		Uint:   4,
-		Float:  4.0,
-		Bool:   true,
-		String: "4444",            // 4
-		Slice:  []int{4, 4, 4, 4}, // 4
-	}
-	s2 := &testStruct{
-		Int:    6,
-		Uint:   6,
-		Float:  6.0,
-		Bool:   false,
-		String: "666666",                // 6
-		Slice:  []int{6, 6, 6, 6, 6, 6}, // 6
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.Nil(t, err1)
-	xtesting.NotNil(t, err2)
-	xtesting.ElementMatch(t, getError(err2), []string{"int", "uint", "float", "bool", "string", "slice"})
-
-	s3 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 6i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
-}
-
-func TestOneof(t *testing.T) {
-	val := validator.New()
-	_ = val.RegisterValidation("int", OneofValidator(1, 2, 3))
-	_ = val.RegisterValidation("uint", OneofValidator(uint(1), uint(2), uint(3)))
-	_ = val.RegisterValidation("float", OneofValidator(1.0, 2.0, 3.0))
-	_ = val.RegisterValidation("bool", OneofValidator(true))
-	_ = val.RegisterValidation("string", OneofValidator("1", "2", "3"))
-	_ = val.RegisterValidation("slice", LenValidator(0))
-	_ = val.RegisterValidation("complex", OneofValidator(1i, 2i, 3i))
-	_ = val.RegisterValidation("fn", OneofValidator(func() {}))
-
-	s1 := &testStruct{
-		Int:    1,
-		Uint:   2,
-		Float:  3.0,
-		Bool:   true,
-		String: "2",
-		Slice:  []int{},
-	}
-	s2 := &testStruct{
-		Int:    4,
-		Uint:   5,
-		Float:  6.0,
-		Bool:   false,
-		String: "4",
-		Slice:  []int{},
-	}
-	err1 := val.Struct(s1)
-	err2 := val.Struct(s2)
-	xtesting.Nil(t, err1)
-	xtesting.NotNil(t, err2)
-	xtesting.ElementMatch(t, getError(err2), []string{"int", "uint", "float", "bool", "string"})
-
-	s3 := &malformedStruct{Complex: 1i, Fn: func() {}}
-	s4 := &malformedStruct{Complex: 4i, Fn: func() {}}
-	err3 := val.Struct(s3)
-	err4 := val.Struct(s4)
-	xtesting.NotNil(t, err3)
-	xtesting.NotNil(t, err4)
-	xtesting.ElementMatch(t, getError(err3), []string{"complex", "fn"})
-	xtesting.ElementMatch(t, getError(err4), []string{"complex", "fn"})
 }

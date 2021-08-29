@@ -3,8 +3,7 @@
 ## Dependencies
 
 + github.com/Aoi-hosizora/ahlib
-+ github.com/go-playground/locales
-+ github.com/go-playground/universal-translator
++ github.com/gin-gonic/gin
 + github.com/go-playground/validator/v10
 
 ## Documents
@@ -26,7 +25,7 @@
 ### Functions
 
 + `func ApplyTranslator(validator *validator.Validate, locTranslator locales.Translator, registerFn TranslationRegisterHandler) (ut.Translator, error)`
-+ `func UseJsonTagAsFieldName(validator *validator.Validate)`
++ `func UseTagAsFieldName(validator *validator.Validate, tagName string)`
 + `func AddToTranslatorFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc`
 + `func DefaultTranslateFunc() validator.TranslationFunc`
 + `func EnLocaleTranslator() locales.Translator`
