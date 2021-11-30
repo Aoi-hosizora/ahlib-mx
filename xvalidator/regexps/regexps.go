@@ -4,6 +4,8 @@ import (
 	"regexp"
 )
 
+// Regexps from https://github.com/go-playground/validator/blob/master/regexes.go.
+
 const (
 	alphaRegexString                 = "^[a-zA-Z]+$"
 	alphaNumericRegexString          = "^[a-zA-Z0-9]+$"
@@ -55,7 +57,6 @@ const (
 	bicRegexString                   = `^[A-Za-z]{6}[A-Za-z0-9]{2}([A-Za-z0-9]{3})?$`
 )
 
-// Regexps from https://github.com/go-playground/validator/blob/master/regexes.go.
 var (
 	AlphaRegex                 = regexp.MustCompile(alphaRegexString)
 	AlphaNumericRegex          = regexp.MustCompile(alphaNumericRegexString)

@@ -8,7 +8,6 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/locales"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -155,7 +154,7 @@ func TestValidatorAndTranslator(t *testing.T) {
 
 	// translator
 	for _, tc := range []struct {
-		giveTranslator   locales.Translator
+		giveTranslator   xvalidator.LocaleTranslator
 		giveRegisterFn   xvalidator.TranslationRegisterHandler
 		wantRequiredText string
 	}{
@@ -165,7 +164,7 @@ func TestValidatorAndTranslator(t *testing.T) {
 		{xvalidator.JaLocaleTranslator(), xvalidator.JaTranslationRegisterFunc(), "Stringは必須フィールドです"},
 		{xvalidator.RuLocaleTranslator(), xvalidator.RuTranslationRegisterFunc(), "String обязательное поле"},
 		{xvalidator.ZhLocaleTranslator(), xvalidator.ZhTranslationRegisterFunc(), "String为必填字段"},
-		{xvalidator.ZhHantLocaleTranslator(), xvalidator.ZhTwTranslationRegisterFunc(), "String為必填欄位"},
+		{xvalidator.ZhHantLocaleTranslator(), xvalidator.ZhHantTranslationRegisterFunc(), "String為必填欄位"},
 	} {
 		text := ""
 		if tc.giveTranslator == nil || tc.giveRegisterFn == nil {

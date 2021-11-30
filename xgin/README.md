@@ -5,6 +5,7 @@
 + github.com/Aoi-hosizora/ahlib
 + github.com/gin-gonic/gin
 + github.com/sirupsen/logrus
++ github.com/go-playground/validator/v10
 
 ## Documents
 
