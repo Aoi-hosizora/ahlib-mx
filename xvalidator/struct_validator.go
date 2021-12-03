@@ -61,7 +61,10 @@ func (v *ValidateFieldsError) Error() string {
 // Example:
 // 	v.Translate(trans, true)  // => map[s.int:int is a required field, s.str:str cannot be null and empty] (s.int uses validator.FieldError, s.str uses WrappedValidateFieldError)
 // 	v.Translate(trans, false) // => map[int:int is a required field, str:str cannot be null and empty]
-func (v *ValidateFieldsError) Translate(translator UtTranslator, useNamespace bool) map[string]string {
+func (v *ValidateFieldsError) Translate(ut UtTranslator, useNamespace bool) map[string]string {
+	if ut == nil {
+		panic(panicNilUtTranslator)
+	}
 	keyFn := func(e validator.FieldError) string {
 		if useNamespace {
 			return e.Namespace()
@@ -71,8 +74,8 @@ func (v *ValidateFieldsError) Translate(translator UtTranslator, useNamespace bo
 
 	result := make(map[string]string, len(v.fields))
 	for _, err := range v.fields {
-		if se, ok := err.(validator.FieldError); ok {
-			result[keyFn(se)] = se.Translate(translator)
+		if fe, ok := err.(validator.FieldError); ok {
+			result[keyFn(fe)] = fe.Translate(ut)
 		} else if we, ok := err.(*WrappedValidateFieldError); ok {
 			result[keyFn(we.origin)] = we.message
 		} else {

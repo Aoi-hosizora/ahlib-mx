@@ -38,7 +38,7 @@ type loggerParam struct {
 	contextError string
 }
 
-// getLoggerParamAndFields returns loggerParam and logrus.Fields from given gin.Context and times.
+// getLoggerParamAndFields returns loggerParam and logrus.Fields using given parameters.
 func getLoggerParamAndFields(c *gin.Context, start, end time.Time) (*loggerParam, logrus.Fields) {
 	path := c.Request.URL.Path
 	if raw := c.Request.URL.RawQuery; raw != "" {
@@ -79,31 +79,30 @@ func getLoggerParamAndFields(c *gin.Context, start, end time.Time) (*loggerParam
 
 // LogToLogrus logs gin's request and response information to logrus.Logger using given gin.Context and times.
 func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...logopt.LoggerOption) {
-	param, fields := getLoggerParamAndFields(c, start, end)
-	extra := logopt.NewLoggerOptions(options)
-	extra.AddToFields(fields)
-	entry := logger.WithFields(fields)
+	p, f := getLoggerParamAndFields(c, start, end)
+	m := formatLogger(p)
 
-	msg := formatLogger(param)
-	extra.AddToMessage(&msg)
+	extra := logopt.NewLoggerOptions(options)
+	extra.AddToMessage(&m)
+	extra.AddToFields(f)
 	switch {
-	case param.status >= 500:
-		entry.Error(msg)
-	case param.status >= 400:
-		entry.Warn(msg)
+	case p.status >= 500:
+		logger.WithFields(f).Error(m)
+	case p.status >= 400:
+		logger.WithFields(f).Warn(m)
 	default:
-		entry.Info(msg)
+		logger.WithFields(f).Info(m)
 	}
 }
 
 // LogToLogger logs gin's request and response information to logrus.StdLogger using given gin.Context and times.
 func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...logopt.LoggerOption) {
-	param, _ := getLoggerParamAndFields(c, start, end)
-	extra := logopt.NewLoggerOptions(options)
+	p, _ := getLoggerParamAndFields(c, start, end)
+	m := formatLogger(p)
 
-	msg := formatLogger(param)
-	extra.AddToMessage(&msg)
-	logger.Print(msg)
+	extra := logopt.NewLoggerOptions(options)
+	extra.AddToMessage(&m)
+	logger.Print(m)
 }
 
 // formatLogger formats loggerParam to logger string.
@@ -115,7 +114,7 @@ func formatLogger(param *loggerParam) string {
 	msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s",
 		param.status, param.latency.String(), param.clientIP, xnumber.RenderByte(float64(param.length)), param.method, param.path)
 	if param.contextError != "" {
-		msg = fmt.Sprintf("%s | (%s)", msg, param.contextError)
+		msg += fmt.Sprintf(" | err: %s", param.contextError)
 	}
 	return msg
 }

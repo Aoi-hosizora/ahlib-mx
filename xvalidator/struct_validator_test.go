@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestValidateFieldsError(t *testing.T) {
+func TestValidateFieldsErrorAndTranslate(t *testing.T) {
 	v := validator.New()
 	type s struct {
 		Str string `validate:"required,gt=2,lt=10" json:"str"`
@@ -50,6 +50,8 @@ func TestValidateFieldsError(t *testing.T) {
 	xtesting.Equal(t, fe1["s.str"], "str is a required field")
 	xtesting.Equal(t, fe2["int"], "int is a required field")
 	xtesting.Equal(t, fe2["str"], "str is a required field")
+	xtesting.Panic(t, func() { TranslateValidationErrors(fe, nil, false) })
+
 	ve = &ValidateFieldsError{fields: []error{err1, err2_}}
 	ve1 := ve.Translate(tr, true)
 	ve2 := ve.Translate(tr, false)
@@ -57,6 +59,7 @@ func TestValidateFieldsError(t *testing.T) {
 	xtesting.Equal(t, ve1["s.str"], "str is a required field")
 	xtesting.Equal(t, ve2["int"], "Int field must be set and can not be zero")
 	xtesting.Equal(t, ve2["str"], "str is a required field")
+	xtesting.Panic(t, func() { ve.Translate(nil, false) })
 	err := &ValidateFieldsError{fields: []error{nil, errors.New("xxx")}}
 	xtesting.Equal(t, len(err.Translate(tr, true)), 0)
 }

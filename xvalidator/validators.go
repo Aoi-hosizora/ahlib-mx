@@ -13,7 +13,7 @@ import (
 // regexp & datetime
 // =================
 
-// ParamRegexpValidator represents regexp validator with param, just like `regexp: xxx`. For more regexp, see
+// ParamRegexpValidator represents parameterized regexp validator, just like `regexp: xxx`. For more regexps, see xvalidator.regexps package and
 // https://github.com/go-playground/validator/blob/master/regexes.go.
 func ParamRegexpValidator() validator.Func {
 	return func(fl validator.FieldLevel) bool {

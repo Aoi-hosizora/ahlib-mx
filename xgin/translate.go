@@ -12,27 +12,28 @@ import (
 
 // translateOptions is a type of TranslateBindingError function's option, each field can be set by TranslateOption.
 type translateOptions struct {
-	translator xvalidator.UtTranslator
+	utTranslator xvalidator.UtTranslator
 
-	jsonInvalidUnmarshalErrorFn func(*json.InvalidUnmarshalError) (result map[string]string, need4xx bool)
-	jsonUnmarshalTypeErrorFn    func(*json.UnmarshalTypeError) (result map[string]string, need4xx bool)
-	jsonSyntaxErrorFn           func(*json.SyntaxError) (result map[string]string, need4xx bool)
-	ioEOFErrorFn                func(error) (result map[string]string, need4xx bool)
-	strconvNumErrorFn           func(*strconv.NumError) (result map[string]string, need4xx bool)
-	xginRouterDecodeErrorFn     func(*RouterDecodeError) (result map[string]string, need4xx bool)
-	validatorInvalidTypeErrorFn func(*validator.InvalidValidationError) (result map[string]string, need4xx bool)
-	validatorFieldsErrorFn      func(validator.ValidationErrors, xvalidator.UtTranslator) (result map[string]string, need4xx bool)
-	xginFieldsValidateErrorFn   func(*xvalidator.ValidateFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool)
-	extraErrorsTranslateFn      func(error) (result map[string]string, need4xx bool)
+	jsonInvalidUnmarshalErrorFn     func(*json.InvalidUnmarshalError) (result map[string]string, need4xx bool)
+	jsonUnmarshalTypeErrorFn        func(*json.UnmarshalTypeError) (result map[string]string, need4xx bool)
+	jsonSyntaxErrorFn               func(*json.SyntaxError) (result map[string]string, need4xx bool)
+	ioEOFErrorFn                    func(error) (result map[string]string, need4xx bool)
+	strconvNumErrorFn               func(*strconv.NumError) (result map[string]string, need4xx bool)
+	xginRouterDecodeErrorFn         func(*RouterDecodeError) (result map[string]string, need4xx bool)
+	validatorInvalidTypeErrorFn     func(*validator.InvalidValidationError) (result map[string]string, need4xx bool)
+	validatorFieldsErrorFn          func(validator.ValidationErrors, xvalidator.UtTranslator) (result map[string]string, need4xx bool)
+	xvalidatorValidateFieldsErrorFn func(*xvalidator.ValidateFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool)
+
+	extraErrorsTranslateFn func(error) (result map[string]string, need4xx bool)
 }
 
 // TranslateOption represents an option for translateOptions, can be created by WithXXX functions.
 type TranslateOption func(*translateOptions)
 
-// WithTranslator creates a TranslateOption to specific UtTranslator as the translation of validator.ValidationErrors and xgin.ValidateFieldsError.
-func WithTranslator(translator xvalidator.UtTranslator) TranslateOption {
+// WithUtTranslator creates a TranslateOption to specific xvalidator.UtTranslator as the translation of validator.ValidationErrors and xvalidator.ValidateFieldsError.
+func WithUtTranslator(translator xvalidator.UtTranslator) TranslateOption {
 	return func(o *translateOptions) {
-		o.translator = translator
+		o.utTranslator = translator
 	}
 }
 
@@ -92,21 +93,21 @@ func WithValidatorFieldsError(fn func(validator.ValidationErrors, xvalidator.UtT
 	}
 }
 
-// WithXginFieldsValidateError creates a translation function for xgin.ValidateFieldsError.
-func WithXginFieldsValidateError(fn func(*xvalidator.ValidateFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool)) TranslateOption {
+// WithXvalidatorValidateFieldsError creates a translation function for xvalidator.ValidateFieldsError.
+func WithXvalidatorValidateFieldsError(fn func(*xvalidator.ValidateFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
-		o.xginFieldsValidateErrorFn = fn
+		o.xvalidatorValidateFieldsErrorFn = fn
 	}
 }
 
-// WithExtraErrorsTranslate creates a translation function for other errors, and it is the default translation function for extra error types.
+// WithExtraErrorsTranslate creates a translation function for other errors.
 func WithExtraErrorsTranslate(fn func(error) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.extraErrorsTranslateFn = fn
 	}
 }
 
-// TranslateBindingError translates the given error and TranslateOption-s to a field-message map, note that the returned boolean value means whether the given
+// TranslateBindingError translates the given error and TranslateOption-s to a field-message map. Note that the returned boolean value means whether the given
 // error can be regarded as an HTTP 4xx status code (user induced error).
 func TranslateBindingError(err error, options ...TranslateOption) (result map[string]string, need4xx bool) {
 	if err == nil {
@@ -139,7 +140,7 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 			return nil, false
 		},
 		xginRouterDecodeErrorFn: func(e *RouterDecodeError) (result map[string]string, need4xx bool) {
-			reason := e.Translation
+			reason := e.Message
 			if nErr, ok := e.Err.(*strconv.NumError); ok && reason == "" {
 				if errors.Is(nErr.Err, strconv.ErrSyntax) {
 					reason = "is not a number"
@@ -158,11 +159,11 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 		validatorInvalidTypeErrorFn: func(e *validator.InvalidValidationError) (result map[string]string, need4xx bool) {
 			return nil, false
 		},
-		validatorFieldsErrorFn: func(e validator.ValidationErrors, trans xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
-			return xvalidator.TranslateValidationErrors(e, trans, false), true
+		validatorFieldsErrorFn: func(e validator.ValidationErrors, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
+			return xvalidator.TranslateValidationErrors(e, translator, false), true
 		},
-		xginFieldsValidateErrorFn: func(e *xvalidator.ValidateFieldsError, trans xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
-			return e.Translate(trans, false), true
+		xvalidatorValidateFieldsErrorFn: func(e *xvalidator.ValidateFieldsError, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
+			return e.Translate(translator, false), true
 		},
 		extraErrorsTranslateFn: func(e error) (result map[string]string, need4xx bool) {
 			return nil, false
@@ -200,15 +201,15 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 	if vErr, ok := err.(*validator.InvalidValidationError); ok {
 		return opt.validatorInvalidTypeErrorFn(vErr)
 	}
-	if opt.translator != nil {
+	if opt.utTranslator != nil {
 		if vErr, ok := err.(validator.ValidationErrors); ok {
-			return opt.validatorFieldsErrorFn(vErr, opt.translator)
+			return opt.validatorFieldsErrorFn(vErr, opt.utTranslator)
 		}
 		if vErr, ok := err.(*xvalidator.ValidateFieldsError); ok {
-			return opt.xginFieldsValidateErrorFn(vErr, opt.translator)
+			return opt.xvalidatorValidateFieldsErrorFn(vErr, opt.utTranslator)
 		}
 	}
 
-	// 4. extra & default
+	// 4. extra
 	return opt.extraErrorsTranslateFn(err)
 }

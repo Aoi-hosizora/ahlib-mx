@@ -128,6 +128,7 @@ type TranslationRegisterHandler func(v *validator.Validate, translator UtTransla
 const (
 	panicNilLocaleTranslator      = "xvalidator: nil locale translator"
 	panicNilTranslationRegisterFn = "xvalidator: nil translation register function"
+	panicNilUtTranslator          = "xvalidator: nil universal translator (ut.Translator)"
 )
 
 // ApplyTranslator applies translator to validator.Validate using given LocaleTranslator (locales.Translator) and TranslationRegisterHandler, this function
@@ -197,6 +198,9 @@ func DefaultTranslateFunc() validator.TranslationFunc {
 // 	TranslateValidationErrors(err, trans, true)  // => map[Struct.int:int is a required field, Struct.str:str is a required field]
 // 	TranslateValidationErrors(err, trans, false) // => map[int:int is a required field, str:str is a required field]
 func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string {
+	if ut == nil {
+		panic(panicNilUtTranslator)
+	}
 	keyFn := func(e validator.FieldError) string {
 		if useNamespace {
 			return e.Namespace()

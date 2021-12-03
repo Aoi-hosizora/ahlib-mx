@@ -28,7 +28,7 @@ type loggerParam struct {
 	traceStack   xruntime.TraceStack
 }
 
-// getLoggerParamAndFields returns loggerParam and logrus.Fields using given error and xruntime.TraceStack.
+// getLoggerParamAndFields returns loggerParam and logrus.Fields using given parameters.
 func getLoggerParamAndFields(err interface{}, stack xruntime.TraceStack) (*loggerParam, logrus.Fields) {
 	param := &loggerParam{
 		errorMessage: fmt.Sprintf("%v", err),
@@ -44,24 +44,23 @@ func getLoggerParamAndFields(err interface{}, stack xruntime.TraceStack) (*logge
 
 // LogToLogrus logs a panic message to logrus.Logger from given error, nil-able xruntime.TraceStack.
 func LogToLogrus(logger *logrus.Logger, err interface{}, stack xruntime.TraceStack, options ...logopt.LoggerOption) {
-	param, fields := getLoggerParamAndFields(err, stack)
-	extra := logopt.NewLoggerOptions(options)
-	extra.AddToFields(fields)
-	entry := logger.WithFields(fields)
+	p, f := getLoggerParamAndFields(err, stack)
+	m := formatLogger(p)
 
-	msg := formatLogger(param)
-	extra.AddToMessage(&msg)
-	entry.Error(msg)
+	extra := logopt.NewLoggerOptions(options)
+	extra.AddToMessage(&m)
+	extra.AddToFields(f)
+	logger.WithFields(f).Error(m)
 }
 
 // LogToLogger logs a panic message to logrus.StdLogger using given error, nil-able xruntime.TraceStack.
 func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceStack, options ...logopt.LoggerOption) {
-	param, _ := getLoggerParamAndFields(err, stack)
-	extra := logopt.NewLoggerOptions(options)
+	p, _ := getLoggerParamAndFields(err, stack)
+	m := formatLogger(p)
 
-	msg := formatLogger(param)
-	extra.AddToMessage(&msg)
-	logger.Print(msg)
+	extra := logopt.NewLoggerOptions(options)
+	extra.AddToMessage(&m)
+	logger.Print(m)
 }
 
 // formatLogger formats loggerParam to logger string.
