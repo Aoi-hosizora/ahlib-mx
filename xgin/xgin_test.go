@@ -546,20 +546,28 @@ func TestTranslateBindingError(t *testing.T) {
 			map[string]interface{}{"__decode": "type of 'number 3.14' in 'int' mismatches with required 'int32'"},
 		},
 		// validator
-		{"body", `{}`, "", 500, nil},
+		{"body", `{}`, "", 400,
+			map[string]interface{}{"str": "Field validation for 'str' failed on the 'required' tag", "int": "Field validation for 'int' failed on the 'required' tag"},
+		},
 		{"body", `{}`, "useTrans=true", 400,
 			map[string]interface{}{"str": "str is a required field", "int": "int is a required field"},
 		},
-		{"body", `{"str": "", "int": 0}`, "", 500, nil}, // TODO
+		{"body", `{"str": "", "int": 0}`, "", 400,
+			map[string]interface{}{"str": "Field validation for 'str' failed on the 'required' tag", "int": "Field validation for 'int' failed on the 'required' tag"},
+		},
 		{"body", `{"str": "", "int": 0}`, "useTrans=true", 400,
 			map[string]interface{}{"str": "str is a required field", "int": "int is a required field"},
 		},
 		// xvalidator required
-		{"body", `{}`, "useCustom=true", 500, nil},
+		{"body", `{}`, "useCustom=true", 400,
+			map[string]interface{}{"str": "str should be not null and not empty", "int": "int should be not null and not zero"},
+		},
 		{"body", `{}`, "useCustom=true&useTrans=true", 400,
 			map[string]interface{}{"str": "str should be not null and not empty", "int": "int should be not null and not zero"},
 		},
-		{"body", `{"str": "", "int": 0}`, "useCustom=true", 500, nil}, // TODO
+		{"body", `{"str": "", "int": 0}`, "useCustom=true", 400,
+			map[string]interface{}{"str": "str should be not null and not empty", "int": "int should be not null and not zero"},
+		},
 		{"body", `{"str": "", "int": 0}`, "useCustom=true&useTrans=true", 400,
 			map[string]interface{}{"str": "str should be not null and not empty", "int": "int should be not null and not zero"},
 		},
@@ -631,6 +639,7 @@ func TestTranslateBindingError(t *testing.T) {
 		{"nil", nil, nil, nil, false},
 		{"NumError", &strconv.NumError{}, nil, nil, false},
 		{"InvalidValidationError", &validator.InvalidValidationError{}, nil, nil, false},
+		{"ExtraErrors", errors.New("TODO"), nil, nil, false},
 		{"InvalidUnmarshalError", &json.InvalidUnmarshalError{}, []TranslateOption{WithJsonInvalidUnmarshalError(
 			func(*json.InvalidUnmarshalError) (result map[string]string, need4xx bool) { return nil, true })}, nil, true},
 		{"UnmarshalTypeError", &json.UnmarshalTypeError{}, []TranslateOption{WithJsonUnmarshalTypeError(

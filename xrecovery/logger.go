@@ -2,24 +2,27 @@ package xrecovery
 
 import (
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/internal/logopt"
+	"github.com/Aoi-hosizora/ahlib-web/internal"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/sirupsen/logrus"
 )
 
+// LoggerOption represents an option for loggerOptions, created by WithXXX functions.
+type LoggerOption = internal.LoggerOption
+
 // WithExtraText creates a logger option to log with extra text.
-func WithExtraText(text string) logopt.LoggerOption {
-	return logopt.WithExtraText(text)
+func WithExtraText(text string) LoggerOption {
+	return internal.WithExtraText(text)
 }
 
 // WithExtraFields creates a logger option to log with extra fields.
-func WithExtraFields(fields map[string]interface{}) logopt.LoggerOption {
-	return logopt.WithExtraFields(fields)
+func WithExtraFields(fields map[string]interface{}) LoggerOption {
+	return internal.WithExtraFields(fields)
 }
 
 // WithExtraFieldsV creates a logger option to log with extra fields in vararg.
-func WithExtraFieldsV(fields ...interface{}) logopt.LoggerOption {
-	return logopt.WithExtraFieldsV(fields...)
+func WithExtraFieldsV(fields ...interface{}) LoggerOption {
+	return internal.WithExtraFieldsV(fields...)
 }
 
 // loggerParam stores some logger parameters, used in LogToLogrus and LogToLogger.
@@ -43,22 +46,22 @@ func getLoggerParamAndFields(err interface{}, stack xruntime.TraceStack) (*logge
 }
 
 // LogToLogrus logs a panic message to logrus.Logger from given error, nil-able xruntime.TraceStack.
-func LogToLogrus(logger *logrus.Logger, err interface{}, stack xruntime.TraceStack, options ...logopt.LoggerOption) {
+func LogToLogrus(logger *logrus.Logger, err interface{}, stack xruntime.TraceStack, options ...LoggerOption) {
 	p, f := getLoggerParamAndFields(err, stack)
 	m := formatLogger(p)
 
-	extra := logopt.NewLoggerOptions(options)
+	extra := internal.NewLoggerOptions(options)
 	extra.AddToMessage(&m)
 	extra.AddToFields(f)
 	logger.WithFields(f).Error(m)
 }
 
 // LogToLogger logs a panic message to logrus.StdLogger using given error, nil-able xruntime.TraceStack.
-func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceStack, options ...logopt.LoggerOption) {
+func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceStack, options ...LoggerOption) {
 	p, _ := getLoggerParamAndFields(err, stack)
 	m := formatLogger(p)
 
-	extra := logopt.NewLoggerOptions(options)
+	extra := internal.NewLoggerOptions(options)
 	extra.AddToMessage(&m)
 	logger.Print(m)
 }

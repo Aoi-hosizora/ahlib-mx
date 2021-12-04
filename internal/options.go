@@ -1,4 +1,4 @@
-package logopt
+package internal
 
 import (
 	"fmt"

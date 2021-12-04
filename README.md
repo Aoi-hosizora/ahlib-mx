@@ -6,7 +6,7 @@
 [![License](http://img.shields.io/badge/license-mit-blue.svg)](./LICENSE)
 [![Release](https://img.shields.io/github/v/release/Aoi-hosizora/ahlib-web)](https://github.com/Aoi-hosizora/ahlib-web/releases)
 
-+ A personal golang library for web development, including gin, validator/v10, recovery, telebot.v2.
++ A personal golang library for web development, including gin, validator/v10, recovery, telebot.v2, require `Go >= 1.15`.
 
 ### Related libraries
 
@@ -18,16 +18,18 @@
 ### Packages
 
 + xgin
++ xgin/headers
 + xrecovery
 + xtelebot
 + xvalidator
++ xvalidator/regexps
 
 ### Dependencies
 
 + See [go.mod](./go.mod) and [go.sum](./go.sum)
 + `github.com/Aoi-hosizora/ahlib v1.5.0`
 + `github.com/gin-gonic/gin v1.7.3`
-+ `github.com/go-playground/validator/v10 v10.2.0`
++ `github.com/go-playground/validator/v10 v10.4.1`
 + `github.com/go-playground/locales v0.13.0`
 + `github.com/go-playground/universal-translator v0.17.0`
 + `gopkg.in/tucnak/telebot.v2 v2.3.3`

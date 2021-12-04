@@ -9,7 +9,7 @@
 
 ### Types
 
-+ None
++ `type LoggerOption func`
 
 ### Variables
 

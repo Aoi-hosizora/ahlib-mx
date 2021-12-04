@@ -160,10 +160,16 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 			return nil, false
 		},
 		validatorFieldsErrorFn: func(e validator.ValidationErrors, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
-			return xvalidator.TranslateValidationErrors(e, translator, false), true
+			if translator != nil {
+				return xvalidator.TranslateValidationErrors(e, translator, false), true
+			}
+			return xvalidator.SplitValidationErrors(e, false), true
 		},
 		xvalidatorValidateFieldsErrorFn: func(e *xvalidator.ValidateFieldsError, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
-			return e.Translate(translator, false), true
+			if translator != nil {
+				return e.Translate(translator, false), true
+			}
+			return e.SplitToMap(false), true
 		},
 		extraErrorsTranslateFn: func(e error) (result map[string]string, need4xx bool) {
 			return nil, false
@@ -201,13 +207,11 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 	if vErr, ok := err.(*validator.InvalidValidationError); ok {
 		return opt.validatorInvalidTypeErrorFn(vErr)
 	}
-	if opt.utTranslator != nil {
-		if vErr, ok := err.(validator.ValidationErrors); ok {
-			return opt.validatorFieldsErrorFn(vErr, opt.utTranslator)
-		}
-		if vErr, ok := err.(*xvalidator.ValidateFieldsError); ok {
-			return opt.xvalidatorValidateFieldsErrorFn(vErr, opt.utTranslator)
-		}
+	if vErr, ok := err.(validator.ValidationErrors); ok {
+		return opt.validatorFieldsErrorFn(vErr, opt.utTranslator)
+	}
+	if vErr, ok := err.(*xvalidator.ValidateFieldsError); ok {
+		return opt.xvalidatorValidateFieldsErrorFn(vErr, opt.utTranslator)
 	}
 
 	// 4. extra

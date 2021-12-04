@@ -11,6 +11,7 @@ import (
 )
 
 func TestValidateFieldsErrorAndTranslate(t *testing.T) {
+	// WrappedValidateFieldError
 	v := validator.New()
 	type s struct {
 		Str string `validate:"required,gt=2,lt=10" json:"str"`
@@ -32,6 +33,7 @@ func TestValidateFieldsErrorAndTranslate(t *testing.T) {
 	xtesting.Equal(t, err6_.Message(), "The value of Int must less then 5")
 	xtesting.Equal(t, err6_.Error(), "Key: 's.int' Error:The value of Int must less then 5")
 
+	// ValidateFieldsError
 	ve := &ValidateFieldsError{fields: []error{err1, err2_}}
 	xtesting.Equal(t, len(ve.Fields()), 2)
 	xtesting.Equal(t, ve.Fields()[0].Error(), err1.Error())
@@ -42,6 +44,7 @@ func TestValidateFieldsErrorAndTranslate(t *testing.T) {
 	ve = &ValidateFieldsError{fields: []error{err4_, err6_}}
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:The length of String must less then 10\nKey: 's.int' Error:The value of Int must less then 5")
 
+	// TranslateValidationErrors
 	tr, _ := ApplyTranslator(v, EnLocaleTranslator(), EnTranslationRegisterFunc())
 	fe := validator.ValidationErrors{err1, err2}
 	fe1 := TranslateValidationErrors(fe, tr, true) // => fe.Translate(tr)
@@ -52,6 +55,7 @@ func TestValidateFieldsErrorAndTranslate(t *testing.T) {
 	xtesting.Equal(t, fe2["str"], "str is a required field")
 	xtesting.Panic(t, func() { TranslateValidationErrors(fe, nil, false) })
 
+	// ValidateFieldsError.Translate
 	ve = &ValidateFieldsError{fields: []error{err1, err2_}}
 	ve1 := ve.Translate(tr, true)
 	ve2 := ve.Translate(tr, false)
@@ -62,6 +66,23 @@ func TestValidateFieldsErrorAndTranslate(t *testing.T) {
 	xtesting.Panic(t, func() { ve.Translate(nil, false) })
 	err := &ValidateFieldsError{fields: []error{nil, errors.New("xxx")}}
 	xtesting.Equal(t, len(err.Translate(tr, true)), 0)
+
+	// SplitValidationErrors
+	fe1 = SplitValidationErrors(fe, true)
+	fe2 = SplitValidationErrors(fe, false)
+	xtesting.Equal(t, fe1["s.int"], "Field validation for 'int' failed on the 'required' tag")
+	xtesting.Equal(t, fe1["s.str"], "Field validation for 'str' failed on the 'required' tag")
+	xtesting.Equal(t, fe2["int"], "Field validation for 'int' failed on the 'required' tag")
+	xtesting.Equal(t, fe2["str"], "Field validation for 'str' failed on the 'required' tag")
+
+	// ValidateFieldsError.SplitToMap
+	ve1 = ve.SplitToMap(true)
+	ve2 = ve.SplitToMap(false)
+	xtesting.Equal(t, ve1["s.int"], "Int field must be set and can not be zero")
+	xtesting.Equal(t, ve1["s.str"], "Field validation for 'str' failed on the 'required' tag")
+	xtesting.Equal(t, ve2["int"], "Int field must be set and can not be zero")
+	xtesting.Equal(t, ve2["str"], "Field validation for 'str' failed on the 'required' tag")
+	xtesting.Equal(t, len(err.SplitToMap(true)), 0)
 }
 
 func TestCustomStructValidator(t *testing.T) {

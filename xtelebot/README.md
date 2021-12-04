@@ -12,6 +12,7 @@
 + `type ChatStatus uint64`
 + `type BotDataOption func`
 + `type BotData struct`
++ `type LoggerOption func`
 
 ### Variables
 

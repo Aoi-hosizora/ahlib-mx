@@ -1,7 +1,6 @@
 package xtelebot
 
 import (
-	"github.com/Aoi-hosizora/ahlib-web/internal/logopt"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/tucnak/telebot.v2"
@@ -206,7 +205,7 @@ func TestReceiveLogger(t *testing.T) {
 		for _, tc := range []struct {
 			giveEndpoint interface{}
 			giveMessage  *telebot.Message
-			giveOptions  []logopt.LoggerOption
+			giveOptions  []LoggerOption
 		}{
 			{nil, nil, nil},                      // x
 			{"", nil, nil},                       // x
@@ -219,11 +218,11 @@ func TestReceiveLogger(t *testing.T) {
 			{rep, text, nil},
 			{inl, text, nil},
 
-			{ep, text, []logopt.LoggerOption{WithExtraText("extra")}},
-			{ep, text, []logopt.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{ep, text, []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
-			{ep, text, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{ep, text, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+			{ep, text, []LoggerOption{WithExtraText("extra")}},
+			{ep, text, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{ep, text, []LoggerOption{WithExtraFieldsV("k", "v")}},
+			{ep, text, []LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{ep, text, []LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogReceiveToLogrus(l1, tc.giveEndpoint, tc.giveMessage, tc.giveOptions...)
@@ -244,7 +243,7 @@ func TestReplyLogger(t *testing.T) {
 			giveReceived *telebot.Message
 			giveReplied  *telebot.Message
 			giveError    error
-			giveOptions  []logopt.LoggerOption
+			giveOptions  []LoggerOption
 		}{
 			{text, nil, nil, nil},
 			{nil, text, nil, nil},
@@ -265,13 +264,13 @@ func TestReplyLogger(t *testing.T) {
 			{text, venue, nil, nil},
 			{text, videoNote, nil, nil},
 
-			{text, text2, nil, []logopt.LoggerOption{WithExtraText("extra")}},
-			{text, text2, nil, []logopt.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{text, text2, nil, []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
-			{text, text2, nil, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{text, text2, nil, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
-			{text, text2, telebot.ErrBlockedByUser, []logopt.LoggerOption{WithExtraText("extra")}},
-			{text, text2, telebot.ErrBlockedByUser, []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
+			{text, text2, nil, []LoggerOption{WithExtraText("extra")}},
+			{text, text2, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{text, text2, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
+			{text, text2, nil, []LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{text, text2, nil, []LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+			{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText("extra")}},
+			{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogReplyToLogrus(l1, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
@@ -292,7 +291,7 @@ func TestSendLogger(t *testing.T) {
 			giveChat    *telebot.Chat
 			giveSent    *telebot.Message
 			giveError   error
-			giveOptions []logopt.LoggerOption
+			giveOptions []LoggerOption
 		}{
 			{nil, text, nil, nil},
 			{chat, nil, nil, nil},
@@ -300,13 +299,13 @@ func TestSendLogger(t *testing.T) {
 
 			{chat, text, nil, nil},
 
-			{chat, text, nil, []logopt.LoggerOption{WithExtraText("extra")}},
-			{chat, text, nil, []logopt.LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{chat, text, nil, []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
-			{chat, text, nil, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{chat, text, nil, []logopt.LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
-			{chat, text, telebot.ErrBlockedByUser, []logopt.LoggerOption{WithExtraText("extra")}},
-			{chat, text, telebot.ErrBlockedByUser, []logopt.LoggerOption{WithExtraFieldsV("k", "v")}},
+			{chat, text, nil, []LoggerOption{WithExtraText("extra")}},
+			{chat, text, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{chat, text, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
+			{chat, text, nil, []LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{chat, text, nil, []LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+			{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText("extra")}},
+			{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
 		} {
 			if !std {
 				LogSendToLogrus(l1, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)

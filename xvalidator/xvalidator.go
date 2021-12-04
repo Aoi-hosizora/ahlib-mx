@@ -1,6 +1,7 @@
 package xvalidator
 
 import (
+	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/go-playground/locales"
 	loc_en "github.com/go-playground/locales/en"
@@ -195,8 +196,8 @@ func DefaultTranslateFunc() validator.TranslationFunc {
 //
 // Example:
 // 	err := validator.Struct(&Struct{}).(validator.ValidationErrors)
-// 	TranslateValidationErrors(err, trans, true)  // => map[Struct.int:int is a required field, Struct.str:str is a required field]
-// 	TranslateValidationErrors(err, trans, false) // => map[int:int is a required field, str:str is a required field]
+// 	TranslateValidationErrors(err, trans, true)  // => {Struct.int: int is a required field, Struct.str: str is a required field}
+// 	TranslateValidationErrors(err, trans, false) // => {int:        int is a required field, str:        str is a required field}
 func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string {
 	if ut == nil {
 		panic(panicNilUtTranslator)
@@ -211,6 +212,28 @@ func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, 
 	result := make(map[string]string, len(err))
 	for _, fe := range err {
 		result[keyFn(fe)] = fe.Translate(ut)
+	}
+	return result
+}
+
+// SplitValidationErrors splits all the field errors to a field-message map without SplitToMap UtTranslator, the returned map will be in format of
+// validator.FieldError's error message. See TranslateValidationErrors for more.
+//
+// Example:
+// 	err := validator.Struct(&Struct{}).(validator.ValidationErrors)
+// 	SplitValidationErrors(err, true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: Field validation for 'str' failed on the 'required' tag}
+// 	SplitValidationErrors(err, false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        Field validation for 'str' failed on the 'required' tag}
+func SplitValidationErrors(err validator.ValidationErrors, useNamespace bool) map[string]string {
+	keyFn := func(e validator.FieldError) string {
+		if useNamespace {
+			return e.Namespace()
+		}
+		return e.Field()
+	}
+
+	result := make(map[string]string, len(err))
+	for _, fe := range err {
+		result[keyFn(fe)] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", fe.Field(), fe.Tag())
 	}
 	return result
 }

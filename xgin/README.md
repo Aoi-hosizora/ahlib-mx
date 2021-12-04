@@ -14,6 +14,7 @@
 + `type DumpRequestOption func`
 + `type RouterDecodeError struct`
 + `type TranslateOption func`
++ `type LoggerOption func`
 
 ### Variables
 

@@ -4,7 +4,7 @@ import (
 	"regexp"
 )
 
-// Regexps from https://github.com/go-playground/validator/blob/master/regexes.go.
+// Regexps are referred from https://github.com/go-playground/validator/blob/e40bece342/regexes.go.
 
 const (
 	alphaRegexString                 = "^[a-zA-Z]+$"

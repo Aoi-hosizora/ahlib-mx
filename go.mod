@@ -1,6 +1,6 @@
 module github.com/Aoi-hosizora/ahlib-web
 
-go 1.13
+go 1.15
 
 require (
 	github.com/Aoi-hosizora/ahlib v1.5.0

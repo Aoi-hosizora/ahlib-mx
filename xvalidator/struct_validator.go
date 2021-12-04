@@ -59,8 +59,10 @@ func (v *ValidateFieldsError) Error() string {
 // otherwise in "$field" format.
 //
 // Example:
-// 	v.Translate(trans, true)  // => map[s.int:int is a required field, s.str:str cannot be null and empty] (s.int uses validator.FieldError, s.str uses WrappedValidateFieldError)
-// 	v.Translate(trans, false) // => map[int:int is a required field, str:str cannot be null and empty]
+// 	err := validator.Struct(&Struct{}).(xvalidator.ValidateFieldsError)
+// 	v.Translate(trans, true)  // => {Struct.int: int is a required field, Struct.str: str cannot be null and empty}
+// 	v.Translate(trans, false) // => {int:        int is a required field, str:        str cannot be null and empty}
+// 	// Here Struct.int's error is in validator.FieldError type, and Struct.str's error is in xvalidator.WrappedValidateFieldError type.
 func (v *ValidateFieldsError) Translate(ut UtTranslator, useNamespace bool) map[string]string {
 	if ut == nil {
 		panic(panicNilUtTranslator)
@@ -76,6 +78,35 @@ func (v *ValidateFieldsError) Translate(ut UtTranslator, useNamespace bool) map[
 	for _, err := range v.fields {
 		if fe, ok := err.(validator.FieldError); ok {
 			result[keyFn(fe)] = fe.Translate(ut)
+		} else if we, ok := err.(*WrappedValidateFieldError); ok {
+			result[keyFn(we.origin)] = we.message
+		} else {
+			// skip
+		}
+	}
+	return result
+}
+
+// SplitToMap splits all the field errors to a field-message map without using UtTranslator, the returned map will be in format of
+// xvalidator.WrappedValidateFieldError's message and validator.FieldError's error message. See ValidateFieldsError.Translate for more.
+//
+// Example:
+// 	err := validator.Struct(&Struct{}).(validator.ValidationErrors)
+// 	SplitValidationErrors(err, true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: str cannot be null and empty}
+// 	SplitValidationErrors(err, false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        str cannot be null and empty}
+// 	// Here Struct.int's error is in validator.FieldError type, and Struct.str's error is in xvalidator.WrappedValidateFieldError type.
+func (v *ValidateFieldsError) SplitToMap(useNamespace bool) map[string]string {
+	keyFn := func(e validator.FieldError) string {
+		if useNamespace {
+			return e.Namespace()
+		}
+		return e.Field()
+	}
+
+	result := make(map[string]string, len(v.fields))
+	for _, err := range v.fields {
+		if fe, ok := err.(validator.FieldError); ok {
+			result[keyFn(fe)] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", fe.Field(), fe.Tag())
 		} else if we, ok := err.(*WrappedValidateFieldError); ok {
 			result[keyFn(we.origin)] = we.message
 		} else {
