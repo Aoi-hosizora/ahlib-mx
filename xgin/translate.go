@@ -130,7 +130,7 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 		strconvNumErrorFn: func(e *strconv.NumError) (result map[string]string, need4xx bool) {
 			reason := ""
 			if errors.Is(e.Err, strconv.ErrSyntax) {
-				reason = "is not a number"
+				reason = "must be a number"
 			} else if errors.Is(e.Err, strconv.ErrRange) {
 				reason = "is out of range"
 			}
@@ -143,7 +143,7 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 			reason := e.Message
 			if nErr, ok := e.Err.(*strconv.NumError); ok && reason == "" {
 				if errors.Is(nErr.Err, strconv.ErrSyntax) {
-					reason = "is not a number"
+					reason = "must be a number"
 				} else if errors.Is(nErr.Err, strconv.ErrRange) {
 					reason = "is out of range"
 				}

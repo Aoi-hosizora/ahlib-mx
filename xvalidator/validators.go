@@ -249,26 +249,27 @@ func OneofValidator(ps ...interface{}) validator.Func {
 // For numbers & strings, it validates the value.
 // For slices, arrays, and maps, it validates the length.
 func eqHelper(i, p interface{}) (bool, bool) {
-	v := reflect.ValueOf(i)
-	switch k := v.Kind(); k {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		p, ok := xreflect.GetInt(p)
-		return ok && v.Int() == p, true
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		p, ok := xreflect.GetUint(p)
-		return ok && v.Uint() == p, true
-	case reflect.Float32, reflect.Float64:
-		p, ok := xreflect.GetFloat(p)
-		return ok && xnumber.EqualInAccuracy(v.Float(), p), true
-	case reflect.Bool:
-		p, ok := xreflect.GetBool(p)
-		return ok && v.Bool() == p, true
-	case reflect.String:
-		p, ok := xreflect.GetString(p)
-		return ok && v.String() == p, true
+	iv, ok1, irv := xreflect.SmpvalOf(i)
+	pv, ok2, _ := xreflect.SmpvalOf(p)
+	if ok1 && ok2 {
+		switch iv.Flag() {
+		case xreflect.Int:
+			return pv.Flag() == iv.Flag() && iv.Int() == pv.Int(), true
+		case xreflect.Uint:
+			return pv.Flag() == iv.Flag() && iv.Uint() == pv.Uint(), true
+		case xreflect.Float:
+			return pv.Flag() == iv.Flag() && iv.Float() == pv.Float(), true
+		case xreflect.Bool:
+			return pv.Flag() == iv.Flag() && iv.Bool() == pv.Bool(), true
+		case xreflect.Str:
+			return pv.Flag() == iv.Flag() && iv.Str() == pv.Str(), true
+		}
+	}
+	switch irv.Kind() {
 	case reflect.Slice, reflect.Array, reflect.Map:
-		p, ok := xreflect.GetInt(p)
-		return ok && v.Len() == int(p), true
+		if ok2 && pv.Flag() == xreflect.Int {
+			return int64(irv.Len()) == pv.Int(), true
+		}
 	}
 	return false, false
 }
@@ -278,26 +279,25 @@ func eqHelper(i, p interface{}) (bool, bool) {
 // For strings, it validates the length of string.
 // For slices, arrays, and maps, it validates the length.
 func lenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) bool, ff func(i, p float64) bool) bool {
-	v := reflect.ValueOf(i)
-	switch k := v.Kind(); k {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		p, ok := xreflect.GetInt(p)
-		return ok && fi(v.Int(), p)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		p, ok := xreflect.GetUint(p)
-		return ok && fu(v.Uint(), p)
-	case reflect.Float32, reflect.Float64:
-		p, ok := xreflect.GetFloat(p)
-		return ok && ff(v.Float(), p)
-	case reflect.Bool:
-		p, ok := xreflect.GetBool(p)
-		return ok && fi(int64(xnumber.Bool(v.Bool())), int64(xnumber.Bool(p)))
+	iv, ok1, irv := xreflect.SmpvalOf(i)
+	pv, ok2, _ := xreflect.SmpvalOf(p)
+	if ok1 && ok2 {
+		switch iv.Flag() {
+		case xreflect.Int:
+			return pv.Flag() == iv.Flag() && fi(iv.Int(), pv.Int())
+		case xreflect.Uint:
+			return pv.Flag() == iv.Flag() && fu(iv.Uint(), pv.Uint())
+		case xreflect.Float:
+			return pv.Flag() == iv.Flag() && ff(iv.Float(), pv.Float())
+		case xreflect.Bool:
+			return pv.Flag() == iv.Flag() && fi(int64(xnumber.Bool(iv.Bool())), int64(xnumber.Bool(pv.Bool())))
+		}
+	}
+	switch irv.Kind() {
 	case reflect.String:
-		p, ok := xreflect.GetInt(p)
-		return ok && fi(int64(len([]rune(v.String()))), p)
+		return pv.Flag() == xreflect.Int && fi(int64(len([]rune(irv.String()))), pv.Int())
 	case reflect.Slice, reflect.Array, reflect.Map:
-		p, ok := xreflect.GetInt(p)
-		return ok && fi(int64(v.Len()), p)
+		return pv.Flag() == xreflect.Int && fi(int64(irv.Len()), pv.Int())
 	}
 	return false
 }
@@ -305,54 +305,50 @@ func lenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) 
 // oneofHelper is a helper function for oneof used for OneofValidator.
 // For numbers & strings, it validates the value.
 func oneofHelper(i interface{}, ps []interface{}) bool {
-	v := reflect.ValueOf(i)
-
-	switch k := v.Kind(); k {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v := v.Int()
-		for _, p := range ps {
-			p, ok := xreflect.GetInt(p)
-			if ok && v == p {
-				return true
+	iv, ok, _ := xreflect.SmpvalOf(i)
+	if ok {
+		switch iv.Flag() {
+		case xreflect.Int:
+			for _, p := range ps {
+				pv, ok, _ := xreflect.SmpvalOf(p)
+				if ok && pv.Flag() == xreflect.Int && iv.Int() == pv.Int() {
+					return true
+				}
 			}
-		}
-		return false
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		v := v.Uint()
-		for _, p := range ps {
-			p, ok := xreflect.GetUint(p)
-			if ok && v == p {
-				return true
+			return false
+		case xreflect.Uint:
+			for _, p := range ps {
+				pv, ok, _ := xreflect.SmpvalOf(p)
+				if ok && pv.Flag() == xreflect.Uint && iv.Uint() == pv.Uint() {
+					return true
+				}
 			}
-		}
-		return false
-	case reflect.Float32, reflect.Float64:
-		v := v.Float()
-		for _, p := range ps {
-			p, ok := xreflect.GetFloat(p)
-			if ok && xnumber.EqualInAccuracy(v, p) {
-				return true
+			return false
+		case xreflect.Float:
+			for _, p := range ps {
+				pv, ok, _ := xreflect.SmpvalOf(p)
+				if ok && pv.Flag() == xreflect.Float && xnumber.EqualInAccuracy(iv.Float(), pv.Float()) {
+					return true
+				}
 			}
-		}
-		return false
-	case reflect.Bool:
-		v := v.Bool()
-		for _, p := range ps {
-			p, ok := xreflect.GetBool(p)
-			if ok && v == p {
-				return true
+			return false
+		case xreflect.Bool:
+			for _, p := range ps {
+				pv, ok, _ := xreflect.SmpvalOf(p)
+				if ok && pv.Flag() == xreflect.Bool && iv.Bool() == pv.Bool() {
+					return true
+				}
 			}
-		}
-		return false
-	case reflect.String:
-		v := v.String()
-		for _, p := range ps {
-			p, ok := xreflect.GetString(p)
-			if ok && v == p {
-				return true
+			return false
+		case xreflect.Str:
+			for _, p := range ps {
+				pv, ok, _ := xreflect.SmpvalOf(p)
+				if ok && pv.Flag() == xreflect.Str && iv.Str() == pv.Str() {
+					return true
+				}
 			}
+			return false
 		}
-		return false
 	}
 
 	// other types

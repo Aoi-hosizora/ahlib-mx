@@ -149,7 +149,12 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 // ==========
 
 // PprofWrap registers several routes from package `net/http/pprof` to gin.Engine. For more, please visit https://github.com/DeanThompson/ginpprof.
-func PprofWrap(engine *gin.Engine) {
+func PprofWrap(engine *gin.Engine, hideDebug bool) {
+	if hideDebug {
+		temp := gin.DebugPrintRouteFunc
+		gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {}
+		defer func() { gin.DebugPrintRouteFunc = temp }()
+	}
 	for _, r := range []struct {
 		method  string
 		path    string
@@ -224,6 +229,19 @@ func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvali
 		return nil, err // errValidatorNotSupported
 	}
 	return xvalidator.ApplyTranslator(val, locale, registerFn) // create translator with locale, register translator to validator
+}
+
+// _globalTranslator is a global xvalidator.UtTranslator set by SetGlobalTranslator and can be got by GetGlobalTranslator.
+var _globalTranslator xvalidator.UtTranslator
+
+// SetGlobalTranslator stores given xvalidator.UtTranslator to global, it can be got by using GetGlobalTranslator.
+func SetGlobalTranslator(translator xvalidator.UtTranslator) {
+	_globalTranslator = translator
+}
+
+// GetGlobalTranslator gets the stored translator by SetGlobalTranslator, it will return nil if this function is called before SetGlobalTranslator.
+func GetGlobalTranslator() xvalidator.UtTranslator {
+	return _globalTranslator
 }
 
 // AddBinding registers custom validation function to gin's validator engine. You can use your custom validator.Func or functions from xvalidator package

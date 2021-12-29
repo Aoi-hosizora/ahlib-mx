@@ -33,9 +33,11 @@
 + `func WithSecretReplace(secret string) DumpRequestOption`
 + `func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string`
 + `func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string`
-+ `func PprofWrap(router *gin.Engine)`
++ `func PprofWrap(engine *gin.Engine, hideDebug bool)`
 + `func GetValidatorEngine() (*validator.Validate, error)`
 + `func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvalidator.TranslationRegisterHandler) (xvalidator.UtTranslator, error)`
++ `func SetGlobalTranslator(translator xvalidator.UtTranslator)`
++ `func GetGlobalTranslator() xvalidator.UtTranslator`
 + `func AddBinding(tag string, fn validator.Func) error`
 + `func AddTranslation(translator xvalidator.UtTranslator, tag, message string, override bool) error`
 + `func EnableRegexpBinding() error`

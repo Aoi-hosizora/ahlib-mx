@@ -28,19 +28,21 @@ func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 // loggerParam stores some logger parameters, used in LogToLogrus and LogToLogger.
 type loggerParam struct {
 	errorMessage string
-	traceStack   xruntime.TraceStack
+	filename     string
+	lineIndex    int
 }
 
 // getLoggerParamAndFields returns loggerParam and logrus.Fields using given parameters.
 func getLoggerParamAndFields(err interface{}, stack xruntime.TraceStack) (*loggerParam, logrus.Fields) {
-	param := &loggerParam{
-		errorMessage: fmt.Sprintf("%v", err),
-		traceStack:   stack,
+	param := &loggerParam{errorMessage: fmt.Sprintf("%v", err)}
+	if len(stack) > 0 {
+		param.filename = stack[0].Filename
+		param.lineIndex = stack[0].LineIndex
 	}
 	fields := logrus.Fields{
 		"module":        "recovery",
 		"error_message": param.errorMessage,
-		"trace_stack":   param.traceStack.String(),
+		"trace_stack":   stack.String(),
 	}
 	return param, fields
 }
@@ -73,9 +75,8 @@ func LogToLogger(logger logrus.StdLogger, err interface{}, stack xruntime.TraceS
 // 	                                ...         ...
 func formatLogger(param *loggerParam) string {
 	msg := fmt.Sprintf("[Recovery] panic recovered: %s", param.errorMessage)
-	if len(param.traceStack) > 0 {
-		s := param.traceStack[0]
-		msg += fmt.Sprintf(" | %s:%d", s.Filename, s.LineIndex)
+	if param.filename != "" {
+		msg += fmt.Sprintf(" | %s:%d", param.filename, param.lineIndex)
 	}
 	return msg
 }

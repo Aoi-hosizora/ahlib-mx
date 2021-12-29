@@ -1,5 +1,3 @@
-github.com/Aoi-hosizora/ahlib v1.5.0 h1:M8oIN6Zl4zG9F5mwRjZqg1A8LHk9I7hMsIchlO3rBtg=
-github.com/Aoi-hosizora/ahlib v1.5.0/go.mod h1:69tHdnDy1yjwzNKV4jD0ltnGxTWgFra+sqbadYc0Dmk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

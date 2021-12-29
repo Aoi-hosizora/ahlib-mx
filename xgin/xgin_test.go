@@ -115,7 +115,7 @@ func TestDumpRequest(t *testing.T) {
 func TestPprofWrap(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
-	PprofWrap(app)
+	PprofWrap(app, true)
 	server := &http.Server{Addr: ":12345", Handler: app}
 	go server.ListenAndServe()
 	defer server.Shutdown(context.Background())
@@ -184,6 +184,13 @@ func TestValidatorAndTranslator(t *testing.T) {
 	val.SetTagName("binding") // default tag is binding
 
 	// translator
+	xtesting.Nil(t, GetGlobalTranslator())
+	ut, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+	xtesting.Nil(t, err)
+	SetGlobalTranslator(ut)
+	xtesting.NotNil(t, GetGlobalTranslator())
+	SetGlobalTranslator(nil)
+	xtesting.Nil(t, GetGlobalTranslator())
 	type testStruct3 struct {
 		String string `binding:"required,ne=hhh" json:"str"`
 	}
