@@ -11,92 +11,92 @@ import (
 	"time"
 )
 
-func TestBotData(t *testing.T) {
+func TestNewBotData(t *testing.T) {
 	for _, tc := range []struct {
 		giveOptions []BotDataOption
-		wantInitSts ChatStatus
+		wantInitSts ChatState
 	}{
 		{[]BotDataOption{}, 0},
 		{[]BotDataOption{nil}, 0},
 		{[]BotDataOption{nil, nil}, 0},
-		{[]BotDataOption{WithInitialStatus(0)}, 0},
-		{[]BotDataOption{nil, WithInitialStatus(0)}, 0},
-		{[]BotDataOption{WithInitialStatus(0), nil}, 0},
-		{[]BotDataOption{WithInitialStatus(1)}, 1},
-		{[]BotDataOption{WithInitialStatus(1), WithInitialStatus(2)}, 2},
+		{[]BotDataOption{WithInitialState(0)}, 0},
+		{[]BotDataOption{nil, WithInitialState(0)}, 0},
+		{[]BotDataOption{WithInitialState(0), nil}, 0},
+		{[]BotDataOption{WithInitialState(1)}, 1},
+		{[]BotDataOption{WithInitialState(1), WithInitialState(2)}, 2},
 	} {
-		xtesting.Equal(t, NewBotData(tc.giveOptions...).config.initialStatus, tc.wantInitSts)
+		xtesting.Equal(t, NewBotData(tc.giveOptions...).option.initialState, tc.wantInitSts)
 	}
 }
 
-func TestBotDataStatus(t *testing.T) {
+func TestBotDataState(t *testing.T) {
 	const (
-		None ChatStatus = iota
-		InitStatus
-		Status
+		None ChatState = iota
+		InitState
+		State
 	)
-	getOk := func(s ChatStatus, ok bool) bool {
+	getOk := func(s ChatState, ok bool) bool {
 		return ok
 	}
 
 	t.Run("Methods", func(t *testing.T) {
-		bd := NewBotData(WithInitialStatus(InitStatus))
+		bd := NewBotData(WithInitialState(InitState))
 
 		// initial
-		xtesting.Equal(t, bd.GetStatusChats(), []int64{})    // GetStatusChats
-		xtesting.False(t, getOk(bd.GetStatus(0)))            // GetStatus
-		xtesting.Equal(t, bd.GetStatusOr(0, None), None)     // GetStatusOr
-		xtesting.Equal(t, bd.GetStatusOrInit(0), InitStatus) // GetStatusOrInit
+		xtesting.Equal(t, bd.GetStateChats(), []int64{})   // GetStateChats
+		xtesting.False(t, getOk(bd.GetState(0)))           // GetState
+		xtesting.Equal(t, bd.GetStateOr(0, None), None)    // GetStateOr
+		xtesting.Equal(t, bd.GetStateOrInit(0), InitState) // GetStateOrInit
 
 		// empty
-		bd.DeleteStatus(0) // DeleteStatus
-		xtesting.Equal(t, bd.GetStatusChats(), []int64{})
-		xtesting.False(t, getOk(bd.GetStatus(0)))
-		xtesting.Equal(t, bd.GetStatusOr(0, None), None)
-		xtesting.Equal(t, bd.GetStatusOrInit(0), InitStatus)
+		bd.DeleteState(0) // DeleteState
+		xtesting.Equal(t, bd.GetStateChats(), []int64{})
+		xtesting.False(t, getOk(bd.GetState(0)))
+		xtesting.Equal(t, bd.GetStateOr(0, None), None)
+		xtesting.Equal(t, bd.GetStateOrInit(0), InitState)
 
-		// has status (by init)
-		xtesting.Equal(t, bd.GetStatusChats(), []int64{0})
-		sts, ok := bd.GetStatus(0)
-		xtesting.Equal(t, sts, InitStatus)
+		// has state (by init)
+		xtesting.Equal(t, bd.GetStateChats(), []int64{0})
+		sts, ok := bd.GetState(0)
+		xtesting.Equal(t, sts, InitState)
 		xtesting.True(t, ok)
-		xtesting.Equal(t, bd.GetStatusOr(0, None), InitStatus)
-		xtesting.Equal(t, bd.GetStatusOrInit(0), InitStatus)
+		xtesting.Equal(t, bd.GetStateOr(0, None), InitState)
+		xtesting.Equal(t, bd.GetStateOrInit(0), InitState)
 
-		// has status (by set)
-		bd.SetStatus(0, Status)
-		sts, ok = bd.GetStatus(0)
-		xtesting.Equal(t, sts, Status)
+		// has state (by set)
+		bd.SetState(0, State)
+		sts, ok = bd.GetState(0)
+		xtesting.Equal(t, sts, State)
 		xtesting.True(t, ok)
-		xtesting.Equal(t, bd.GetStatusOr(0, None), Status)
-		xtesting.Equal(t, bd.GetStatusOrInit(0), Status)
+		xtesting.Equal(t, bd.GetStateOr(0, None), State)
+		xtesting.Equal(t, bd.GetStateOrInit(0), State)
 
-		// has status (by reset)
-		bd.ResetStatus(0) // ResetStatus
-		xtesting.Equal(t, bd.GetStatusChats(), []int64{0})
-		sts, ok = bd.GetStatus(0)
-		xtesting.Equal(t, sts, InitStatus)
+		// has state (by reset)
+		bd.ResetState(0) // ResetState
+		xtesting.Equal(t, bd.GetStateChats(), []int64{0})
+		sts, ok = bd.GetState(0)
+		xtesting.Equal(t, sts, InitState)
 		xtesting.True(t, ok)
-		xtesting.Equal(t, bd.GetStatusOr(0, None), InitStatus)
-		xtesting.Equal(t, bd.GetStatusOrInit(0), InitStatus)
+		xtesting.Equal(t, bd.GetStateOr(0, None), InitState)
+		xtesting.Equal(t, bd.GetStateOrInit(0), InitState)
 	})
 
 	t.Run("Mutex", func(t *testing.T) {
 		bd := NewBotData()
 		wg := sync.WaitGroup{}
-		for i := 0; i < 20; i++ {
+		for i := 0; i < 1000; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 
 				xtesting.NotPanic(t, func() {
-					bd.GetStatusChats()
-					bd.GetStatus(0)
-					bd.GetStatusOr(0, 0)
-					bd.GetStatusOrInit(0)
-					bd.SetStatus(0, 0)
-					bd.ResetStatus(0)
-					bd.DeleteStatus(0)
+					bd.GetStateChats()
+					bd.GetState(0)
+					bd.GetStateOr(0, 0)
+					bd.GetStateOrInit(0)
+					bd.SetState(0, 0)
+					bd.ResetState(0)
+					bd.DeleteState(0)
 				})
 			}()
 		}
@@ -151,7 +151,7 @@ func TestBotDataCache(t *testing.T) {
 	t.Run("Mutex", func(t *testing.T) {
 		bd := NewBotData()
 		wg := sync.WaitGroup{}
-		for i := 0; i < 20; i++ {
+		for i := 0; i < 1000; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -172,23 +172,23 @@ func TestBotDataCache(t *testing.T) {
 }
 
 var (
-	unix      = time.Now().Unix()
+	timestamp = time.Now().Unix()
 	chat      = &telebot.Chat{ID: 12345678, Username: "Aoi-hosizora"}
-	text      = &telebot.Message{ID: 3344, Chat: chat, Text: "text", Unixtime: unix - 2}
-	text2     = &telebot.Message{ID: 3345, Chat: chat, Text: "text", Unixtime: unix}
-	photo     = &telebot.Message{ID: 3345, Chat: chat, Photo: &telebot.Photo{}, Unixtime: unix}
-	sticker   = &telebot.Message{ID: 3345, Chat: chat, Sticker: &telebot.Sticker{}, Unixtime: unix}
-	video     = &telebot.Message{ID: 3345, Chat: chat, Video: &telebot.Video{}, Unixtime: unix}
-	audio     = &telebot.Message{ID: 3345, Chat: chat, Audio: &telebot.Audio{}, Unixtime: unix}
-	voice     = &telebot.Message{ID: 3345, Chat: chat, Voice: &telebot.Voice{}, Unixtime: unix}
-	loc       = &telebot.Message{ID: 3345, Chat: chat, Location: &telebot.Location{}, Unixtime: unix}
-	animation = &telebot.Message{ID: 3345, Chat: chat, Animation: &telebot.Animation{}, Unixtime: unix}
-	dice      = &telebot.Message{ID: 3345, Chat: chat, Dice: &telebot.Dice{}, Unixtime: unix}
-	document  = &telebot.Message{ID: 3345, Chat: chat, Document: &telebot.Document{}, Unixtime: unix}
-	invoice   = &telebot.Message{ID: 3345, Chat: chat, Invoice: &telebot.Invoice{}, Unixtime: unix}
-	poll      = &telebot.Message{ID: 3345, Chat: chat, Poll: &telebot.Poll{}, Unixtime: unix}
-	venue     = &telebot.Message{ID: 3345, Chat: chat, Venue: &telebot.Venue{}, Unixtime: unix}
-	videoNote = &telebot.Message{ID: 3345, Chat: chat, VideoNote: &telebot.VideoNote{}, Unixtime: unix}
+	text      = &telebot.Message{ID: 3344, Chat: chat, Text: "text", Unixtime: timestamp - 2}
+	text2     = &telebot.Message{ID: 3345, Chat: chat, Text: "text", Unixtime: timestamp}
+	photo     = &telebot.Message{ID: 3345, Chat: chat, Photo: &telebot.Photo{}, Unixtime: timestamp}
+	sticker   = &telebot.Message{ID: 3345, Chat: chat, Sticker: &telebot.Sticker{}, Unixtime: timestamp}
+	video     = &telebot.Message{ID: 3345, Chat: chat, Video: &telebot.Video{}, Unixtime: timestamp}
+	audio     = &telebot.Message{ID: 3345, Chat: chat, Audio: &telebot.Audio{}, Unixtime: timestamp}
+	voice     = &telebot.Message{ID: 3345, Chat: chat, Voice: &telebot.Voice{}, Unixtime: timestamp}
+	loc       = &telebot.Message{ID: 3345, Chat: chat, Location: &telebot.Location{}, Unixtime: timestamp}
+	animation = &telebot.Message{ID: 3345, Chat: chat, Animation: &telebot.Animation{}, Unixtime: timestamp}
+	dice      = &telebot.Message{ID: 3345, Chat: chat, Dice: &telebot.Dice{}, Unixtime: timestamp}
+	document  = &telebot.Message{ID: 3345, Chat: chat, Document: &telebot.Document{}, Unixtime: timestamp}
+	invoice   = &telebot.Message{ID: 3345, Chat: chat, Invoice: &telebot.Invoice{}, Unixtime: timestamp}
+	poll      = &telebot.Message{ID: 3345, Chat: chat, Poll: &telebot.Poll{}, Unixtime: timestamp}
+	venue     = &telebot.Message{ID: 3345, Chat: chat, Venue: &telebot.Venue{}, Unixtime: timestamp}
+	videoNote = &telebot.Message{ID: 3345, Chat: chat, VideoNote: &telebot.VideoNote{}, Unixtime: timestamp}
 )
 
 func TestReceiveLogger(t *testing.T) {
@@ -198,8 +198,8 @@ func TestReceiveLogger(t *testing.T) {
 
 	ep := "/test-endpoint"
 	on := "\atext"
-	rep := &telebot.ReplyButton{Text: "reply"}
-	inl := &telebot.InlineButton{Unique: "inline"}
+	rep := &telebot.ReplyButton{Text: "test-button1"}
+	inl := &telebot.InlineButton{Unique: "test-button2"}
 
 	for _, std := range []bool{false, true} {
 		for _, tc := range []struct {
@@ -208,8 +208,8 @@ func TestReceiveLogger(t *testing.T) {
 			giveOptions  []LoggerOption
 		}{
 			{nil, nil, nil},                      // x
-			{"", nil, nil},                       // x
-			{"", text, nil},                      // x
+			{"x", nil, nil},                      // x
+			{"x", text, nil},                     // x
 			{&telebot.InlineButton{}, text, nil}, // x
 			{&telebot.ReplyButton{}, text, nil},  // x
 
@@ -231,6 +231,19 @@ func TestReceiveLogger(t *testing.T) {
 			}
 		}
 	}
+
+	xtesting.NotPanic(t, func() {
+		LogReceiveToLogrus(l1, "x", nil)
+		LogReceiveToLogger(l2, "x", nil)
+		LogReceiveToLogrus(l1, "", text)
+		LogReceiveToLogger(l2, "\a", text)
+		LogReceiveToLogrus(l1, "\a", text)
+		LogReceiveToLogger(l2, 0, text)
+		LogReceiveToLogrus(l1, nil, nil)
+		LogReceiveToLogger(l2, nil, nil)
+		LogReceiveToLogrus(nil, nil, nil)
+		LogReceiveToLogger(nil, nil, nil)
+	})
 }
 
 func TestReplyLogger(t *testing.T) {
@@ -279,6 +292,17 @@ func TestReplyLogger(t *testing.T) {
 			}
 		}
 	}
+
+	xtesting.NotPanic(t, func() {
+		LogReplyToLogrus(l1, text, nil, nil)
+		LogReplyToLogger(l2, text, nil, nil)
+		LogReplyToLogrus(l1, nil, text, nil)
+		LogReplyToLogger(l2, nil, text, nil)
+		LogReplyToLogrus(l1, nil, nil, nil)
+		LogReplyToLogger(l2, nil, nil, nil)
+		LogReplyToLogrus(nil, nil, nil, nil)
+		LogReplyToLogger(nil, nil, nil, nil)
+	})
 }
 
 func TestSendLogger(t *testing.T) {
@@ -314,4 +338,15 @@ func TestSendLogger(t *testing.T) {
 			}
 		}
 	}
+
+	xtesting.NotPanic(t, func() {
+		LogSendToLogrus(l1, chat, nil, nil)
+		LogSendToLogger(l2, chat, nil, nil)
+		LogSendToLogrus(l1, nil, text, nil)
+		LogSendToLogger(l2, nil, text, nil)
+		LogSendToLogrus(l1, nil, nil, nil)
+		LogSendToLogger(l2, nil, nil, nil)
+		LogSendToLogrus(nil, nil, nil, nil)
+		LogSendToLogger(nil, nil, nil, nil)
+	})
 }

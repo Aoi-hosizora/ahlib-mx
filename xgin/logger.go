@@ -37,7 +37,7 @@ type responseLoggerParam struct {
 	latency  string
 	length   string
 	clientIP string
-	ctxError string
+	errorMsg string
 }
 
 // extractResponseLoggerData extracts and returns responseLoggerParam and logrus.Fields using given parameters.
@@ -51,7 +51,7 @@ func extractResponseLoggerData(c *gin.Context, start, end time.Time) (*responseL
 	if length < 0 {
 		length = 0
 	}
-	ctxError := c.Errors.ByType(gin.ErrorTypePrivate).String()
+	errorMsg := c.Errors.ByType(gin.ErrorTypePrivate).String()
 
 	param := &responseLoggerParam{
 		method:   c.Request.Method,
@@ -60,7 +60,7 @@ func extractResponseLoggerData(c *gin.Context, start, end time.Time) (*responseL
 		latency:  latency.String(),
 		length:   xnumber.RenderByte(float64(length)),
 		clientIP: c.ClientIP(),
-		ctxError: strings.TrimSpace(ctxError),
+		errorMsg: strings.TrimSpace(errorMsg),
 	}
 	fields := logrus.Fields{
 		"module":     "gin",
@@ -72,7 +72,7 @@ func extractResponseLoggerData(c *gin.Context, start, end time.Time) (*responseL
 		"latency":    latency,
 		"length":     length,
 		"client_ip":  param.clientIP,
-		"ctx_error":  param.ctxError,
+		"error_msg":  param.errorMsg,
 	}
 	return param, fields
 }
@@ -85,14 +85,17 @@ func extractResponseLoggerData(c *gin.Context, start, end time.Time) (*responseL
 // 	         8            12               15             10          7     ...
 func formatResponseLogger(p *responseLoggerParam) string {
 	msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", p.status, p.latency, p.clientIP, p.length, p.method, p.path)
-	if p.ctxError != "" {
-		msg += fmt.Sprintf(" | err: %s", p.ctxError)
+	if p.errorMsg != "" {
+		msg += fmt.Sprintf(" | err: %s", p.errorMsg)
 	}
 	return msg
 }
 
 // LogToLogrus logs gin's request and response information to logrus.Logger using given gin.Context and other arguments.
 func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...LoggerOption) {
+	if logger == nil || c == nil {
+		return
+	}
 	p, f := extractResponseLoggerData(c, start, end)
 	m := formatResponseLogger(p)
 
@@ -111,6 +114,9 @@ func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, op
 
 // LogToLogger logs gin's request and response information to logrus.StdLogger using given gin.Context and other arguments.
 func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...LoggerOption) {
+	if logger == nil || c == nil {
+		return
+	}
 	p, _ := extractResponseLoggerData(c, start, end)
 	m := formatResponseLogger(p)
 
@@ -157,6 +163,9 @@ func formatRecoveryLogger(p *recoveryLoggerParam) string {
 
 // LogRecoveryToLogrus logs panic message to logrus.Logger using given value returned from recover and nil-able xruntime.TraceStack.
 func LogRecoveryToLogrus(logger *logrus.Logger, v interface{}, stack xruntime.TraceStack, options ...LoggerOption) {
+	if logger == nil || v == nil {
+		return
+	}
 	p, f := extractRecoveryLoggerData(v, stack)
 	m := formatRecoveryLogger(p)
 
@@ -168,6 +177,9 @@ func LogRecoveryToLogrus(logger *logrus.Logger, v interface{}, stack xruntime.Tr
 
 // LogRecoveryToLogger logs panic message to logrus.StdLogger using given value returned from recover and nil-able xruntime.TraceStack.
 func LogRecoveryToLogger(logger logrus.StdLogger, v interface{}, stack xruntime.TraceStack, options ...LoggerOption) {
+	if logger == nil || v == nil {
+		return
+	}
 	p, _ := extractRecoveryLoggerData(v, stack)
 	m := formatRecoveryLogger(p)
 

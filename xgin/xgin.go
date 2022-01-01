@@ -96,7 +96,10 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 		opt.secretPlaceholder = "*"
 	}
 
-	bs, _ := httputil.DumpRequest(req, false) // error is impossible
+	bs, err := httputil.DumpRequest(req, false)
+	if err != nil {
+		return nil // unreachable
+	}
 	lines := strings.Split(xstring.FastBtos(bs), "\r\n") // split by \r\n
 	result := make([]string, 0, len(lines))
 	for i, line := range lines {

@@ -9,7 +9,7 @@
 
 ### Types
 
-+ `type ChatStatus uint64`
++ `type ChatState uint64`
 + `type BotDataOption func`
 + `type BotData struct`
 + `type LoggerOption func`
@@ -24,7 +24,7 @@
 
 ### Functions
 
-+ `func WithInitialStatus(initialStatus ChatStatus) BotDataOption`
++ `func WithInitialState(initialState ChatState) BotDataOption`
 + `func NewBotData(options ...BotDataOption) *BotData`
 + `func WithExtraText(text string) LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) LoggerOption`
@@ -38,13 +38,13 @@
 
 ### Methods
 
-+ `func (b *BotData) GetStatusChats() []int64`
-+ `func (b *BotData) GetStatus(chatID int64) (ChatStatus, bool)`
-+ `func (b *BotData) GetStatusOr(chatID int64, fallbackStatus ChatStatus) ChatStatus`
-+ `func (b *BotData) GetStatusOrInit(chatID int64) ChatStatus`
-+ `func (b *BotData) SetStatus(chatID int64, status ChatStatus)`
-+ `func (b *BotData) ResetStatus(chatID int64)`
-+ `func (b *BotData) DeleteStatus(chatID int64)`
++ `func (b *BotData) GetStateChats() []int64`
++ `func (b *BotData) GetState(chatID int64) (ChatState, bool)`
++ `func (b *BotData) GetStateOr(chatID int64, fallbackState ChatState) ChatState`
++ `func (b *BotData) GetStateOrInit(chatID int64) ChatState`
++ `func (b *BotData) SetState(chatID int64, state ChatState)`
++ `func (b *BotData) ResetState(chatID int64)`
++ `func (b *BotData) DeleteState(chatID int64)`
 + `func (b *BotData) GetCacheChats() []int64`
 + `func (b *BotData) GetCache(chatID int64, key string) (interface{}, bool)`
 + `func (b *BotData) GetCacheOr(chatID int64, key string, fallbackValue interface{}) interface{}`

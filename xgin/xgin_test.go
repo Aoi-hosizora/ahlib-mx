@@ -160,13 +160,8 @@ func TestWrapPprof(t *testing.T) {
 
 type mockValidator struct{}
 
-func (f mockValidator) ValidateStruct(interface{}) error {
-	return nil
-}
-
-func (f mockValidator) Engine() interface{} {
-	return nil // fake
-}
+func (f mockValidator) ValidateStruct(interface{}) error { return nil }
+func (f mockValidator) Engine() interface{}              { return nil /* fake */ }
 
 func TestValidatorAndTranslator(t *testing.T) {
 	// validator
@@ -711,7 +706,7 @@ func TestLogger(t *testing.T) {
 	std := false
 
 	app := gin.New()
-	app.Use(func(c *gin.Context) {
+	loggerMiddleware := func(c *gin.Context) {
 		start := time.Now()
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(20))) // fake duration
 		c.Next()
@@ -728,7 +723,8 @@ func TestLogger(t *testing.T) {
 			LogToLogger(l2, c, start, end, WithExtraFields(map[string]interface{}{"k": "v"}))
 			LogToLogger(l2, c, start, end, WithExtraFieldsV("k", "v"))
 		}
-	})
+	}
+	app.Use(loggerMiddleware)
 	app.GET("/200", func(c *gin.Context) { c.JSON(200, &gin.H{"status": "200 success"}) })
 	app.GET("/304", func(c *gin.Context) { c.Status(304) })
 	app.GET("/403", func(c *gin.Context) { c.JSON(403, &gin.H{"status": "403 forbidden"}) })
@@ -747,6 +743,13 @@ func TestLogger(t *testing.T) {
 		_, _ = http.Get("http://127.0.0.1:12345/500#anchor")
 		_, _ = http.Post("http://127.0.0.1:12345/XX", "application/json", nil)
 	}
+
+	xtesting.NotPanic(t, func() {
+		LogToLogrus(l1, nil, time.Now(), time.Now())
+		LogToLogger(l2, nil, time.Now(), time.Now())
+		LogToLogrus(nil, nil, time.Now(), time.Now())
+		LogToLogger(nil, nil, time.Now(), time.Now())
+	})
 }
 
 func TestRecoveryLogger(t *testing.T) {
@@ -779,4 +782,11 @@ func TestRecoveryLogger(t *testing.T) {
 			}
 		}
 	}
+
+	xtesting.NotPanic(t, func() {
+		LogRecoveryToLogrus(l1, nil, nil)
+		LogRecoveryToLogger(l2, nil, nil)
+		LogRecoveryToLogrus(nil, nil, nil)
+		LogRecoveryToLogger(nil, nil, nil)
+	})
 }
