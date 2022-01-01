@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xstring"
 	"go/format"
-	"io"
-	"log"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -18,11 +17,11 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	// _ = generate
-	err := generate()
-	if err != nil {
-		log.Fatalln(err)
-	}
+	_ = generate
+	// err := generate()
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
 }
 
 func generate() error {
@@ -87,7 +86,7 @@ func getList() (stdList []string, nstdList []string, err error) {
 		return nil, nil, fmt.Errorf("client: Do: %w", err)
 	}
 	defer resp.Body.Close()
-	bs, err := io.ReadAll(resp.Body)
+	bs, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, err
 	}

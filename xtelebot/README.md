@@ -26,15 +26,15 @@
 
 + `func WithInitialStatus(initialStatus ChatStatus) BotDataOption`
 + `func NewBotData(options ...BotDataOption) *BotData`
-+ `func WithExtraText(text string) logop.LoggerOption`
-+ `func WithExtraFields(fields map[string]interface{}) logop.LoggerOption`
-+ `func WithExtraFieldsV(fields ...interface{}) logop.LoggerOption`
-+ `func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption)`
-+ `func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...logop.LoggerOption)`
-+ `func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption)`
-+ `func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...logop.LoggerOption)`
-+ `func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...logop.LoggerOption)`
-+ `func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...logop.LoggerOption)`
++ `func WithExtraText(text string) LoggerOption`
++ `func WithExtraFields(fields map[string]interface{}) LoggerOption`
++ `func WithExtraFieldsV(fields ...interface{}) LoggerOption`
++ `func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...LoggerOption)`
++ `func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...LoggerOption)`
++ `func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...LoggerOption)`
++ `func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...LoggerOption)`
++ `func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...LoggerOption)`
++ `func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...LoggerOption)`
 
 ### Methods
 

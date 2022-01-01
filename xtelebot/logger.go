@@ -8,20 +8,20 @@ import (
 	"time"
 )
 
-// LoggerOption represents an option for loggerOptions, created by WithXXX functions.
+// LoggerOption represents an option type for some logger functions' option, can be created by WithXXX functions.
 type LoggerOption = internal.LoggerOption
 
-// WithExtraText creates a logger option to log with extra text.
+// WithExtraText creates a LoggerOption to specific extra text logging in "... | extra_text" style, notes that if you use this multiple times, only the last one will be retained.
 func WithExtraText(text string) LoggerOption {
 	return internal.WithExtraText(text)
 }
 
-// WithExtraFields creates a logger option to log with extra fields.
+// WithExtraFields creates a LoggerOption to specific logging with extra fields, notes that if you use this multiple times, only the last one will be retained.
 func WithExtraFields(fields map[string]interface{}) LoggerOption {
 	return internal.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV creates a logger option to log with extra fields in vararg.
+// WithExtraFieldsV creates a LoggerOption to specific logging with extra fields in variadic, notes that if you use this multiple times, only the last one will be retained.
 func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 	return internal.WithExtraFieldsV(fields...)
 }
@@ -171,9 +171,9 @@ func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *te
 	p, f := getReceiveLoggerParamAndFields(endpointString, message)
 	m := formatReceiveLogger(p)
 
-	extra := internal.NewLoggerOptions(options)
-	extra.AddToMessage(&m)
-	extra.AddToFields(f)
+	extra := internal.BuildLoggerOptions(options)
+	extra.ApplyToMessage(&m)
+	extra.ApplyToFields(f)
 	logger.WithFields(f).Info(m)
 }
 
@@ -183,16 +183,16 @@ func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message,
 		return
 	}
 	p, f := getReplyLoggerParamAndFields(received, replied, err)
-	extra := internal.NewLoggerOptions(options)
-	extra.AddToFields(f)
+	extra := internal.BuildLoggerOptions(options)
+	extra.ApplyToFields(f)
 
 	if err != nil {
 		m := formatReplyErrorLogger(received, err)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.WithFields(f).Error(m)
 	} else {
 		m := formatReplyLogger(p)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.WithFields(f).Info(m)
 	}
 }
@@ -203,16 +203,16 @@ func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Me
 		return
 	}
 	p, f := getSendLoggerParamAndFields(chat, sent, err)
-	extra := internal.NewLoggerOptions(options)
-	extra.AddToFields(f)
+	extra := internal.BuildLoggerOptions(options)
+	extra.ApplyToFields(f)
 
 	if err != nil {
 		m := formatSendErrorLogger(chat, err)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.WithFields(f).Error(m)
 	} else {
 		m := formatSendLogger(p)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.WithFields(f).Info(m)
 	}
 }
@@ -226,8 +226,8 @@ func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *
 	p, _ := getReceiveLoggerParamAndFields(endpointString, message)
 	m := formatReceiveLogger(p)
 
-	extra := internal.NewLoggerOptions(options)
-	extra.AddToMessage(&m)
+	extra := internal.BuildLoggerOptions(options)
+	extra.ApplyToMessage(&m)
 	logger.Print(m)
 }
 
@@ -237,15 +237,15 @@ func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Messag
 		return
 	}
 	p, _ := getReplyLoggerParamAndFields(received, replied, err)
-	extra := internal.NewLoggerOptions(options)
+	extra := internal.BuildLoggerOptions(options)
 
 	if err != nil {
 		m := formatReplyErrorLogger(received, err)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.Print(m)
 	} else {
 		m := formatReplyLogger(p)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.Print(m)
 	}
 }
@@ -256,20 +256,21 @@ func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.
 		return
 	}
 	p, _ := getSendLoggerParamAndFields(chat, sent, err)
-	extra := internal.NewLoggerOptions(options)
+	extra := internal.BuildLoggerOptions(options)
 
 	if err != nil {
 		m := formatSendErrorLogger(chat, err)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.Print(m)
 	} else {
 		m := formatSendLogger(p)
-		extra.AddToMessage(&m)
+		extra.ApplyToMessage(&m)
 		logger.Print(m)
 	}
 }
 
 // formatReceiveLogger formats receiveLoggerParam to logger string.
+//
 // Logs like:
 // 	[Telebot] 3344 |                 /test-endpoint | 12345678 Aoi-hosizora
 // 	[Telebot] 3344 |                       $on_text | 12345678 Aoi-hosizora
@@ -282,6 +283,7 @@ func formatReceiveLogger(param *receiveLoggerParam) string {
 }
 
 // formatReplyLogger formats replyLoggerParam to logger string.
+//
 // Logs like:
 // 	[Telebot] 3345 |           2s |   t:text | 3344 | 12345678 Aoi-hosizora
 // 	         |----| |------------| |--------| |----| |--------|------------|
@@ -292,6 +294,7 @@ func formatReplyLogger(param *replyLoggerParam) string {
 }
 
 // formatSendLogger formats sendLoggerParam to logger string.
+//
 // Logs like:
 // 	[Telebot] 3346 |            x |   t:text |    x | 12345678 Aoi-hosizora
 // 	         |----| |------------| |--------| |----| |--------|------------|
@@ -302,6 +305,7 @@ func formatSendLogger(param *sendLoggerParam) string {
 }
 
 // formatReplyErrorLogger formats received telebot.Message and error to logger string.
+//
 // Logs like:
 // 	[Telebot] Reply to '12345678 Aoi-hosizora' failed | telegram: bot was blocked by the user (401)
 func formatReplyErrorLogger(received *telebot.Message, err error) string {
@@ -309,6 +313,7 @@ func formatReplyErrorLogger(received *telebot.Message, err error) string {
 }
 
 // formatSendErrorLogger formats sent telebot.Chat and error to logger string.
+//
 // Logs like:
 // 	[Telebot] Send to '12345678 Aoi-hosizora' failed | telegram: bot was blocked by the user (401)
 func formatSendErrorLogger(chat *telebot.Chat, err error) string {

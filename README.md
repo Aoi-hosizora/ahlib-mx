@@ -19,7 +19,6 @@
 
 + xgin
 + xgin/headers
-+ xrecovery
 + xtelebot
 + xvalidator
 + xvalidator/regexps

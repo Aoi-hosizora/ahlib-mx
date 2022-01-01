@@ -115,11 +115,11 @@ func UseDefaultFieldName(v *validator.Validate) {
 // translator related
 // ==================
 
-// UtTranslator represents an alias type of UtTranslator, and this is the translator of validator.Validate.
+// UtTranslator represents an alias type of ut.Translator interface, and this is the translator of validator.Validate.
 type UtTranslator = ut.Translator
 
-// LocaleTranslator represents an alias type of LocaleTranslator, which will be used in ApplyTranslator. These kinds of values can be got
-// from xvalidator.EnLocaleTranslator, xvalidator.ZhLocaleTranslator and so on.
+// LocaleTranslator represents an alias type of locales.Translator interface, which will be used in ApplyTranslator. These kinds of values can be
+// got from xvalidator.EnLocaleTranslator, xvalidator.ZhLocaleTranslator and so on.
 type LocaleTranslator = locales.Translator
 
 // TranslationRegisterHandler represents a translation register function, which will be used in ApplyTranslator. These kinds of values can be got
@@ -129,7 +129,7 @@ type TranslationRegisterHandler func(v *validator.Validate, translator UtTransla
 const (
 	panicNilLocaleTranslator      = "xvalidator: nil locale translator"
 	panicNilTranslationRegisterFn = "xvalidator: nil translation register function"
-	panicNilUtTranslator          = "xvalidator: nil universal translator (ut.Translator)"
+	panicNilUtTranslator          = "xvalidator: nil universal translator"
 )
 
 // ApplyTranslator applies translator to validator.Validate using given LocaleTranslator (locales.Translator) and TranslationRegisterHandler, this function

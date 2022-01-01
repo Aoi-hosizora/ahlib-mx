@@ -19,50 +19,50 @@ import (
 // dump request
 // ============
 
-// dumpRequestOptions represents some options for DumpRequest, set by DumpRequestOption.
+// dumpRequestOptions is a type of DumpHttpRequest's option, each field can be set by DumpRequestOption function type.
 type dumpRequestOptions struct {
 	ignoreRequestLine bool
 	retainHeaders     []string
 	ignoreHeaders     []string
 	secretHeaders     []string
-	secretReplace     string
+	secretPlaceholder string
 }
 
-// DumpRequestOption represents an option for DumpRequest, can be created by WithXXX functions.
+// DumpRequestOption represents an option type for DumpHttpRequest's option, can be created by WithXXX functions.
 type DumpRequestOption func(*dumpRequestOptions)
 
-// WithIgnoreRequestLine creates a DumpRequestOption for request line, if set to true, request line such as "GET /xxx HTTP/1.1" will be ignored.
+// WithIgnoreRequestLine creates a DumpRequestOption for request line, if set to true, request line "GET /xxx HTTP/1.1" will be ignored.
 func WithIgnoreRequestLine(ignore bool) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
 		o.ignoreRequestLine = ignore
 	}
 }
 
-// WithRetainHeaders creates a DumpRequestOption for retained header.
+// WithRetainHeaders creates a DumpRequestOption for headers which are wanted to retain, WithIgnoreHeaders option will be ignored when use with this.
 func WithRetainHeaders(headers ...string) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
 		o.retainHeaders = headers
 	}
 }
 
-// WithIgnoreHeaders creates a DumpRequestOption for ignore headers, this option will be ignored when WithRetainHeaders is used in DumpRequest.
+// WithIgnoreHeaders creates a DumpRequestOption for headers which are wanted to ignore, this option will be ignored when used with WithRetainHeaders.
 func WithIgnoreHeaders(headers ...string) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
 		o.ignoreHeaders = headers
 	}
 }
 
-// WithSecretHeaders creates a DumpRequestOption for secret headers, such as Authorization field.
+// WithSecretHeaders creates a DumpRequestOption for headers which are secret, such as Authorization field, also see WithSecretPlaceholder.
 func WithSecretHeaders(headers ...string) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
 		o.secretHeaders = headers
 	}
 }
 
-// WithSecretReplace creates a DumpRequestOption for secret header replace string, defaults to "*".
-func WithSecretReplace(secret string) DumpRequestOption {
+// WithSecretPlaceholder creates a DumpRequestOption to specific a secret placeholder for secret headers set by WithSecretHeaders, defaults to "*".
+func WithSecretPlaceholder(placeholder string) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
-		o.secretReplace = secret
+		o.secretPlaceholder = placeholder
 	}
 }
 
@@ -86,124 +86,111 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 	if req == nil {
 		return nil
 	}
-	opt := &dumpRequestOptions{ignoreRequestLine: false, secretReplace: "*"}
+	opt := &dumpRequestOptions{}
 	for _, op := range options {
 		if op != nil {
 			op(opt)
 		}
 	}
-
-	bs, err := httputil.DumpRequest(req, false)
-	if err != nil {
-		return nil
+	if opt.secretPlaceholder == "" {
+		opt.secretPlaceholder = "*"
 	}
-	params := strings.Split(xstring.FastBtos(bs), "\r\n") // split by \r\n
-	result := make([]string, 0, len(params))
-	for idx, param := range params {
-		if idx == 0 {
+
+	bs, _ := httputil.DumpRequest(req, false) // error is impossible
+	lines := strings.Split(xstring.FastBtos(bs), "\r\n") // split by \r\n
+	result := make([]string, 0, len(lines))
+	for i, line := range lines {
+		if i == 0 {
 			if !opt.ignoreRequestLine {
-				result = append(result, param) // request line: METHOD /ENDPOINT HTTP/1.1
+				result = append(result, line) // request line: METHOD /ENDPOINT HTTP/1.1
 			}
 			continue
 		}
-		param = strings.TrimSpace(param)
-		if param == "" {
-			// after the request line, there is \r\n\r\n, which is the splitter of the request line and the request header
+		line = strings.TrimSpace(line)
+		if line == "" {
+			// after the request line, there is \r\n\r\n, which is the splitter between the request line and the request header
 			continue
 		}
 
-		// filter headers, use retainHeaders first
+		// I. filter headers, use retainHeaders first
 		headerList := opt.retainHeaders
+		toIgnore := false
 		if len(opt.retainHeaders) == 0 {
 			headerList = opt.ignoreHeaders
+			toIgnore = true
 		}
 		exist := false
 		for _, header := range headerList {
-			if isSpecificHeader(param, header) {
+			if isSpecificHeader(line, header) {
 				exist = true
 				break
 			}
 		}
-		if (len(opt.retainHeaders) != 0 && !exist) || (len(opt.retainHeaders) == 0 && exist) {
+		if (!toIgnore && !exist) || (toIgnore && exist) {
 			continue
 		}
 
-		// rewrite headers that are secret
+		// II. rewrite headers that are secret
 		for _, header := range opt.secretHeaders {
-			if isSpecificHeader(param, header) {
-				header = strings.SplitN(param, ":", 2)[0]
-				param = header + ": " + opt.secretReplace
+			if isSpecificHeader(line, header) {
+				header = strings.SplitN(line, ":", 2)[0]
+				line = header + ": " + opt.secretPlaceholder
 				break
 			}
 		}
 
-		// append to the result slice
-		result = append(result, param)
+		// III. append to the result slice
+		result = append(result, line)
 	}
 
 	return result
 }
 
 // ==========
-// pprof wrap
+// wrap pprof
 // ==========
 
-// PprofWrap registers several routes from package `net/http/pprof` to gin.Engine. For more, please visit https://github.com/DeanThompson/ginpprof.
-func PprofWrap(engine *gin.Engine, hideDebug bool) {
-	if hideDebug {
-		temp := gin.DebugPrintRouteFunc
-		gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {}
-		defer func() { gin.DebugPrintRouteFunc = temp }()
-	}
+var (
+	_indexHandler        = func(ctx *gin.Context) { pprof.Index(ctx.Writer, ctx.Request) }
+	_heapHandler         = func(ctx *gin.Context) { pprof.Handler("heap").ServeHTTP(ctx.Writer, ctx.Request) }
+	_goroutineHandler    = func(ctx *gin.Context) { pprof.Handler("goroutine").ServeHTTP(ctx.Writer, ctx.Request) }
+	_allocsHandler       = func(ctx *gin.Context) { pprof.Handler("allocs").ServeHTTP(ctx.Writer, ctx.Request) }
+	_blockHandler        = func(ctx *gin.Context) { pprof.Handler("block").ServeHTTP(ctx.Writer, ctx.Request) }
+	_threadcreateHandler = func(ctx *gin.Context) { pprof.Handler("threadcreate").ServeHTTP(ctx.Writer, ctx.Request) }
+	_cmdlineHandler      = func(ctx *gin.Context) { pprof.Cmdline(ctx.Writer, ctx.Request) }
+	_profileHandler      = func(ctx *gin.Context) { pprof.Profile(ctx.Writer, ctx.Request) }
+	_symbolHandler       = func(ctx *gin.Context) { pprof.Symbol(ctx.Writer, ctx.Request) }
+	_traceHandler        = func(ctx *gin.Context) { pprof.Trace(ctx.Writer, ctx.Request) }
+	_mutexHandler        = func(ctx *gin.Context) { pprof.Handler("mutex").ServeHTTP(ctx.Writer, ctx.Request) }
+)
+
+// WrapPprof registers several routes from package `net/http/pprof` to gin.Engine. For more, please visit https://github.com/DeanThompson/ginpprof.
+func WrapPprof(engine *gin.Engine) {
 	for _, r := range []struct {
 		method  string
 		path    string
 		handler gin.HandlerFunc
 	}{
-		{"GET", "/debug/pprof/", func(ctx *gin.Context) {
-			pprof.Index(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/heap", func(ctx *gin.Context) {
-			pprof.Handler("heap").ServeHTTP(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/goroutine", func(ctx *gin.Context) {
-			pprof.Handler("goroutine").ServeHTTP(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/allocs", func(ctx *gin.Context) {
-			pprof.Handler("allocs").ServeHTTP(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/block", func(ctx *gin.Context) {
-			pprof.Handler("block").ServeHTTP(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/threadcreate", func(ctx *gin.Context) {
-			pprof.Handler("threadcreate").ServeHTTP(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/cmdline", func(ctx *gin.Context) {
-			pprof.Cmdline(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/profile", func(ctx *gin.Context) {
-			pprof.Profile(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/symbol", func(ctx *gin.Context) {
-			pprof.Symbol(ctx.Writer, ctx.Request)
-		}},
-		{"POST", "/debug/pprof/symbol", func(ctx *gin.Context) {
-			pprof.Symbol(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/trace", func(ctx *gin.Context) {
-			pprof.Trace(ctx.Writer, ctx.Request)
-		}},
-		{"GET", "/debug/pprof/mutex", func(ctx *gin.Context) {
-			pprof.Handler("mutex").ServeHTTP(ctx.Writer, ctx.Request)
-		}},
+		{"GET", "/debug/pprof/", _indexHandler},
+		{"GET", "/debug/pprof/heap", _heapHandler},
+		{"GET", "/debug/pprof/goroutine", _goroutineHandler},
+		{"GET", "/debug/pprof/allocs", _allocsHandler},
+		{"GET", "/debug/pprof/block", _blockHandler},
+		{"GET", "/debug/pprof/threadcreate", _threadcreateHandler},
+		{"GET", "/debug/pprof/cmdline", _cmdlineHandler},
+		{"GET", "/debug/pprof/profile", _profileHandler},
+		{"GET", "/debug/pprof/symbol", _symbolHandler},
+		{"POST", "/debug/pprof/symbol", _symbolHandler},
+		{"GET", "/debug/pprof/trace", _traceHandler},
+		{"GET", "/debug/pprof/mutex", _mutexHandler},
 	} {
 		engine.Handle(r.method, r.path, r.handler) // use path directly
 	}
 }
 
-// ================================
-// validator & translator & binding
-// ================================
+// ======================
+// validator & translator
+// ======================
 
 var (
 	errValidatorNotSupported = errors.New("xgin: gin's validator engine is not validator.Validate from github.com/go-playground/validator/v10")
@@ -303,12 +290,21 @@ func EnableRFC3339DateTimeBindingTranslator(translator xvalidator.UtTranslator) 
 	return AddTranslation(translator, "datetime", "{0} should be an RFC3339 datetime", true)
 }
 
-// ============
-// router error
-// ============
+// ========================
+// mass functions and types
+// ========================
 
-// RouterDecodeError is an error type for router parameter decoding. At most of the time, the Err field is in strconv.NumError type generated by functions from
-// strconv package such as strconv.ParseInt and strconv.Atoi.
+// HideDebugPrintRoute hides the gin.DebugPrintRouteFunc logging and returns a function to restore this behavior.
+func HideDebugPrintRoute() (restoreFn func()) {
+	printFn := gin.DebugPrintRouteFunc
+	gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {}
+	return func() {
+		gin.DebugPrintRouteFunc = printFn
+	}
+}
+
+// RouterDecodeError is an error type for router parameter decoding. At most of the time, the Err field is in strconv.NumError type generated by functions from strconv
+// package such as strconv.ParseInt and strconv.Atoi. This type also supports custom translation in TranslateBindingError and WithXginRouterDecodeError.
 type RouterDecodeError struct {
 	Field   string
 	Input   string
@@ -316,9 +312,9 @@ type RouterDecodeError struct {
 	Message string
 }
 
-// NewRouterDecodeError creates a new RouterDecodeError by parameters.
-func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError {
-	return &RouterDecodeError{Field: routerField, Input: input, Err: err, Message: message}
+// NewRouterDecodeError creates a new RouterDecodeError by given arguments.
+func NewRouterDecodeError(field string, input string, err error, message string) *RouterDecodeError {
+	return &RouterDecodeError{Field: field, Input: input, Err: err, Message: message}
 }
 
 // Error returns the formatted error message from RouterDecodeError, note that returned value is not RouterDecodeError.Message.

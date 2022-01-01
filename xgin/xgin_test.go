@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -56,10 +57,10 @@ func TestDumpRequest(t *testing.T) {
 		c.JSON(200, DumpRequest(c, WithSecretHeaders("X-Test"), WithIgnoreHeaders("X-Multi")))
 	})
 	app.GET("secret2", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithIgnoreHeaders("X-Multi"), WithSecretHeaders("X-TEST"), WithSecretReplace("***")))
+		c.JSON(200, DumpRequest(c, WithIgnoreHeaders("X-Multi"), WithSecretHeaders("X-TEST"), WithSecretPlaceholder("***")))
 	})
 	app.GET("secret3", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithRetainHeaders("X-Multi"), WithSecretHeaders("X-Multi"), WithSecretReplace("***")))
+		c.JSON(200, DumpRequest(c, WithRetainHeaders("X-Multi"), WithSecretHeaders("X-Multi"), WithSecretPlaceholder("***")))
 	})
 
 	server := &http.Server{Addr: ":12345", Handler: app}
@@ -112,10 +113,12 @@ func TestDumpRequest(t *testing.T) {
 	}
 }
 
-func TestPprofWrap(t *testing.T) {
+func TestWrapPprof(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
-	PprofWrap(app, true)
+	rfn := HideDebugPrintRoute()
+	WrapPprof(app)
+	rfn()
 	server := &http.Server{Addr: ":12345", Handler: app}
 	go server.ListenAndServe()
 	defer server.Shutdown(context.Background())
@@ -434,6 +437,16 @@ func TestCustomStructValidator(t *testing.T) {
 	}
 }
 
+type translatableError string
+
+func (t translatableError) Error() string {
+	return string(t)
+}
+
+func (t translatableError) Translate() (map[string]string, bool) {
+	return map[string]string{"_": string(t)}, true
+}
+
 func TestTranslateBindingError(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	val, _ := GetValidatorEngine()
@@ -582,23 +595,23 @@ func TestTranslateBindingError(t *testing.T) {
 		{"body", `{"str": "abc", "int": 1}`, "", 200, nil},
 		// strconv number error
 		{"id/a", ``, "useNumError=true", 400,
-			map[string]interface{}{"router parameter": "router parameter is not a number"},
+			map[string]interface{}{"router parameter": "router parameter must be a number"},
 		},
 		{"id/3.14", ``, "useNumError=true", 400,
-			map[string]interface{}{"router parameter": "router parameter is not a number"},
+			map[string]interface{}{"router parameter": "router parameter must be a number"},
 		},
 		{"id/999999999999999999999999999999", `useNumError=true`, "useNumError=true", 400,
 			map[string]interface{}{"router parameter": "router parameter is out of range"},
 		},
 		// router decode error
 		{"id/a", ``, "", 400,
-			map[string]interface{}{"id": "router parameter id is not a number"},
+			map[string]interface{}{"id": "router parameter id must be a number"},
 		},
 		{"id/3.14", ``, "", 400,
-			map[string]interface{}{"id": "router parameter id is not a number"},
+			map[string]interface{}{"id": "router parameter id must be a number"},
 		},
 		{"id/3.14", ``, "ignoreField=true", 400,
-			map[string]interface{}{"router parameter": "router parameter is not a number"},
+			map[string]interface{}{"router parameter": "router parameter must be a number"},
 		},
 		{"id/999999999999999999999999999999", ``, "", 400,
 			map[string]interface{}{"id": "router parameter id is out of range"},
@@ -669,6 +682,12 @@ func TestTranslateBindingError(t *testing.T) {
 			func(*xvalidator.ValidateFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 				return nil, false
 			})}, nil, false},
+		{"WithTranslatableError", translatableError("TODO"), []TranslateOption{}, map[string]string{"_": "TODO"}, true},
+		{"WithTranslatableError", translatableError("TODO"), []TranslateOption{WithTranslatableError(
+			func(e TranslatableError) (result map[string]string, need4xx bool) {
+				return map[string]string{"_x_": e.Error()}, true
+			})}, map[string]string{"_x_": "TODO"}, true},
+		{"NilExtraErrors", errors.New("TODO"), []TranslateOption{WithExtraErrorsTranslate(nil)}, nil, false},
 		{"ExtraErrors", errors.New("TODO"), []TranslateOption{WithExtraErrorsTranslate(
 			func(e error) (result map[string]string, need4xx bool) {
 				return map[string]string{"_": e.Error()}, true
@@ -727,5 +746,37 @@ func TestLogger(t *testing.T) {
 		_, _ = http.Get("http://127.0.0.1:12345/304")
 		_, _ = http.Get("http://127.0.0.1:12345/500#anchor")
 		_, _ = http.Post("http://127.0.0.1:12345/XX", "application/json", nil)
+	}
+}
+
+func TestRecoveryLogger(t *testing.T) {
+	l1 := logrus.New()
+	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
+	l2 := log.New(os.Stderr, "", log.LstdFlags)
+
+	for _, std := range []bool{false, true} {
+		for _, tc := range []struct {
+			giveErr     interface{}
+			giveStack   xruntime.TraceStack
+			giveOptions []LoggerOption
+		}{
+			{nil, nil, nil},
+			{"test string", nil, nil},
+			{errors.New("test error"), nil, nil},
+			{nil, xruntime.RuntimeTraceStack(0), nil},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), nil},
+
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []LoggerOption{WithExtraText("extra")}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []LoggerOption{WithExtraFieldsV("k", "v")}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+			{errors.New("test error"), xruntime.RuntimeTraceStack(0), []LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
+		} {
+			if !std {
+				LogRecoveryToLogrus(l1, tc.giveErr, tc.giveStack, tc.giveOptions...)
+			} else {
+				LogRecoveryToLogger(l2, tc.giveErr, tc.giveStack, tc.giveOptions...)
+			}
+		}
 	}
 }
