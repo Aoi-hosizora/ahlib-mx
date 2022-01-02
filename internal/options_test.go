@@ -17,8 +17,10 @@ func TestLoggerOptions(t *testing.T) {
 		{[]LoggerOption{nil, nil, nil}, "", logrus.Fields{}},
 
 		{[]LoggerOption{WithExtraText("")}, "", logrus.Fields{}},
-		{[]LoggerOption{WithExtraText("test")}, " | test", logrus.Fields{}},
-		{[]LoggerOption{WithExtraText("test1"), WithExtraText("test2")}, " | test2", logrus.Fields{}},
+		{[]LoggerOption{WithExtraText("   ")}, "   ", logrus.Fields{}},
+		{[]LoggerOption{WithExtraText("  x x  ")}, "  x x  ", logrus.Fields{}},
+		{[]LoggerOption{WithExtraText("test")}, "test", logrus.Fields{}},
+		{[]LoggerOption{WithExtraText("test1"), WithExtraText(" | test2")}, " | test2", logrus.Fields{}},
 
 		{[]LoggerOption{WithExtraFields(map[string]interface{}{})}, "", logrus.Fields{}},
 		{[]LoggerOption{WithExtraFields(map[string]interface{}{"true": 2, "3": 4.4})}, "", logrus.Fields{"true": 2, "3": 4.4}},
@@ -32,10 +34,10 @@ func TestLoggerOptions(t *testing.T) {
 		{[]LoggerOption{WithExtraFieldsV(true, 2, 3.3, 4, 5)}, "", logrus.Fields{"true": 2, "3.3": 4}},
 		{[]LoggerOption{WithExtraFieldsV(true, 2, 3.3, 4, 5), WithExtraFieldsV("k", "v")}, "", logrus.Fields{"k": "v"}},
 
-		{[]LoggerOption{WithExtraText("test"), WithExtraFields(map[string]interface{}{"1": 2})}, " | test", logrus.Fields{"1": 2}},
-		{[]LoggerOption{WithExtraFields(map[string]interface{}{"1": 2}), WithExtraText("test")}, " | test", logrus.Fields{"1": 2}},
-		{[]LoggerOption{WithExtraText("test"), WithExtraFieldsV(3, 4)}, " | test", logrus.Fields{"3": 4}},
-		{[]LoggerOption{WithExtraFieldsV(3, 4), WithExtraText("test")}, " | test", logrus.Fields{"3": 4}},
+		{[]LoggerOption{WithExtraText("test"), WithExtraFields(map[string]interface{}{"1": 2})}, "test", logrus.Fields{"1": 2}},
+		{[]LoggerOption{WithExtraFields(map[string]interface{}{"1": 2}), WithExtraText(" | test")}, " | test", logrus.Fields{"1": 2}},
+		{[]LoggerOption{WithExtraText("test"), WithExtraFieldsV(3, 4)}, "test", logrus.Fields{"3": 4}},
+		{[]LoggerOption{WithExtraFieldsV(3, 4), WithExtraText(" | test")}, " | test", logrus.Fields{"3": 4}},
 		{[]LoggerOption{WithExtraFields(map[string]interface{}{"1": 2}), WithExtraFieldsV(3, 4)}, "", logrus.Fields{"3": 4}},
 		{[]LoggerOption{WithExtraFieldsV(3, 4), WithExtraFields(map[string]interface{}{"1": 2})}, "", logrus.Fields{"1": 2}},
 	} {

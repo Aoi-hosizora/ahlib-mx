@@ -13,10 +13,18 @@
 + `type BotDataOption func`
 + `type BotData struct`
 + `type LoggerOption func`
++ `type ReceiveLoggerParam struct`
++ `type ReplyLoggerParam struct`
++ `type SendLoggerParam struct`
 
 ### Variables
 
-+ None
++ `var FormatReceiveFunc func(p *ReceiveLoggerParam) string`
++ `var FieldifyReceiveFunc func(p *ReceiveLoggerParam) logrus.Fields`
++ `var FormatReplyFunc func(p *ReplyLoggerParam) string`
++ `var FieldifyReplyFunc func(p *ReplyLoggerParam) logrus.Fields`
++ `var FormatSendFunc func(p *SendLoggerParam) string`
++ `var FieldifySendFunc func(p *SendLoggerParam) logrus.Fields`
 
 ### Constants
 
@@ -29,11 +37,11 @@
 + `func WithExtraText(text string) LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) LoggerOption`
-+ `func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, message *telebot.Message, options ...LoggerOption)`
++ `func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, received *telebot.Message, options ...LoggerOption)`
++ `func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, received *telebot.Message, options ...LoggerOption)`
 + `func LogReplyToLogrus(logger *logrus.Logger, received, replied *telebot.Message, err error, options ...LoggerOption)`
-+ `func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...LoggerOption)`
-+ `func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, message *telebot.Message, options ...LoggerOption)`
 + `func LogReplyToLogger(logger logrus.StdLogger, received, replied *telebot.Message, err error, options ...LoggerOption)`
++ `func LogSendToLogrus(logger *logrus.Logger, chat *telebot.Chat, sent *telebot.Message, err error, options ...LoggerOption)`
 + `func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.Message, err error, options ...LoggerOption)`
 
 ### Methods

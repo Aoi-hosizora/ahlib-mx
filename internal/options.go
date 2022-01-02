@@ -1,25 +1,23 @@
 package internal
 
 import (
-	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xstring"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
 // loggerOptions is a type of some logger functions' option, each field can be set by Option function type.
 type loggerOptions struct {
-	text   string                 // extra text
-	fields map[string]interface{} // extra fields
+	text   string
+	fields map[string]interface{}
 }
 
 // LoggerOption represents an option type for some logger functions' option, can be created by WithXXX functions.
 type LoggerOption func(*loggerOptions)
 
-// WithExtraText creates a LoggerOption to specific extra text logging in "... | extra_text" style, notes that if you use this multiple times, only the last one will be retained.
+// WithExtraText creates a LoggerOption to specific extra text logging in "...extra_text" style, notes that if you use this multiple times, only the last one will be retained.
 func WithExtraText(text string) LoggerOption {
 	return func(extra *loggerOptions) {
-		extra.text = strings.TrimSpace(text)
+		extra.text = text // no trim
 	}
 }
 
@@ -51,7 +49,7 @@ func BuildLoggerOptions(options []LoggerOption) *loggerOptions {
 // ApplyToMessage adds extra string to given message.
 func (l *loggerOptions) ApplyToMessage(m *string) {
 	if l.text != "" {
-		*m += fmt.Sprintf(" | %s", l.text)
+		*m += l.text
 	}
 }
 

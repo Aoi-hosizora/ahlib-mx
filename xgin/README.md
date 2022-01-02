@@ -16,10 +16,15 @@
 + `type TranslatableError interface`
 + `type TranslateOption func`
 + `type LoggerOption func`
++ `type ResponseLoggerParam struct`
++ `type RecoveryLoggerParam struct`
 
 ### Variables
 
-+ None
++ `var FormatResponseFunc func(p *ResponseLoggerParam) string`
++ `var FieldifyResponseFunc func(p *ResponseLoggerParam) logrus.Fields`
++ `var FormatRecoveryFunc func(p *RecoveryLoggerParam) string`
++ `var FieldifyRecoveryFunc func(p *RecoveryLoggerParam) logrus.Fields`
 
 ### Constants
 
@@ -65,8 +70,8 @@
 + `func WithExtraText(text string) LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) LoggerOption`
-+ `func LogToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...LoggerOption)`
-+ `func LogToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...LoggerOption)`
++ `func LogResponseToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...LoggerOption)`
++ `func LogResponseToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...LoggerOption)`
 + `func LogRecoveryToLogrus(logger *logrus.Logger, v interface{}, stack xruntime.TraceStack, options ...LoggerOption)`
 + `func LogRecoveryToLogger(logger logrus.StdLogger, v interface{}, stack xruntime.TraceStack, options ...LoggerOption)`
 

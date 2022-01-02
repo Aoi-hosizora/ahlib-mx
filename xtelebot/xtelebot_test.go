@@ -1,11 +1,11 @@
 package xtelebot
 
 import (
+	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/tucnak/telebot.v2"
 	"log"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -194,7 +194,7 @@ var (
 func TestReceiveLogger(t *testing.T) {
 	l1 := logrus.New()
 	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
-	l2 := log.New(os.Stderr, "", log.LstdFlags)
+	l2 := log.Default()
 
 	ep := "/test-endpoint"
 	on := "\atext"
@@ -202,32 +202,46 @@ func TestReceiveLogger(t *testing.T) {
 	inl := &telebot.InlineButton{Unique: "test-button2"}
 
 	for _, std := range []bool{false, true} {
-		for _, tc := range []struct {
-			giveEndpoint interface{}
-			giveMessage  *telebot.Message
-			giveOptions  []LoggerOption
-		}{
-			{nil, nil, nil},                      // x
-			{"x", nil, nil},                      // x
-			{"x", text, nil},                     // x
-			{&telebot.InlineButton{}, text, nil}, // x
-			{&telebot.ReplyButton{}, text, nil},  // x
+		for _, custom := range []bool{false, true} {
+			for _, tc := range []struct {
+				giveEndpoint interface{}
+				giveMessage  *telebot.Message
+				giveOptions  []LoggerOption
+			}{
+				{nil, nil, nil},                      // x
+				{"x", nil, nil},                      // x
+				{"x", text, nil},                     // x
+				{&telebot.InlineButton{}, text, nil}, // x
+				{&telebot.ReplyButton{}, text, nil},  // x
 
-			{ep, text, nil},
-			{on, text, nil},
-			{rep, text, nil},
-			{inl, text, nil},
+				{ep, text, nil},
+				{on, text, nil},
+				{rep, text, nil},
+				{inl, text, nil},
 
-			{ep, text, []LoggerOption{WithExtraText("extra")}},
-			{ep, text, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{ep, text, []LoggerOption{WithExtraFieldsV("k", "v")}},
-			{ep, text, []LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{ep, text, []LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
-		} {
-			if !std {
-				LogReceiveToLogrus(l1, tc.giveEndpoint, tc.giveMessage, tc.giveOptions...)
-			} else {
-				LogReceiveToLogger(l2, tc.giveEndpoint, tc.giveMessage, tc.giveOptions...)
+				{ep, text, []LoggerOption{WithExtraText(" | extra")}},
+				{ep, text, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+				{ep, text, []LoggerOption{WithExtraFieldsV("k", "v")}},
+				{ep, text, []LoggerOption{WithExtraText(" | extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+				{ep, text, []LoggerOption{WithExtraText(" | extra"), WithExtraFieldsV("k", "v")}},
+			} {
+				if custom {
+					FormatReceiveFunc = func(p *ReceiveLoggerParam) string {
+						return fmt.Sprintf("[Telebot] %4d - %30s - %d %s", p.ReceivedID, p.Endpoint, p.ChatID, p.ChatName)
+					}
+					FieldifyReceiveFunc = func(p *ReceiveLoggerParam) logrus.Fields {
+						return logrus.Fields{"module": "telebot", "action": p.Action}
+					}
+				}
+				if !std {
+					LogReceiveToLogrus(l1, tc.giveEndpoint, tc.giveMessage, tc.giveOptions...)
+				} else {
+					LogReceiveToLogger(l2, tc.giveEndpoint, tc.giveMessage, tc.giveOptions...)
+				}
+				if custom {
+					FormatReceiveFunc = nil
+					FieldifyReceiveFunc = nil
+				}
 			}
 		}
 	}
@@ -249,46 +263,64 @@ func TestReceiveLogger(t *testing.T) {
 func TestReplyLogger(t *testing.T) {
 	l1 := logrus.New()
 	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
-	l2 := log.New(os.Stderr, "", log.LstdFlags)
+	l2 := log.Default()
 
 	for _, std := range []bool{false, true} {
-		for _, tc := range []struct {
-			giveReceived *telebot.Message
-			giveReplied  *telebot.Message
-			giveError    error
-			giveOptions  []LoggerOption
-		}{
-			{text, nil, nil, nil},
-			{nil, text, nil, nil},
-			{text, nil, telebot.ErrBlockedByUser, nil},
+		for _, custom := range []bool{false, true} {
+			for _, tc := range []struct {
+				giveReceived *telebot.Message
+				giveReplied  *telebot.Message
+				giveError    error
+				giveOptions  []LoggerOption
+			}{
+				{text, nil, nil, nil},
+				{nil, text, nil, nil},
+				{text, nil, telebot.ErrBlockedByUser, nil},
 
-			{text, text2, nil, nil},
-			{text, photo, nil, nil},
-			{text, sticker, nil, nil},
-			{text, video, nil, nil},
-			{text, audio, nil, nil},
-			{text, voice, nil, nil},
-			{text, loc, nil, nil},
-			{text, animation, nil, nil},
-			{text, dice, nil, nil},
-			{text, document, nil, nil},
-			{text, invoice, nil, nil},
-			{text, poll, nil, nil},
-			{text, venue, nil, nil},
-			{text, videoNote, nil, nil},
+				{text, text2, nil, nil},
+				{text, photo, nil, nil},
+				{text, sticker, nil, nil},
+				{text, video, nil, nil},
+				{text, audio, nil, nil},
+				{text, voice, nil, nil},
+				{text, loc, nil, nil},
+				{text, animation, nil, nil},
+				{text, dice, nil, nil},
+				{text, document, nil, nil},
+				{text, invoice, nil, nil},
+				{text, poll, nil, nil},
+				{text, venue, nil, nil},
+				{text, videoNote, nil, nil},
 
-			{text, text2, nil, []LoggerOption{WithExtraText("extra")}},
-			{text, text2, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{text, text2, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
-			{text, text2, nil, []LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{text, text2, nil, []LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
-			{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText("extra")}},
-			{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
-		} {
-			if !std {
-				LogReplyToLogrus(l1, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
-			} else {
-				LogReplyToLogger(l2, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
+				{text, text2, nil, []LoggerOption{WithExtraText(" | extra")}},
+				{text, text2, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+				{text, text2, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
+				{text, text2, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+				{text, text2, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFieldsV("k", "v")}},
+				{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText(" | extra")}},
+				{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
+			} {
+				if custom {
+					FormatReplyFunc = func(p *ReplyLoggerParam) string {
+						if p.ErrorMsg != "" {
+							return fmt.Sprintf("[Telebot] err: %s", p.ErrorMsg)
+						}
+						return fmt.Sprintf("[Telebot] %4d - %12s - %8s - %4d - %d %s", p.RepliedID, p.Latency.String(), p.RepliedType, p.ReceivedID, p.ChatID, p.ChatName)
+
+					}
+					FieldifyReplyFunc = func(p *ReplyLoggerParam) logrus.Fields {
+						return logrus.Fields{"module": "telebot", "action": p.Action}
+					}
+				}
+				if !std {
+					LogReplyToLogrus(l1, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
+				} else {
+					LogReplyToLogger(l2, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
+				}
+				if custom {
+					FormatReplyFunc = nil
+					FieldifyReplyFunc = nil
+				}
 			}
 		}
 	}
@@ -308,33 +340,50 @@ func TestReplyLogger(t *testing.T) {
 func TestSendLogger(t *testing.T) {
 	l1 := logrus.New()
 	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
-	l2 := log.New(os.Stderr, "", log.LstdFlags)
+	l2 := log.Default()
 
 	for _, std := range []bool{false, true} {
-		for _, tc := range []struct {
-			giveChat    *telebot.Chat
-			giveSent    *telebot.Message
-			giveError   error
-			giveOptions []LoggerOption
-		}{
-			{nil, text, nil, nil},
-			{chat, nil, nil, nil},
-			{chat, nil, telebot.ErrBlockedByUser, nil},
+		for _, custom := range []bool{false, true} {
+			for _, tc := range []struct {
+				giveChat    *telebot.Chat
+				giveSent    *telebot.Message
+				giveError   error
+				giveOptions []LoggerOption
+			}{
+				{nil, text, nil, nil},
+				{chat, nil, nil, nil},
+				{chat, nil, telebot.ErrBlockedByUser, nil},
 
-			{chat, text, nil, nil},
+				{chat, text, nil, nil},
 
-			{chat, text, nil, []LoggerOption{WithExtraText("extra")}},
-			{chat, text, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{chat, text, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
-			{chat, text, nil, []LoggerOption{WithExtraText("extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-			{chat, text, nil, []LoggerOption{WithExtraText("extra"), WithExtraFieldsV("k", "v")}},
-			{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText("extra")}},
-			{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
-		} {
-			if !std {
-				LogSendToLogrus(l1, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)
-			} else {
-				LogSendToLogger(l2, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)
+				{chat, text, nil, []LoggerOption{WithExtraText(" | extra")}},
+				{chat, text, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
+				{chat, text, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
+				{chat, text, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
+				{chat, text, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFieldsV("k", "v")}},
+				{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText(" | extra")}},
+				{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
+			} {
+				if custom {
+					FormatSendFunc = func(p *SendLoggerParam) string {
+						if p.ErrorMsg != "" {
+							return fmt.Sprintf("[Telebot] err: %s", p.ErrorMsg)
+						}
+						return fmt.Sprintf("[Telebot] %4d - %12s - %8s - %4s - %d %s", p.SentID, "x", p.SentType, "x", p.ChatID, p.ChatName)
+					}
+					FieldifySendFunc = func(p *SendLoggerParam) logrus.Fields {
+						return logrus.Fields{"module": "telebot", "action": p.Action}
+					}
+				}
+				if !std {
+					LogSendToLogrus(l1, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)
+				} else {
+					LogSendToLogger(l2, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)
+				}
+				if custom {
+					FormatSendFunc = nil
+					FieldifySendFunc = nil
+				}
 			}
 		}
 	}
