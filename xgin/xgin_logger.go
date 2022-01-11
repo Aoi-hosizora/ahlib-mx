@@ -192,7 +192,7 @@ func extractRecoveryLoggerParam(v interface{}, stack xruntime.TraceStack) *Recov
 
 // formatResponseLoggerParam formats given RecoveryLoggerParam to string for LogRecoveryToLogrus and LogRecoveryToLogger.
 //
-// Logs like:
+// The default format logs like:
 // 	[Recovery] panic recovered: test error | xxx.go:12
 // 	                           |----------| |---------|
 // 	                                ...         ...

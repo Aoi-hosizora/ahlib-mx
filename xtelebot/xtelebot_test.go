@@ -1,33 +1,22 @@
 package xtelebot
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/tucnak/telebot.v2"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
-
-func TestNewBotData(t *testing.T) {
-	for _, tc := range []struct {
-		giveOptions []BotDataOption
-		wantInitSts ChatState
-	}{
-		{[]BotDataOption{}, 0},
-		{[]BotDataOption{nil}, 0},
-		{[]BotDataOption{nil, nil}, 0},
-		{[]BotDataOption{WithInitialState(0)}, 0},
-		{[]BotDataOption{nil, WithInitialState(0)}, 0},
-		{[]BotDataOption{WithInitialState(0), nil}, 0},
-		{[]BotDataOption{WithInitialState(1)}, 1},
-		{[]BotDataOption{WithInitialState(1), WithInitialState(2)}, 2},
-	} {
-		xtesting.Equal(t, NewBotData(tc.giveOptions...).option.initialState, tc.wantInitSts)
-	}
-}
 
 func TestBotDataState(t *testing.T) {
 	const (
@@ -40,7 +29,8 @@ func TestBotDataState(t *testing.T) {
 	}
 
 	t.Run("Methods", func(t *testing.T) {
-		bd := NewBotData(WithInitialState(InitState))
+		bd := NewBotData()
+		bd.SetInitialState(InitState)
 
 		// initial
 		xtesting.Equal(t, bd.GetStateChats(), []int64{})   // GetStateChats
@@ -168,6 +158,231 @@ func TestBotDataCache(t *testing.T) {
 			}()
 		}
 		wg.Wait()
+	})
+}
+
+func mockTelebotApi(t *testing.T) (bot *telebot.Bot, shutdown func()) {
+	gin.SetMode(gin.ReleaseMode)
+	app := gin.New()
+	app.Use(func(c *gin.Context) {
+		// log.Printf("%s %s", c.Request.Method, c.Request.URL.Path)
+	})
+
+	app.POST("/botxxx:yyy/getMe", func(c *gin.Context) {
+		fakeUser := &telebot.User{ID: 1, FirstName: "FIRSTNAME", LastName: "LASTNAME", Username: "USERNAME", IsBot: true, SupportsInline: true}
+		c.JSON(200, gin.H{"ok": true, "Result": fakeUser})
+	})
+	app.POST("/botxxx:yyy/sendMessage", func(c *gin.Context) {
+		bs, _ := ioutil.ReadAll(c.Request.Body)
+		data := make(map[string]interface{})
+		_ = json.Unmarshal(bs, &data)
+		chatId, _ := strconv.ParseInt(data["chat_id"].(string), 10, 64)
+		fakeMessage := &telebot.Message{ID: 111, Text: data["text"].(string), Chat: &telebot.Chat{ID: chatId, Username: "?"}, Unixtime: time.Now().Unix() + 2}
+		c.JSON(200, gin.H{"ok": true, "Result": fakeMessage})
+	})
+	app.POST("/botxxx:yyy/getUpdates", func(c *gin.Context) {
+		bs, _ := ioutil.ReadAll(c.Request.Body)
+		data := make(map[string]interface{})
+		_ = json.Unmarshal(bs, &data)
+		if data["offset"] != "1" {
+			c.JSON(200, gin.H{"ok": true})
+			return
+		}
+		fakeChat1 := &telebot.Chat{ID: 11111111, Username: "?"}
+		fakeChat2 := &telebot.Chat{ID: 22222222, Username: "panic"}
+		fakeUpdate1 := &telebot.Update{ID: 1, Message: &telebot.Message{ID: 111, Text: "/panic 1", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
+		fakeUpdate2 := &telebot.Update{ID: 2, Message: &telebot.Message{ID: 111, Text: "/panic 2", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
+		fakeUpdate3 := &telebot.Update{ID: 3, Message: &telebot.Message{ID: 111, Text: "/command something", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
+		fakeUpdate4 := &telebot.Update{ID: 4, Message: &telebot.Message{ID: 111, Text: "reply", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
+		fakeUpdate5 := &telebot.Update{ID: 4, Message: &telebot.Message{ID: 111, Text: "reply", Unixtime: time.Now().Unix(), Chat: fakeChat2}}
+		fakeUpdate6 := &telebot.Update{ID: 4, Callback: &telebot.Callback{Data: "\finline", Message: &telebot.Message{ID: 111, Text: "inline", Unixtime: time.Now().Unix(), Chat: fakeChat1}}}
+		fakeUpdate7 := &telebot.Update{ID: 4, Callback: &telebot.Callback{Data: "\finline", Message: &telebot.Message{ID: 111, Text: "inline", Unixtime: time.Now().Unix(), Chat: fakeChat2}}}
+		c.JSON(200, gin.H{"ok": true, "Result": []*telebot.Update{fakeUpdate1, fakeUpdate2, fakeUpdate3, fakeUpdate4, fakeUpdate5, fakeUpdate6, fakeUpdate7}})
+	})
+
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+
+	mockBot, err := telebot.NewBot(telebot.Settings{
+		URL:     "http://localhost:12345",
+		Token:   "xxx:yyy",
+		Verbose: false,
+		Poller:  &telebot.LongPoller{Timeout: time.Millisecond * 200},
+	})
+	xtesting.Nil(t, err)
+	xtesting.Equal(t, mockBot.Me.Username, "USERNAME")
+	return mockBot, func() {
+		server.Shutdown(context.Background())
+	}
+}
+
+func TestBotWrapper(t *testing.T) {
+	xtesting.Panic(t, func() { NewBotWrapper(nil) })
+
+	mockBot, shutdown := mockTelebotApi(t)
+	defer shutdown()
+	br := NewBotWrapper(mockBot)
+	xtesting.Equal(t, br.Bot(), mockBot)
+	xtesting.Equal(t, br.Data().initialState, ChatState(0))
+
+	t.Run("HandleCommand", func(t *testing.T) {
+		var defaul = func(w *BotWrapper, m *telebot.Message) {}
+		xtesting.Panic(t, func() { br.HandleCommand("", defaul) })
+		xtesting.Panic(t, func() { br.HandleCommand("a", defaul) })
+		xtesting.Panic(t, func() { br.HandleCommand("aa", defaul) })
+		xtesting.Panic(t, func() { br.HandleCommand("/a", nil) })
+		xtesting.NotPanic(t, func() { br.HandleCommand("\aa", defaul) })
+		xtesting.NotPanic(t, func() { br.HandleCommand("/a", defaul) })
+	})
+
+	t.Run("HandleInlineButton", func(t *testing.T) {
+		var btn1 = &telebot.InlineButton{Unique: ""}
+		var btn2 = &telebot.InlineButton{Unique: "x"}
+		var defaul = func(*BotWrapper, *telebot.Callback) {}
+		xtesting.Panic(t, func() { br.HandleInlineButton(nil, defaul) })
+		xtesting.Panic(t, func() { br.HandleInlineButton(btn1, defaul) })
+		xtesting.Panic(t, func() { br.HandleInlineButton(btn2, nil) })
+		xtesting.NotPanic(t, func() { br.HandleInlineButton(btn2, defaul) })
+	})
+
+	t.Run("HandleInlineButton", func(t *testing.T) {
+		var btn1 = &telebot.ReplyButton{Text: ""}
+		var btn2 = &telebot.ReplyButton{Text: "x"}
+		var defaul = func(*BotWrapper, *telebot.Message) {}
+		xtesting.Panic(t, func() { br.HandleReplyButton(nil, defaul) })
+		xtesting.Panic(t, func() { br.HandleReplyButton(btn1, defaul) })
+		xtesting.Panic(t, func() { br.HandleReplyButton(btn2, nil) })
+		xtesting.NotPanic(t, func() { br.HandleReplyButton(btn2, defaul) })
+	})
+
+	t.Run("ReplyTo", func(t *testing.T) {
+		defaultMsg := &telebot.Message{Chat: &telebot.Chat{ID: 11111111, Username: "Aoi-hosizora"}}
+		_, err := br.ReplyTo(nil, "abc")
+		xtesting.NotNil(t, err)
+		_, err = br.ReplyTo(defaultMsg, nil)
+		xtesting.NotNil(t, err)
+		_, err = br.ReplyTo(defaultMsg, 0)
+		xtesting.NotNil(t, err)
+		replied, err := br.ReplyTo(defaultMsg, "abc")
+		xtesting.Nil(t, err)
+		xtesting.Equal(t, replied.Text, "abc")
+		xtesting.Equal(t, replied.Chat.ID, int64(11111111))
+	})
+
+	t.Run("SendTo", func(t *testing.T) {
+		defaultChat := &telebot.Chat{ID: 11111111, Username: "Aoi-hosizora"}
+		_, err := br.SendTo(nil, "abc")
+		xtesting.NotNil(t, err)
+		_, err = br.SendTo(defaultChat, nil)
+		xtesting.NotNil(t, err)
+		_, err = br.SendTo(defaultChat, 0)
+		xtesting.NotNil(t, err)
+		replied, err := br.SendTo(defaultChat, "abc")
+		xtesting.Nil(t, err)
+		xtesting.Equal(t, replied.Text, "abc")
+		xtesting.Equal(t, replied.Chat.ID, int64(11111111))
+	})
+}
+
+func TestBotWrapperWithPoll(t *testing.T) {
+	mockBot, shutdown := mockTelebotApi(t)
+	defer shutdown()
+	br := NewBotWrapper(mockBot)
+	l := logrus.New()
+	l.SetLevel(logrus.TraceLevel)
+	l.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
+
+	br.SetHandledEndpointCallback(func(endpoint string, handlerName string) {
+		l.Debugf("[Telebot] %-12s | %s\n", endpoint, handlerName)
+	})
+	br.SetReceivedCallback(func(endpoint interface{}, received *telebot.Message) {
+		LogReceiveToLogrus(l, endpoint, received)
+	})
+	br.SetAfterRepliedCallback(func(received *telebot.Message, replied *telebot.Message, err error) {
+		LogReplyToLogrus(l, received, replied, err)
+	})
+	br.SetAfterSentCallback(func(chat *telebot.Chat, sent *telebot.Message, err error) {
+		LogSendToLogrus(l, chat, sent, err)
+	})
+
+	t.Run("Handle", func(t *testing.T) {
+		chs := [7]chan bool{make(chan bool), make(chan bool), make(chan bool), make(chan bool), make(chan bool), make(chan bool), make(chan bool)}
+		count := int32(0)
+		br.HandleCommand("/panic", func(w *BotWrapper, m *telebot.Message) {
+			if m.Text == "/panic 1" {
+				defer close(chs[0])
+				atomic.AddInt32(&count, 1)
+				panic("test panic")
+			} else {
+				<-chs[0]
+				defer close(chs[1])
+				atomic.AddInt32(&count, 1)
+				origin := br.panicHandler
+				defer br.SetPanicHandler(origin)
+				br.SetPanicHandler(func(v interface{}) { l.Errorf("Panic with `%v`", v) })
+				panic("test panic 2")
+			}
+		})
+		br.HandleCommand("/command", func(w *BotWrapper, m *telebot.Message) {
+			<-chs[1]
+			defer close(chs[2])
+			atomic.AddInt32(&count, 1)
+			xtesting.Equal(t, m.Text, "/command something")
+
+			received, err := br.ReplyTo(m, "abc")
+			xtesting.Nil(t, err)
+			xtesting.Equal(t, received.Text, "abc")
+		})
+		br.HandleReplyButton(&telebot.ReplyButton{Text: "reply"}, func(w *BotWrapper, m *telebot.Message) {
+			if m.Chat.Username != "panic" {
+				<-chs[2]
+				defer close(chs[3])
+				atomic.AddInt32(&count, 1)
+				xtesting.Equal(t, m.Text, "reply")
+
+				received, err := br.ReplyTo(m, "def")
+				xtesting.Nil(t, err)
+				xtesting.Equal(t, received.Text, "def")
+			} else {
+				<-chs[3]
+				defer close(chs[4])
+				atomic.AddInt32(&count, 1)
+				panic("test panic reply")
+			}
+		})
+		br.HandleInlineButton(&telebot.InlineButton{Unique: "inline"}, func(w *BotWrapper, c *telebot.Callback) {
+			if c.Message.Chat.Username != "panic" {
+				<-chs[4]
+				defer close(chs[5])
+				atomic.AddInt32(&count, 1)
+				xtesting.Equal(t, c.Message.Text, "inline")
+
+				sent, err := br.SendTo(c.Message.Chat, "abc")
+				xtesting.Nil(t, err)
+				xtesting.Equal(t, sent.Text, "abc")
+			} else {
+				<-chs[5]
+				defer close(chs[6])
+				atomic.AddInt32(&count, 1)
+				panic("test panic inline")
+			}
+		})
+
+		terminated := make(chan struct{})
+		go func() {
+			br.bot.Start()
+			close(terminated)
+		}()
+		<-chs[6]
+		br.bot.Stop()
+		<-terminated
+		xtesting.Equal(t, int(atomic.LoadInt32(&count)), 7)
+	})
+
+	t.Run("handledEndpointCallback", func(t *testing.T) {
+		// hack
+		handledEndpointCallback(nil, "/aaa", func() {})
+		handledEndpointCallback(func(s string, s2 string) {}, "", func() {})
 	})
 }
 

@@ -272,9 +272,9 @@ func TestAddBindingAndTranslator(t *testing.T) {
 		err := ctx.ShouldBindQuery(test)
 		if err != nil {
 			translations := xvalidator.TranslateValidationErrors(err.(validator.ValidationErrors), trans, false)
-			ctx.JSON(400, &gin.H{"success": false, "details": translations})
+			ctx.JSON(400, gin.H{"success": false, "details": translations})
 		} else {
-			ctx.JSON(200, &gin.H{"success": true})
+			ctx.JSON(200, gin.H{"success": true})
 		}
 	})
 	server := &http.Server{Addr: ":12345", Handler: app}
@@ -380,9 +380,9 @@ func TestCustomStructValidator(t *testing.T) {
 	app := gin.New()
 	app.GET("", func(ctx *gin.Context) {
 		if err := ctx.ShouldBindQuery(&testStruct{}); err != nil {
-			ctx.JSON(400, &gin.H{"success": false, "details": err.(*xvalidator.ValidateFieldsError).Translate(trans, false)})
+			ctx.JSON(400, gin.H{"success": false, "details": err.(*xvalidator.ValidateFieldsError).Translate(trans, false)})
 		} else {
-			ctx.JSON(200, &gin.H{"success": true})
+			ctx.JSON(200, gin.H{"success": true})
 		}
 	})
 	server := &http.Server{Addr: ":12345", Handler: app}
@@ -476,10 +476,10 @@ func TestResponseLogger(t *testing.T) {
 		}
 	}
 	app.Use(loggerMiddleware)
-	app.GET("/200", func(c *gin.Context) { c.JSON(200, &gin.H{"status": "200 success"}) })
+	app.GET("/200", func(c *gin.Context) { c.JSON(200, gin.H{"status": "200 success"}) })
 	app.GET("/304", func(c *gin.Context) { c.Status(304) })
-	app.GET("/403", func(c *gin.Context) { c.JSON(403, &gin.H{"status": "403 forbidden"}) })
-	app.GET("/500", func(c *gin.Context) { c.JSON(500, &gin.H{"status": "500 internal server error"}) })
+	app.GET("/403", func(c *gin.Context) { c.JSON(403, gin.H{"status": "403 forbidden"}) })
+	app.GET("/500", func(c *gin.Context) { c.JSON(500, gin.H{"status": "500 internal server error"}) })
 	app.POST("/XX", func(c *gin.Context) { _ = c.Error(errors.New("test error")) })
 
 	server := &http.Server{Addr: ":12345", Handler: app}

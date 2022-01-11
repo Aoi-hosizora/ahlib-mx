@@ -4,6 +4,10 @@
 .history/
 .idea/
 
-### Project ###
+### Build ###
 build/
+coverage.txt
+profile.out
+
+### Project ###
 _generate/

@@ -10,8 +10,10 @@
 ### Types
 
 + `type ChatState uint64`
-+ `type BotDataOption func`
 + `type BotData struct`
++ `type BotWrapper struct`
++ `type MessageHandler func`
++ `type CallbackHandler func`
 + `type LoggerOption func`
 + `type ReceiveLoggerParam struct`
 + `type ReplyLoggerParam struct`
@@ -32,8 +34,8 @@
 
 ### Functions
 
-+ `func WithInitialState(initialState ChatState) BotDataOption`
-+ `func NewBotData(options ...BotDataOption) *BotData`
++ `func NewBotData() *BotData`
++ `func NewBotWrapper(bot *telebot.Bot) *BotWrapper`
 + `func WithExtraText(text string) LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) LoggerOption`
@@ -49,6 +51,7 @@
 + `func (b *BotData) GetStateChats() []int64`
 + `func (b *BotData) GetState(chatID int64) (ChatState, bool)`
 + `func (b *BotData) GetStateOr(chatID int64, fallbackState ChatState) ChatState`
++ `func (b *BotData) SetInitialState(s ChatState)`
 + `func (b *BotData) GetStateOrInit(chatID int64) ChatState`
 + `func (b *BotData) SetState(chatID int64, state ChatState)`
 + `func (b *BotData) ResetState(chatID int64)`
@@ -60,3 +63,15 @@
 + `func (b *BotData) SetCache(chatID int64, key string, value interface{})`
 + `func (b *BotData) RemoveCache(chatID int64, key string)`
 + `func (b *BotData) ClearCaches(chatID int64)`
++ `func (b *BotWrapper) Bot() *telebot.Bot`
++ `func (b *BotWrapper) Data() *BotData`
++ `func (b *BotWrapper) HandleCommand(command string, handler MessageHandler)`
++ `func (b *BotWrapper) HandleReplyButton(button *telebot.ReplyButton, handler MessageHandler)`
++ `func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler CallbackHandler)`
++ `func (b *BotWrapper) ReplyTo(received *telebot.Message, what interface{}, options ...interface{}) (*telebot.Message, error)`
++ `func (b *BotWrapper) SendTo(chat *telebot.Chat, what interface{}, options ...interface{}) (*telebot.Message, error)`
++ `func (b *BotWrapper) SetHandledEndpointCallback(f func(endpoint string, handlerName string))`
++ `func (b *BotWrapper) SetPanicHandler(handler func(v interface{}))`
++ `func (b *BotWrapper) SetReceivedCallback(cb func(endpoint interface{}, received *telebot.Message))`
++ `func (b *BotWrapper) SetAfterRepliedCallback(cb func(received *telebot.Message, replied *telebot.Message, err error))`
++ `func (b *BotWrapper) SetAfterSentCallback(cb func(chat *telebot.Chat, sent *telebot.Message, err error))`

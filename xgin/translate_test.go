@@ -44,9 +44,9 @@ func TestTranslateBindingError(t *testing.T) {
 	}
 	respond := func(c *gin.Context, code int, details map[string]string) {
 		if code == 200 {
-			c.JSON(200, &gin.H{"success": true})
+			c.JSON(200, gin.H{"success": true})
 		} else {
-			c.JSON(code, &gin.H{"success": false, "details": details})
+			c.JSON(code, gin.H{"success": false, "details": details})
 		}
 	}
 

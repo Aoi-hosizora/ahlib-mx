@@ -5,6 +5,8 @@ import (
 	"github.com/Aoi-hosizora/ahlib-web/internal"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/tucnak/telebot.v2"
+	"reflect"
+	"runtime"
 	"time"
 )
 
@@ -64,10 +66,11 @@ func extractReceiveLoggerParam(endpoint string, received *telebot.Message) *Rece
 
 // formatReceiveLoggerParam formats given ReceiveLoggerParam to string for LogReceiveToLogrus and LogReceiveToLogger.
 //
-// Logs like:
+// The default format logs like:
 // 	[Telebot] 3344 |                 /test-endpoint | 12345678 Aoi-hosizora
 // 	[Telebot] 3344 |                       $on_text | 12345678 Aoi-hosizora
-// 	[Telebot] 3344 |                 $rep_btn:reply | 12345678 Aoi-hosizora
+// 	[Telebot] 3344 |          $rep_btn:reply_button | 12345678 Aoi-hosizora
+// 	[Telebot] 3344 |         $inl_btn:inline_button | 12345678 Aoi-hosizora
 // 	         |----| |------------------------------| |--------|------------|
 // 	           4                    30                  ...        ...
 func formatReceiveLoggerParam(p *ReceiveLoggerParam) string {
@@ -187,7 +190,7 @@ func extractReplyLoggerParam(received, replied *telebot.Message, err error) *Rep
 
 // formatReplyLoggerParam formats given ReplyLoggerParam to string for LogReplyToLogrus and LogReplyToLogger.
 //
-// Logs like:
+// The default format logs like:
 // 	[Telebot] Reply to message 3344 from chat '12345678 Aoi-hosizora' failed | telegram: bot was blocked by the user (401)
 // 	[Telebot] 3345 |           2s |   t:text | 3344 | 12345678 Aoi-hosizora
 // 	         |----| |------------| |--------| |----| |--------|------------|
@@ -314,7 +317,7 @@ func extractSendLoggerParam(chat *telebot.Chat, sent *telebot.Message, err error
 
 // formatSendLoggerParam formats given SendLoggerParam to string for LogSendToLogrus and LogSendToLogger.
 //
-// Logs like:
+// The default format logs like:
 // 	[Telebot] Send message to chat '12345678 Aoi-hosizora' failed | telegram: bot was blocked by the user (401)
 // 	[Telebot] 3346 |            x |   t:text |    x | 12345678 Aoi-hosizora
 // 	         |----| |------------| |--------| |----| |--------|------------|
@@ -394,11 +397,11 @@ func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.
 func renderEndpoint(endpoint interface{}) (string, bool) {
 	switch ep := endpoint.(type) {
 	case string:
-		if ep == "" || ep == "\a" {
+		if len(ep) <= 1 || (ep[0] != '/' && ep[0] != '\a') {
 			return "", false // empty
 		}
 		out := ""
-		if len(ep) > 1 && ep[0] == '\a' {
+		if ep[0] == '\a' {
 			out = "$on_" + ep[1:] // OnXXX
 		} else {
 			out = ep // string
@@ -455,4 +458,17 @@ func renderMessageType(m *telebot.Message) string {
 	}
 
 	return "t:" + typ // t:xxx
+}
+
+// handledEndpointCallback renders arguments to string and invokes given callback function.
+func handledEndpointCallback(callback func(string, string), endpoint, handler interface{}) {
+	if callback == nil {
+		return
+	}
+	ep, ok := renderEndpoint(endpoint)
+	if !ok {
+		return
+	}
+	funcname := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
+	callback(ep, funcname)
 }
