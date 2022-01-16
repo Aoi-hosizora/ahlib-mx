@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/http/pprof"
-	"os"
 	"strings"
 )
 
@@ -284,12 +283,4 @@ func (r *RouterDecodeError) Error() string {
 // Unwrap returns the wrapped error from RouterDecodeError.
 func (r *RouterDecodeError) Unwrap() error {
 	return r.Err
-}
-
-// GetProxyEnv lookups and returns three proxy environments, including http_proxy, https_proxy and socks_proxy.
-func GetProxyEnv() (httpProxy string, httpsProxy string, socksProxy string) {
-	hp := strings.TrimSpace(os.Getenv("http_proxy"))
-	hsp := strings.TrimSpace(os.Getenv("https_proxy"))
-	ssp := strings.TrimSpace(os.Getenv("socks_proxy"))
-	return hp, hsp, ssp
 }

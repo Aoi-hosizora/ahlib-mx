@@ -45,7 +45,9 @@ func NewBotWrapper(bot *telebot.Bot) *BotWrapper {
 		handledCallback:   DefaultHandledCallback,
 		receivedCallback:  nil, // defaults to do nothing
 		respondedCallback: nil, // defaults to do nothing
-		panicHandler:      func(_, _, value interface{}) { log.Printf("Warning: Panic with `%v`", value) },
+		panicHandler: func(_, _, value interface{}) {
+			log.Printf("xtelebot warning: Handler panicked with `%v`", value)
+		},
 	}
 }
 
@@ -144,7 +146,7 @@ func (b *BotWrapper) HandleReplyButton(button *telebot.ReplyButton, handler Mess
 	if button == nil {
 		panic(panicNilButton)
 	}
-	if button.Text /* CallbackUnique */ == "" {
+	if button.Text /* CallbackUnique => Text */ == "" {
 		panic(panicEmptyButtonText)
 	}
 	if handler == nil {
@@ -174,7 +176,7 @@ func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler Ca
 	if button == nil {
 		panic(panicNilButton)
 	}
-	if button.Unique /* CallbackUnique, \f... */ == "" {
+	if button.Unique /* CallbackUnique => \fUnique */ == "" {
 		panic(panicEmptyButtonUnique)
 	}
 	if handler == nil {
@@ -215,7 +217,7 @@ const (
 )
 
 // RespondEvent is a type of respond event, containing arguments of respond method (such as BotWrapper.RespondSend) and responded result and error,
-// this will be used in respondedCallback, LogRespondToLogrus and LogRespondToLogger.
+// this will be used in responded callback, LogRespondToLogrus and LogRespondToLogger.
 type RespondEvent struct {
 	// for RespondSendEvent
 	SendSource  *telebot.Chat
@@ -240,12 +242,12 @@ type RespondEvent struct {
 	DeleteSource *telebot.Message
 	DeleteResult *telebot.Message // fake
 
-	// for RespondCallbackEvent (answer callback)
+	// for RespondCallbackEvent
 	CallbackSource *telebot.Callback
 	CallbackAnswer *telebot.CallbackResponse
 	CallbackResult *telebot.CallbackResponse // fake
 
-	// error
+	// ctx and error
 	ReturnedError error
 }
 
@@ -253,7 +255,7 @@ var (
 	errNilChat     = errors.New("xtelebot: nil source chat")
 	errNilMessage  = errors.New("xtelebot: nil source message")
 	errNilCallback = errors.New("xtelebot: nil source callback")
-	errNilWhat     = errors.New("xtelebot: nil what value")
+	errNilWhat     = errors.New("xtelebot: nil respond value")
 )
 
 // RespondSend responds and sends message to given telebot.Chat, if error returned is not caused by arguments, it will also invoke responded callback.
@@ -419,7 +421,7 @@ func (b *BotWrapper) SetRespondedCallback(cb func(typ RespondEventType, event *R
 	b.respondedCallback = cb
 }
 
-// SetPanicHandler sets panic handler to all handlers, notes that the `messageOrCallback` parameter means handler's parameter, that is telebot.Message 
+// SetPanicHandler sets panic handler to all handlers, notes that the `messageOrCallback` parameter means handler's parameter, that is telebot.Message
 // for MessageHandler and telebot.Callback for CallbackHandler, defaults to print warning message with given panicked value.
 func (b *BotWrapper) SetPanicHandler(handler func(endpoint, messageOrCallback, value interface{})) {
 	b.panicHandler = handler

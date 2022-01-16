@@ -5,10 +5,6 @@ import (
 	"gopkg.in/tucnak/telebot.v2"
 	"sync"
 	"testing"
-	"github.com/sirupsen/logrus"
-	"log"
-	"fmt"
-	"time"
 )
 
 func TestMarkups(t *testing.T) {
@@ -39,6 +35,12 @@ func TestMarkups(t *testing.T) {
 		xtesting.Equal(t, replies[0][0], *TextBtn("text1"))
 		xtesting.Equal(t, replies[0][1], *TextBtn("text2"))
 		xtesting.Equal(t, replies[1][0], *TextBtn("text3"))
+
+		rInlines := SetInlineKeyboard(inlines)
+		rReplies := SetReplyKeyboard(replies)
+		xtesting.Equal(t, rInlines.InlineKeyboard, inlines)
+		xtesting.Equal(t, rReplies.ReplyKeyboard, replies)
+		xtesting.Equal(t, rReplies.ResizeReplyKeyboard, true)
 	})
 
 	t.Run("mass_functions", func(t *testing.T) {
@@ -53,13 +55,13 @@ func TestStateHandlerSet(t *testing.T) {
 		shs := NewStateHandlerSet()
 
 		// initial
-		xtesting.Equal(t, shs.IsRegistered(0), false) // IsRegistered
-		xtesting.Nil(t, shs.GetHandler(0)) // GetHandler
+		xtesting.Equal(t, shs.IsRegistered(0), false)
+		xtesting.Nil(t, shs.GetHandler(0))
 
 		// register
-		xtesting.Panic(t, func() { shs.Register(0, nil) }) // Register
+		xtesting.Panic(t, func() { shs.Register(0, nil) })
 		tmp := 0
-		shs.Register(0, func(bw *BotWrapper, m *telebot.Message) { })
+		shs.Register(0, func(bw *BotWrapper, m *telebot.Message) {})
 		xtesting.Equal(t, shs.IsRegistered(0), true)
 		xtesting.NotNil(t, shs.GetHandler(0))
 		shs.Register(0, func(bw *BotWrapper, m *telebot.Message) { tmp++ })
@@ -71,7 +73,7 @@ func TestStateHandlerSet(t *testing.T) {
 		xtesting.Equal(t, tmp, 3)
 
 		// unregister
-		xtesting.NotPanic(t, func() { shs.Unregister(999) }) // Unregister
+		xtesting.NotPanic(t, func() { shs.Unregister(999) })
 		xtesting.True(t, shs.IsRegistered(1))
 		xtesting.NotNil(t, shs.GetHandler(1))
 		shs.Unregister(1)
@@ -88,7 +90,7 @@ func TestStateHandlerSet(t *testing.T) {
 	t.Run("Concurrency", func(t *testing.T) {
 		shs := NewStateHandlerSet()
 		wg := sync.WaitGroup{}
-		f := func(bw *BotWrapper, m *telebot.Message) { }
+		f := func(bw *BotWrapper, m *telebot.Message) {}
 		for i := 0; i < 1000; i++ {
 			wg.Add(1)
 			go func() {
@@ -252,216 +254,3 @@ func TestBotDataCache(t *testing.T) {
 		xtesting.Equal(t, len(bd.caches), 0)
 	})
 }
-
-func TestReceiveLogger(t *testing.T) {
-	l1 := logrus.New()
-	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
-	l2 := log.Default()
-
-	ep := "/test-endpoint"
-	on := "\atext"
-	rep := &telebot.ReplyButton{Text: "test-button1"}
-	inl := &telebot.InlineButton{Unique: "test-button2"}
-
-	for _, std := range []bool{false, true} {
-		for _, custom := range []bool{false, true} {
-			for _, tc := range []struct {
-				giveEndpoint interface{}
-				giveMessage  *telebot.Message
-				giveOptions  []LoggerOption
-			}{
-				{nil, nil, nil},                      // x
-				{"x", nil, nil},                      // x
-				{"x", text, nil},                     // x
-				{&telebot.InlineButton{}, text, nil}, // x
-				{&telebot.ReplyButton{}, text, nil},  // x
-
-				{ep, text, nil},
-				{on, text, nil},
-				{rep, text, nil},
-				{inl, text, nil},
-
-				{ep, text, []LoggerOption{WithExtraText(" | extra")}},
-				{ep, text, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-				{ep, text, []LoggerOption{WithExtraFieldsV("k", "v")}},
-				{ep, text, []LoggerOption{WithExtraText(" | extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-				{ep, text, []LoggerOption{WithExtraText(" | extra"), WithExtraFieldsV("k", "v")}},
-			} {
-				if custom {
-					FormatReceiveFunc = func(p *ReceiveLoggerParam) string {
-						return fmt.Sprintf("[Telebot] %4d - %30s - %d %s", p.MessageID, p.FormattedEp, p.ChatID, p.ChatName)
-					}
-					FieldifyReceiveFunc = func(p *ReceiveLoggerParam) logrus.Fields {
-						return logrus.Fields{"module": "telebot", "action": "received"}
-					}
-				}
-				if !std {
-					LogReceiveToLogrus(l1, tc.giveEndpoint, tc.giveMessage, tc.giveOptions...)
-				} else {
-					LogReceiveToLogger(l2, tc.giveEndpoint, tc.giveMessage, tc.giveOptions...)
-				}
-				if custom {
-					FormatReceiveFunc = nil
-					FieldifyReceiveFunc = nil
-				}
-			}
-		}
-	}
-
-	xtesting.NotPanic(t, func() {
-		LogReceiveToLogrus(l1, "x", nil)
-		LogReceiveToLogger(l2, "x", nil)
-		LogReceiveToLogrus(l1, "", text)
-		LogReceiveToLogger(l2, "\a", text)
-		LogReceiveToLogrus(l1, "\a", text)
-		LogReceiveToLogger(l2, 0, text)
-		LogReceiveToLogrus(l1, nil, nil)
-		LogReceiveToLogger(l2, nil, nil)
-		LogReceiveToLogrus(nil, nil, nil)
-		LogReceiveToLogger(nil, nil, nil)
-	})
-}
-
-/*
-
-func TestReplyLogger(t *testing.T) {
-	l1 := logrus.New()
-	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
-	l2 := log.Default()
-
-	for _, std := range []bool{false, true} {
-		for _, custom := range []bool{false, true} {
-			for _, tc := range []struct {
-				giveReceived *telebot.Message
-				giveReplied  *telebot.Message
-				giveError    error
-				giveOptions  []LoggerOption
-			}{
-				{text, nil, nil, nil},
-				{nil, text, nil, nil},
-				{text, nil, telebot.ErrBlockedByUser, nil},
-
-				{text, text2, nil, nil},
-				{text, photo, nil, nil},
-				{text, sticker, nil, nil},
-				{text, video, nil, nil},
-				{text, audio, nil, nil},
-				{text, voice, nil, nil},
-				{text, loc, nil, nil},
-				{text, animation, nil, nil},
-				{text, dice, nil, nil},
-				{text, document, nil, nil},
-				{text, invoice, nil, nil},
-				{text, poll, nil, nil},
-				{text, venue, nil, nil},
-				{text, videoNote, nil, nil},
-
-				{text, text2, nil, []LoggerOption{WithExtraText(" | extra")}},
-				{text, text2, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-				{text, text2, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
-				{text, text2, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-				{text, text2, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFieldsV("k", "v")}},
-				{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText(" | extra")}},
-				{text, text2, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
-			} {
-				if custom {
-					FormatReplyFunc = func(p *ReplyLoggerParam) string {
-						if p.ErrorMsg != "" {
-							return fmt.Sprintf("[Telebot] err: %s", p.ErrorMsg)
-						}
-						return fmt.Sprintf("[Telebot] %4d - %12s - %8s - %4d - %d %s", p.RepliedID, p.Latency.String(), p.RepliedType, p.ReceivedID, p.ChatID, p.ChatName)
-
-					}
-					FieldifyReplyFunc = func(p *ReplyLoggerParam) logrus.Fields {
-						return logrus.Fields{"module": "telebot", "action": p.Action}
-					}
-				}
-				if !std {
-					LogReplyToLogrus(l1, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
-				} else {
-					LogReplyToLogger(l2, tc.giveReceived, tc.giveReplied, tc.giveError, tc.giveOptions...)
-				}
-				if custom {
-					FormatReplyFunc = nil
-					FieldifyReplyFunc = nil
-				}
-			}
-		}
-	}
-
-	xtesting.NotPanic(t, func() {
-		LogReplyToLogrus(l1, text, nil, nil)
-		LogReplyToLogger(l2, text, nil, nil)
-		LogReplyToLogrus(l1, nil, text, nil)
-		LogReplyToLogger(l2, nil, text, nil)
-		LogReplyToLogrus(l1, nil, nil, nil)
-		LogReplyToLogger(l2, nil, nil, nil)
-		LogReplyToLogrus(nil, nil, nil, nil)
-		LogReplyToLogger(nil, nil, nil, nil)
-	})
-}
-
-func TestSendLogger(t *testing.T) {
-	l1 := logrus.New()
-	l1.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
-	l2 := log.Default()
-
-	for _, std := range []bool{false, true} {
-		for _, custom := range []bool{false, true} {
-			for _, tc := range []struct {
-				giveChat    *telebot.Chat
-				giveSent    *telebot.Message
-				giveError   error
-				giveOptions []LoggerOption
-			}{
-				{nil, text, nil, nil},
-				{chat, nil, nil, nil},
-				{chat, nil, telebot.ErrBlockedByUser, nil},
-
-				{chat, text, nil, nil},
-
-				{chat, text, nil, []LoggerOption{WithExtraText(" | extra")}},
-				{chat, text, nil, []LoggerOption{WithExtraFields(map[string]interface{}{"k": "v"})}},
-				{chat, text, nil, []LoggerOption{WithExtraFieldsV("k", "v")}},
-				{chat, text, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFields(map[string]interface{}{"k": "v"})}},
-				{chat, text, nil, []LoggerOption{WithExtraText(" | extra"), WithExtraFieldsV("k", "v")}},
-				{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraText(" | extra")}},
-				{chat, text, telebot.ErrBlockedByUser, []LoggerOption{WithExtraFieldsV("k", "v")}},
-			} {
-				if custom {
-					FormatRespondFunc = func(p *RespondLoggerParam) string {
-						if p.ErrorMsg != "" {
-							return fmt.Sprintf("[Telebot] err: %s", p.ErrorMsg)
-						}
-						return fmt.Sprintf("[Telebot] %4d - %12s - %8s - %4s - %d %s", p.SentID, "x", p.SentType, "x", p.ChatID, p.ChatName)
-					}
-					FieldifyRespondFunc = func(p *RespondLoggerParam) logrus.Fields {
-						return logrus.Fields{"module": "telebot", "action": p.Action}
-					}
-				}
-				if !std {
-					LogRespondToLogrus(l1, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)
-				} else {
-					LogRespondToLogger(l2, tc.giveChat, tc.giveSent, tc.giveError, tc.giveOptions...)
-				}
-				if custom {
-					FormatRespondFunc = nil
-					FieldifyRespondFunc = nil
-				}
-			}
-		}
-	}
-
-	xtesting.NotPanic(t, func() {
-		LogRespondToLogrus(l1, chat, nil, nil)
-		LogRespondToLogger(l2, chat, nil, nil)
-		LogRespondToLogrus(l1, nil, text, nil)
-		LogRespondToLogger(l2, nil, text, nil)
-		LogRespondToLogrus(l1, nil, nil, nil)
-		LogRespondToLogger(l2, nil, nil, nil)
-		LogRespondToLogrus(nil, nil, nil, nil)
-		LogRespondToLogger(nil, nil, nil, nil)
-	})
-}
-
-*/

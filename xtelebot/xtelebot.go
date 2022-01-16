@@ -3,6 +3,7 @@ package xtelebot
 import (
 	"gopkg.in/tucnak/telebot.v2"
 	"sync"
+	"time"
 )
 
 // ====================
@@ -78,6 +79,16 @@ func ReplyKeyboard(rows ...ReplyRow) [][]telebot.ReplyButton {
 	return out
 }
 
+// SetInlineKeyboard creates a telebot.ReplyMarkup for setting telebot.InlineButton keyboard.
+func SetInlineKeyboard(keyboard [][]telebot.InlineButton) *telebot.ReplyMarkup {
+	return &telebot.ReplyMarkup{InlineKeyboard: keyboard}
+}
+
+// SetReplyKeyboard creates a telebot.ReplyMarkup for setting telebot.ReplyButton keyboard with ResizeReplyKeyboard enabled.
+func SetReplyKeyboard(keyboard [][]telebot.ReplyButton) *telebot.ReplyMarkup {
+	return &telebot.ReplyMarkup{ReplyKeyboard: keyboard, ResizeReplyKeyboard: true /* defaults to enable */}
+}
+
 // RemoveInlineKeyboard creates a telebot.ReplyMarkup for removing telebot.InlineButton keyboard.
 func RemoveInlineKeyboard() *telebot.ReplyMarkup {
 	return &telebot.ReplyMarkup{InlineKeyboard: nil /* dummy */}
@@ -91,6 +102,11 @@ func RemoveReplyKeyboard() *telebot.ReplyMarkup {
 // CallbackShowAlert creates a telebot.CallbackResponse for showing alert in telebot.Callback.
 func CallbackShowAlert(text string, showAlert bool) *telebot.CallbackResponse {
 	return &telebot.CallbackResponse{Text: text, ShowAlert: showAlert}
+}
+
+// LongPoller creates a telebot.LongPoller with given second.
+func LongPoller(second int) *telebot.LongPoller {
+	return &telebot.LongPoller{Timeout: time.Duration(second) * time.Second} // the most small unit is second
 }
 
 // ==================
@@ -305,7 +321,7 @@ func (b *BotData) GetChatCaches(chatID int64) (map[string]interface{}, bool) {
 	return m, true
 }
 
-// SetCache sets a chat's cache data using the given key and value.
+// SetCache sets a chat's cache data using given key and value.
 func (b *BotData) SetCache(chatID int64, key string, value interface{}) {
 	b.muC.Lock()
 	m, ok := b.caches[chatID]

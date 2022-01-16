@@ -46,9 +46,12 @@
 + `func URLBtn(text, url string) *telebot.InlineButton`
 + `func InlineKeyboard(rows ...InlineRow) [][]telebot.InlineButton`
 + `func ReplyKeyboard(rows ...ReplyRow) [][]telebot.ReplyButton`
++ `func SetInlineKeyboard(keyboard [][]telebot.InlineButton) *telebot.ReplyMarkup`
++ `func SetReplyKeyboard(keyboard [][]telebot.ReplyButton) *telebot.ReplyMarkup`
 + `func RemoveInlineKeyboard() *telebot.ReplyMarkup`
 + `func RemoveReplyKeyboard() *telebot.ReplyMarkup`
 + `func CallbackShowAlert(text string, showAlert bool) *telebot.CallbackResponse`
++ `func LongPoller(second int) *telebot.LongPoller`
 + `func NewStateHandlerSet() *StateHandlerSet`
 + `func NewBotData() *BotData`
 + `func NewBotWrapper(bot *telebot.Bot) *BotWrapper`

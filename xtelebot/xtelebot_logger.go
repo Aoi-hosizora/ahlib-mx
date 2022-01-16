@@ -151,8 +151,10 @@ func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, received 
 // RespondLoggerParam stores some respond-event (RespondEvent) logger parameters and is used by LogRespondToLogrus and LogRespondToLogger.
 type RespondLoggerParam struct {
 	// origin
-	EventType      RespondEventType
-	Event          *RespondEvent
+	EventType RespondEventType
+	Event     *RespondEvent
+
+	// extracted origin
 	SourceChat     *telebot.Chat             // sc: send, rep, edit, del, call
 	SourceMessage  *telebot.Message          // sm:       rep, edit, del, call
 	SourceCallback *telebot.Callback         // sl:                       call
@@ -182,7 +184,7 @@ var (
 	FieldifyRespondFunc func(p *RespondLoggerParam) logrus.Fields
 )
 
-// extractRespondLoggerParam extracts and returns RespondLoggerParam using given parameters.
+// extractRespondLoggerParam extracts and returns RespondLoggerParam using given parameters, this unexported never panic.
 func extractRespondLoggerParam(typ RespondEventType, ev *RespondEvent) *RespondLoggerParam {
 	p := &RespondLoggerParam{EventType: typ, Event: ev}
 	var sc *telebot.Chat             // source
@@ -196,21 +198,31 @@ func extractRespondLoggerParam(typ RespondEventType, ev *RespondEvent) *RespondL
 		sc = ev.SendSource
 		rm = ev.SendResult
 	case RespondReplyEvent:
-		sc = ev.ReplySource.Chat
 		sm = ev.ReplySource
+		if ev.ReplySource != nil {
+			sc = ev.ReplySource.Chat
+		}
 		rm = ev.ReplyResult
 	case RespondEditEvent:
-		sc = ev.EditSource.Chat
 		sm = ev.EditSource
+		if ev.EditSource != nil {
+			sc = ev.EditSource.Chat
+		}
 		rm = ev.EditResult
 	case RespondDeleteEvent:
-		sc = ev.DeleteSource.Chat
 		sm = ev.DeleteSource
+		if ev.DeleteSource != nil {
+			sc = ev.DeleteSource.Chat
+		}
 		rm = ev.DeleteResult
 	case RespondCallbackEvent:
-		sc = ev.CallbackSource.Message.Chat
-		sm = ev.CallbackSource.Message
 		sl = ev.CallbackSource
+		if ev.CallbackSource != nil {
+			sm = ev.CallbackSource.Message
+			if ev.CallbackSource.Message != nil {
+				sc = ev.CallbackSource.Message.Chat
+			}
+		}
 		ra = ev.CallbackResult
 	default:
 		return nil
@@ -239,18 +251,21 @@ func extractRespondLoggerParam(typ RespondEventType, ev *RespondEvent) *RespondL
 	if ra != nil {
 		p.ResultAnswer = ra
 	}
-	if typ == RespondReplyEvent && sm != nil && rm != nil {
-		latency := rm.Time().Sub(sm.Time())
+	if typ == RespondReplyEvent {
+		latency := time.Duration(-1)
+		if sm != nil && rm != nil {
+			latency = rm.Time().Sub(sm.Time())
+		}
 		p.ReplyLatency = &latency
 	}
-	if typ == RespondCallbackEvent && ra != nil {
-		s := ""
-		if strings.TrimSpace(ra.Text) == "" {
-			s = "-"
-		} else if ra.ShowAlert {
-			s = "with_alert"
-		} else {
-			s = "with_text"
+	if typ == RespondCallbackEvent {
+		s := "-"
+		if ra != nil && strings.TrimSpace(ra.Text) != "" {
+			if ra.ShowAlert {
+				s = "with_alert"
+			} else {
+				s = "with_text"
+			}
 		}
 		p.CallbackAlert = &s
 	}
@@ -264,7 +279,7 @@ func extractRespondLoggerParam(typ RespondEventType, ev *RespondEvent) *RespondL
 // colorizeEventType colorizes and truncates to 4 characters given RespondEventType to string.
 func colorizeEventType(typ RespondEventType) string {
 	switch typ {
-	case "": // hack for receive
+	case "": // trick for receive log
 		return xcolor.Blue.Sprintf("recv")
 	case RespondSendEvent:
 		return xcolor.Green.Sprint("send")
