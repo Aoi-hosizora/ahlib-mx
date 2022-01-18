@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/http/pprof"
@@ -299,10 +300,10 @@ func EnableRFC3339DateTimeBindingTranslator(translator xvalidator.UtTranslator) 
 
 // HideDebugPrintRoute hides the gin.DebugPrintRouteFunc logging and returns a function to restore this behavior.
 func HideDebugPrintRoute() (restoreFn func()) {
-	printFn := gin.DebugPrintRouteFunc
+	originFunc := gin.DebugPrintRouteFunc
 	gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {}
 	return func() {
-		gin.DebugPrintRouteFunc = printFn
+		gin.DebugPrintRouteFunc = originFunc
 	}
 }
 
@@ -331,4 +332,13 @@ func (r *RouterDecodeError) Error() string {
 // Unwrap returns the wrapped error from RouterDecodeError.
 func (r *RouterDecodeError) Unwrap() error {
 	return r.Err
+}
+
+// NewEngineWithoutDebugWarning creates a new gin.Engine without gin.debugPrintWARNINGNew behavior.
+func NewEngineWithoutDebugWarning() *gin.Engine {
+	originWriter := gin.DefaultWriter
+	gin.DefaultWriter = io.Discard
+	engine := gin.New()
+	gin.DefaultWriter = originWriter
+	return engine
 }

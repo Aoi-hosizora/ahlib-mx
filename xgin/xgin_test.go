@@ -111,8 +111,8 @@ func TestDumpRequest(t *testing.T) {
 }
 
 func TestWrapPprof(t *testing.T) {
-	gin.SetMode(gin.ReleaseMode)
-	app := gin.New()
+	gin.SetMode(gin.DebugMode)
+	app := NewEngineWithoutDebugWarning()
 	rfn := HideDebugPrintRoute()
 	WrapPprof(app)
 	rfn()

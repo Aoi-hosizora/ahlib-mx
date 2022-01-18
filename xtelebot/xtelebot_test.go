@@ -318,8 +318,11 @@ func TestBotWrapperWithPoll(t *testing.T) {
 				defer close(chs[1])
 				atomic.AddInt32(&count, 1)
 				origin := br.panicHandler
-				defer br.SetPanicHandler(origin)
-				br.SetPanicHandler(func(v interface{}) { l.Errorf("Panic with `%v`", v) })
+				br.SetPanicHandler(func(endpoint interface{}, v interface{}) {
+					r, _ := renderEndpoint(endpoint)
+					l.Errorf(">> Panic with `%v` | %s", v, r)
+					br.SetPanicHandler(origin)
+				})
 				panic("test panic 2")
 			}
 		})

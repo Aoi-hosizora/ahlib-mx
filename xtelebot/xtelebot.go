@@ -198,7 +198,7 @@ type BotWrapper struct {
 	data *BotData
 
 	endpointHandledCallback func(endpoint string, handlerName string)
-	panicHandler            func(v interface{})
+	panicHandler            func(endpoint interface{}, v interface{})
 	receivedCallback        func(endpoint interface{}, received *telebot.Message)
 	afterRepliedCallback    func(received *telebot.Message, replied *telebot.Message, err error)
 	afterSentCallback       func(chat *telebot.Chat, sent *telebot.Message, err error)
@@ -220,7 +220,9 @@ func NewBotWrapper(bot *telebot.Bot) *BotWrapper {
 		endpointHandledCallback: func(endpoint string, handlerName string) {
 			fmt.Printf("[Bot-debug] %-30s --> %s\n", endpoint, handlerName)
 		},
-		panicHandler: func(v interface{}) { log.Printf("Warning: Panic with `%v`", v) },
+		panicHandler: func(endpoint interface{}, v interface{}) {
+			log.Printf("Warning: Panic with `%v`", v)
+		},
 	}
 }
 
@@ -260,7 +262,7 @@ func (b *BotWrapper) HandleCommand(command string, handler MessageHandler) {
 	b.bot.Handle(command, func(m *telebot.Message) {
 		defer func() {
 			if v := recover(); v != nil && b.panicHandler != nil {
-				b.panicHandler(v)
+				b.panicHandler(command, v)
 			}
 		}()
 		if b.receivedCallback != nil {
@@ -285,7 +287,7 @@ func (b *BotWrapper) HandleReplyButton(button *telebot.ReplyButton, handler Mess
 	b.bot.Handle(button, func(m *telebot.Message) {
 		defer func() {
 			if v := recover(); v != nil && b.panicHandler != nil {
-				b.panicHandler(v)
+				b.panicHandler(button, v)
 			}
 		}()
 		if b.receivedCallback != nil {
@@ -310,7 +312,7 @@ func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler Ca
 	b.bot.Handle(button, func(c *telebot.Callback) {
 		defer func() {
 			if v := recover(); v != nil && b.panicHandler != nil {
-				b.panicHandler(v)
+				b.panicHandler(button, v)
 			}
 		}()
 		if b.receivedCallback != nil {
@@ -371,7 +373,7 @@ func (b *BotWrapper) SetEndpointHandledCallback(f func(endpoint string, handlerN
 }
 
 // SetPanicHandler sets panic handler for all endpoint handlers.
-func (b *BotWrapper) SetPanicHandler(handler func(v interface{})) {
+func (b *BotWrapper) SetPanicHandler(handler func(endpoint interface{}, v interface{})) {
 	b.panicHandler = handler
 }
 

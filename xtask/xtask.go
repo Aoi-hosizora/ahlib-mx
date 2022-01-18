@@ -10,18 +10,19 @@ import (
 	"runtime"
 )
 
-// CronWrapper represents a cron.Cron wrapper type with some helper functions.
-type CronWrapper struct {
+// CronTask represents a task, or job collection, which is implemented by wrapping cron.Cron.
+type CronTask struct {
 	cron *cron.Cron
 	jobs []*FuncJob
 
 	jobAddedCallback   func(job *FuncJob)
 	jobRemovedCallback func(job *FuncJob)
-	panicHandler       func(v interface{})
-	errorHandler       func(err error)
+	beforeJobCallback  func(job *FuncJob)
+	panicHandler       func(job *FuncJob, v interface{})
+	errorHandler       func(job *FuncJob, err error)
 }
 
-// FuncJob represents a cron.Job with some information such as title, cron.Schedule and cron.Entry, stored in CronWrapper.
+// FuncJob represents a cron.Job with some information such as title, cron.Schedule and cron.Entry, stored in CronTask.
 type FuncJob struct {
 	title    string
 	cronSpec string
@@ -30,18 +31,18 @@ type FuncJob struct {
 	entry    *cron.Entry
 	entryID  cron.EntryID
 
-	parent *CronWrapper
+	parent *CronTask
 }
 
 var _ cron.Job = (*FuncJob)(nil)
 
-// ===========
-// CronWrapper
-// ===========
+// ========
+// CronTask
+// ========
 
-// NewCronWrapper creates a default CronWrapper with given cron.Cron and default callbacks and handlers.
-func NewCronWrapper(c *cron.Cron) *CronWrapper {
-	return &CronWrapper{
+// NewCronTask creates a default CronTask with given cron.Cron and default callbacks and handlers.
+func NewCronTask(c *cron.Cron) *CronTask {
+	return &CronTask{
 		cron: c,
 		jobs: make([]*FuncJob, 0),
 
@@ -51,29 +52,29 @@ func NewCronWrapper(c *cron.Cron) *CronWrapper {
 		jobRemovedCallback: func(j *FuncJob) {
 			fmt.Printf("[Task-debug] Remove job: %s, EntryID: %d\n", j.Title(), j.EntryID())
 		},
-		panicHandler: func(v interface{}) {
-			log.Printf("Warning: Panic with `%v`", v)
+		panicHandler: func(job *FuncJob, v interface{}) {
+			log.Printf("Warning: Job %s panics with `%v`", job.title, v)
 		},
 	}
 }
 
-// Cron returns cron.Cron from CronWrapper.
-func (c *CronWrapper) Cron() *cron.Cron {
+// Cron returns cron.Cron from CronTask.
+func (c *CronTask) Cron() *cron.Cron {
 	return c.cron
 }
 
-// Jobs returns FuncJob slice from CronWrapper.
-func (c *CronWrapper) Jobs() []*FuncJob {
+// Jobs returns FuncJob slice from CronTask.
+func (c *CronTask) Jobs() []*FuncJob {
 	return c.jobs
 }
 
-// ScheduleParser returns cron.ScheduleParser from cron.Cron in CronWrapper.
-func (c *CronWrapper) ScheduleParser() cron.ScheduleParser {
+// ScheduleParser returns cron.ScheduleParser from cron.Cron in CronTask.
+func (c *CronTask) ScheduleParser() cron.ScheduleParser {
 	return xreflect.GetUnexportedField(xreflect.FieldValueOf(c.cron, "parser")).Interface().(cron.ScheduleParser)
 }
 
-// newFuncJob creates a FuncJob with given parameters with CronWrapper parent.
-func (c *CronWrapper) newFuncJob(title string, spec string, schedule cron.Schedule, f func() error) *FuncJob {
+// newFuncJob creates a FuncJob with given parameters with CronTask parent.
+func (c *CronTask) newFuncJob(title string, spec string, schedule cron.Schedule, f func() error) *FuncJob {
 	return &FuncJob{parent: c, title: title, cronSpec: spec, schedule: schedule, function: f}
 }
 
@@ -82,8 +83,8 @@ const (
 	panicNilSchedule = "xtask: nil schedule"
 )
 
-// AddJobByCronSpec adds a FuncJob to cron.Cron and CronWrapper by given title, cron spec and function.
-func (c *CronWrapper) AddJobByCronSpec(title string, spec string, f func() error) (cron.EntryID, error) {
+// AddJobByCronSpec adds a FuncJob to cron.Cron and CronTask by given title, cron spec and function.
+func (c *CronTask) AddJobByCronSpec(title string, spec string, f func() error) (cron.EntryID, error) {
 	if f == nil {
 		panic(panicNilFunction)
 	}
@@ -103,8 +104,8 @@ func (c *CronWrapper) AddJobByCronSpec(title string, spec string, f func() error
 	return id, nil
 }
 
-// AddJobBySchedule adds a FuncJob to cron.Cron and CronWrapper by given title, cron.Schedule and function.
-func (c *CronWrapper) AddJobBySchedule(title string, schedule cron.Schedule, f func() error) cron.EntryID {
+// AddJobBySchedule adds a FuncJob to cron.Cron and CronTask by given title, cron.Schedule and function.
+func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func() error) cron.EntryID {
 	if schedule == nil {
 		panic(panicNilSchedule)
 	}
@@ -124,8 +125,8 @@ func (c *CronWrapper) AddJobBySchedule(title string, schedule cron.Schedule, f f
 	return id
 }
 
-// RemoveJob removes a cron.Entry by given cron.EntryID from cron.Cron and CronWrapper.
-func (c *CronWrapper) RemoveJob(id cron.EntryID) {
+// RemoveJob removes a cron.Entry by given cron.EntryID from cron.Cron and CronTask.
+func (c *CronTask) RemoveJob(id cron.EntryID) {
 	c.cron.Remove(id)
 	c.jobs = xslice.DeleteAllWithG(c.jobs, &FuncJob{entryID: id}, func(i, j interface{}) bool {
 		if i.(*FuncJob).entryID == j.(*FuncJob).entryID {
@@ -146,7 +147,7 @@ func (c *CronWrapper) RemoveJob(id cron.EntryID) {
 // 	[Task-debug] job4, <parsed SpecSchedule>   --> ... (EntryID: 4)
 // 	            |-----------------------------|   |----------------|
 // 	                          29                          ...
-func (c *CronWrapper) SetJobAddedCallback(cb func(job *FuncJob)) {
+func (c *CronTask) SetJobAddedCallback(cb func(job *FuncJob)) {
 	c.jobAddedCallback = cb
 }
 
@@ -154,17 +155,22 @@ func (c *CronWrapper) SetJobAddedCallback(cb func(job *FuncJob)) {
 //
 // The default callback logs like:
 // 	[Task-debug] Remove job: job3, EntryID: 3
-func (c *CronWrapper) SetJobRemovedCallback(cb func(job *FuncJob)) {
+func (c *CronTask) SetJobRemovedCallback(cb func(job *FuncJob)) {
 	c.jobRemovedCallback = cb
 }
 
-// SetPanicHandler sets panic handler for jobs executing.
-func (c *CronWrapper) SetPanicHandler(handler func(v interface{})) {
+// SetBeforeJobCallback sets job executing callback, this will be invoked before FuncJob executed, defaults to do nothing.
+func (c *CronTask) SetBeforeJobCallback(cb func(job *FuncJob)) {
+	c.beforeJobCallback = cb
+}
+
+// SetPanicHandler sets panic handler for jobs executing, defaults to print warning message.
+func (c *CronTask) SetPanicHandler(handler func(job *FuncJob, v interface{})) {
 	c.panicHandler = handler
 }
 
-// SetErrorHandler sets error handler for jobs executing.
-func (c *CronWrapper) SetErrorHandler(handler func(err error)) {
+// SetErrorHandler sets error handler for jobs executing, defaults to do nothing.
+func (c *CronTask) SetErrorHandler(handler func(job *FuncJob, err error)) {
 	c.errorHandler = handler
 }
 
@@ -221,12 +227,15 @@ func (f *FuncJob) Run() {
 	defer func() {
 		v := recover()
 		if v != nil && f.parent.panicHandler != nil {
-			f.parent.panicHandler(v) // defaults to log warning
+			f.parent.panicHandler(f, v) // defaults to log warning
 		}
 	}()
 
+	if f.parent.beforeJobCallback != nil {
+		f.parent.beforeJobCallback(f) // defaults to ignore
+	}
 	err := f.function()
 	if err != nil && f.parent.errorHandler != nil {
-		f.parent.errorHandler(err) // defaults to ignore
+		f.parent.errorHandler(f, err) // defaults to ignore
 	}
 }

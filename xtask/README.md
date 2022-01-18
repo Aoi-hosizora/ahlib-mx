@@ -9,7 +9,7 @@
 
 ### Types
 
-+ `type CronWrapper struct`
++ `type CronTask struct`
 + `type FuncJob struct`
 
 ### Variables
@@ -22,20 +22,21 @@
 
 ### Functions
 
-+ `func NewCronWrapper(c *cron.Cron) *CronWrapper`
++ `func NewCronTask(c *cron.Cron) *CronTask`
 
 ### Methods
 
-+ `func (c *CronWrapper) Cron() *cron.Cron`
-+ `func (c *CronWrapper) Jobs() []*FuncJob`
-+ `func (c *CronWrapper) ScheduleParser() cron.ScheduleParser`
-+ `func (c *CronWrapper) AddJobByCronSpec(title string, spec string, f func() error) (cron.EntryID, error)`
-+ `func (c *CronWrapper) AddJobBySchedule(title string, schedule cron.Schedule, f func() error) cron.EntryID`
-+ `func (c *CronWrapper) RemoveJob(id cron.EntryID)`
-+ `func (c *CronWrapper) SetJobAddedCallback(cb func(job *FuncJob))`
-+ `func (c *CronWrapper) SetJobRemovedCallback(cb func(job *FuncJob))`
-+ `func (c *CronWrapper) SetPanicHandler(handler func(v interface{}))`
-+ `func (c *CronWrapper) SetErrorHandler(handler func(err error))`
++ `func (c *CronTask) Cron() *cron.Cron`
++ `func (c *CronTask) Jobs() []*FuncJob`
++ `func (c *CronTask) ScheduleParser() cron.ScheduleParser`
++ `func (c *CronTask) AddJobByCronSpec(title string, spec string, f func() error) (cron.EntryID, error)`
++ `func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func() error) cron.EntryID`
++ `func (c *CronTask) RemoveJob(id cron.EntryID)`
++ `func (c *CronTask) SetJobAddedCallback(cb func(job *FuncJob))`
++ `func (c *CronTask) SetJobRemovedCallback(cb func(job *FuncJob))`
++ `func (c *CronTask) SetBeforeJobCallback(cb func(job *FuncJob))`
++ `func (c *CronTask) SetPanicHandler(handler func(job *FuncJob, v interface{}))`
++ `func (c *CronTask) SetErrorHandler(handler func(job *FuncJob, err error))`
 + `func (f *FuncJob) Title() string`
 + `func (f *FuncJob) CronSpec() string`
 + `func (f *FuncJob) Schedule() cron.Schedule`
