@@ -3,8 +3,8 @@
 ## Dependencies
 
 + github.com/Aoi-hosizora/ahlib
-+ github.com/go-playground/universal-translator
 + github.com/go-playground/validator/v10
++ github.com/go-playground/universal-translator
 + github.com/go-playground/locales
 
 ## Documents

@@ -197,7 +197,7 @@ type BotWrapper struct {
 	bot  *telebot.Bot
 	data *BotData
 
-	handledEndpointCallback func(endpoint string, handlerName string)
+	endpointHandledCallback func(endpoint string, handlerName string)
 	panicHandler            func(v interface{})
 	receivedCallback        func(endpoint interface{}, received *telebot.Message)
 	afterRepliedCallback    func(received *telebot.Message, replied *telebot.Message, err error)
@@ -217,7 +217,7 @@ func NewBotWrapper(bot *telebot.Bot) *BotWrapper {
 		bot:  bot,
 		data: NewBotData(),
 
-		handledEndpointCallback: func(endpoint string, handlerName string) {
+		endpointHandledCallback: func(endpoint string, handlerName string) {
 			fmt.Printf("[Bot-debug] %-30s --> %s\n", endpoint, handlerName)
 		},
 		panicHandler: func(v interface{}) { log.Printf("Warning: Panic with `%v`", v) },
@@ -268,7 +268,7 @@ func (b *BotWrapper) HandleCommand(command string, handler MessageHandler) {
 		}
 		handler(b, m)
 	})
-	handledEndpointCallback(b.handledEndpointCallback, command, handler)
+	handledEndpointCallback(b.endpointHandledCallback, command, handler)
 }
 
 // HandleReplyButton adds telebot.ReplyButton and MessageHandler to telebot.Bot.
@@ -293,7 +293,7 @@ func (b *BotWrapper) HandleReplyButton(button *telebot.ReplyButton, handler Mess
 		}
 		handler(b, m)
 	})
-	handledEndpointCallback(b.handledEndpointCallback, button, handler)
+	handledEndpointCallback(b.endpointHandledCallback, button, handler)
 }
 
 // HandleInlineButton adds telebot.InlineButton and CallbackHandler to telebot.Bot.
@@ -318,7 +318,7 @@ func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler Ca
 		}
 		handler(b, c)
 	})
-	handledEndpointCallback(b.handledEndpointCallback, button, handler)
+	handledEndpointCallback(b.endpointHandledCallback, button, handler)
 }
 
 var (
@@ -357,17 +357,17 @@ func (b *BotWrapper) SendTo(chat *telebot.Chat, what interface{}, options ...int
 	return msg, err
 }
 
-// SetHandledEndpointCallback sets endpoint handled callback, defaults to print the debug message.
+// SetEndpointHandledCallback sets endpoint handled callback, defaults to print the debug message.
 //
-// The default handler logs like:
+// The default callback logs like:
 // 	[Bot-debug] /test-endpoint                 --> ...
 // 	[Bot-debug] $on_text                       --> ...
 // 	[Bot-debug] $rep_btn:reply_button          --> ...
 // 	[Bot-debug] $inl_btn:inline_button         --> ...
 // 	           |------------------------------|   |---|
 // 	                          30                   ...
-func (b *BotWrapper) SetHandledEndpointCallback(f func(endpoint string, handlerName string)) {
-	b.handledEndpointCallback = f
+func (b *BotWrapper) SetEndpointHandledCallback(f func(endpoint string, handlerName string)) {
+	b.endpointHandledCallback = f
 }
 
 // SetPanicHandler sets panic handler for all endpoint handlers.

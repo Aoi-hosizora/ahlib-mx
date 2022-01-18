@@ -2,6 +2,7 @@
 
 ## Dependencies
 
++ github.com/Aoi-hosizora/ahlib
 + gopkg.in/tucnak/telebot.v2
 + github.com/sirupsen/logrus
 
@@ -70,7 +71,7 @@
 + `func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler CallbackHandler)`
 + `func (b *BotWrapper) ReplyTo(received *telebot.Message, what interface{}, options ...interface{}) (*telebot.Message, error)`
 + `func (b *BotWrapper) SendTo(chat *telebot.Chat, what interface{}, options ...interface{}) (*telebot.Message, error)`
-+ `func (b *BotWrapper) SetHandledEndpointCallback(f func(endpoint string, handlerName string))`
++ `func (b *BotWrapper) SetEndpointHandledCallback(f func(endpoint string, handlerName string))`
 + `func (b *BotWrapper) SetPanicHandler(handler func(v interface{}))`
 + `func (b *BotWrapper) SetReceivedCallback(cb func(endpoint interface{}, received *telebot.Message))`
 + `func (b *BotWrapper) SetAfterRepliedCallback(cb func(received *telebot.Message, replied *telebot.Message, err error))`

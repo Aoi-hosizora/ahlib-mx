@@ -292,7 +292,7 @@ func TestBotWrapperWithPoll(t *testing.T) {
 	l.SetLevel(logrus.TraceLevel)
 	l.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
 
-	br.SetHandledEndpointCallback(func(endpoint string, handlerName string) {
+	br.SetEndpointHandledCallback(func(endpoint string, handlerName string) {
 		l.Debugf("[Telebot] %-12s | %s\n", endpoint, handlerName)
 	})
 	br.SetReceivedCallback(func(endpoint interface{}, received *telebot.Message) {
@@ -379,7 +379,7 @@ func TestBotWrapperWithPoll(t *testing.T) {
 		xtesting.Equal(t, int(atomic.LoadInt32(&count)), 7)
 	})
 
-	t.Run("handledEndpointCallback", func(t *testing.T) {
+	t.Run("endpointHandledCallback", func(t *testing.T) {
 		// hack
 		handledEndpointCallback(nil, "/aaa", func() {})
 		handledEndpointCallback(func(s string, s2 string) {}, "", func() {})
