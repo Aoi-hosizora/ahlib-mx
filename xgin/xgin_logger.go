@@ -90,7 +90,7 @@ func formatResponseLoggerParam(p *ResponseLoggerParam) string {
 	if FormatResponseFunc != nil {
 		return FormatResponseFunc(p)
 	}
-	msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", p.Status, p.Latency.String(), p.ClientIP, xnumber.RenderByte(float64(p.Length)), p.Method, p.Path)
+	msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", p.Status, p.Latency.String(), p.ClientIP, xnumber.FormatByteSize(float64(p.Length)), p.Method, p.Path)
 	if p.ErrorMsg != "" {
 		msg += fmt.Sprintf(" | err: %s", p.ErrorMsg)
 	}

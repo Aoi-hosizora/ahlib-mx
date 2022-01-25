@@ -67,29 +67,43 @@ func TestValidateFieldsErrorAndTranslate(t *testing.T) {
 	err := &ValidateFieldsError{fields: []error{nil, errors.New("xxx")}}
 	xtesting.Equal(t, len(err.Translate(tr, true)), 0)
 
-	// SplitValidationErrors
-	fe1 = SplitValidationErrors(fe, true)
-	fe2 = SplitValidationErrors(fe, false)
-	xtesting.Equal(t, fe1["s.int"], "Field validation for 'int' failed on the 'required' tag")
-	xtesting.Equal(t, fe1["s.str"], "Field validation for 'str' failed on the 'required' tag")
-	xtesting.Equal(t, fe2["int"], "Field validation for 'int' failed on the 'required' tag")
-	xtesting.Equal(t, fe2["str"], "Field validation for 'str' failed on the 'required' tag")
+	// FlatValidateErrors
+	fe3 := FlatValidateErrors(fe, true)
+	fe4 := FlatValidateErrors(fe, false)
+	xtesting.Equal(t, fe3["s.int"], "Field validation for 'int' failed on the 'required' tag")
+	xtesting.Equal(t, fe3["s.str"], "Field validation for 'str' failed on the 'required' tag")
+	xtesting.Equal(t, fe4["int"], "Field validation for 'int' failed on the 'required' tag")
+	xtesting.Equal(t, fe4["str"], "Field validation for 'str' failed on the 'required' tag")
 
-	// ValidateFieldsError.SplitToMap
-	ve1 = ve.SplitToMap(true)
-	ve2 = ve.SplitToMap(false)
-	xtesting.Equal(t, ve1["s.int"], "Int field must be set and can not be zero")
-	xtesting.Equal(t, ve1["s.str"], "Field validation for 'str' failed on the 'required' tag")
-	xtesting.Equal(t, ve2["int"], "Int field must be set and can not be zero")
-	xtesting.Equal(t, ve2["str"], "Field validation for 'str' failed on the 'required' tag")
-	xtesting.Equal(t, len(err.SplitToMap(true)), 0)
+	// ValidateFieldsError.FlatToMap
+	ve3 := ve.FlatToMap(true)
+	ve4 := ve.FlatToMap(false)
+	xtesting.Equal(t, ve3["s.int"], "Int field must be set and can not be zero")
+	xtesting.Equal(t, ve3["s.str"], "Field validation for 'str' failed on the 'required' tag")
+	xtesting.Equal(t, ve4["int"], "Int field must be set and can not be zero")
+	xtesting.Equal(t, ve4["str"], "Field validation for 'str' failed on the 'required' tag")
+	xtesting.Equal(t, len(err.FlatToMap(true)), 0)
+
+	// FlattedMapToError
+	ferr := FlattedMapToError(nil)
+	xtesting.Nil(t, ferr)
+	ferr = FlattedMapToError(map[string]string{})
+	xtesting.Nil(t, ferr)
+	ferr = FlattedMapToError(fe2)
+	xtesting.Equal(t, ferr.Error(), "int is a required field; str is a required field")
+	ferr = FlattedMapToError(ve2)
+	xtesting.Equal(t, ferr.Error(), "Int field must be set and can not be zero; str is a required field")
+	ferr = FlattedMapToError(fe4)
+	xtesting.Equal(t, ferr.Error(), "Field validation for 'int' failed on the 'required' tag; Field validation for 'str' failed on the 'required' tag")
+	ferr = FlattedMapToError(ve4)
+	xtesting.Equal(t, ferr.Error(), "Int field must be set and can not be zero; Field validation for 'str' failed on the 'required' tag")
 }
 
 func TestCustomStructValidator(t *testing.T) {
 	v := NewCustomStructValidator()
 	v.SetValidatorTagName("binding")
 	v.SetMessageTagName("message")
-	UseTagAsFieldName(v.ValidateEngine(), "json")
+	v.SetFieldNameTag("json")
 	tr, _ := ApplyTranslator(v.ValidateEngine(), EnLocaleTranslator(), EnTranslationRegisterFunc())
 	xtesting.Equal(t, v.Engine(), v.ValidateEngine())
 

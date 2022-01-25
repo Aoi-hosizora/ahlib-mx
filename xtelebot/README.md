@@ -71,8 +71,8 @@
 + `func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler CallbackHandler)`
 + `func (b *BotWrapper) ReplyTo(received *telebot.Message, what interface{}, options ...interface{}) (*telebot.Message, error)`
 + `func (b *BotWrapper) SendTo(chat *telebot.Chat, what interface{}, options ...interface{}) (*telebot.Message, error)`
-+ `func (b *BotWrapper) SetEndpointHandledCallback(f func(endpoint string, handlerName string))`
-+ `func (b *BotWrapper) SetPanicHandler(handler func(endpoint interface{}, v interface{}))`
++ `func (b *BotWrapper) SetHandledCallback(f func(endpoint interface{}, formattedEndpoint string, handlerName string))`
 + `func (b *BotWrapper) SetReceivedCallback(cb func(endpoint interface{}, received *telebot.Message))`
-+ `func (b *BotWrapper) SetAfterRepliedCallback(cb func(received *telebot.Message, replied *telebot.Message, err error))`
-+ `func (b *BotWrapper) SetAfterSentCallback(cb func(chat *telebot.Chat, sent *telebot.Message, err error))`
++ `func (b *BotWrapper) SetRepliedCallback(cb func(received *telebot.Message, replied *telebot.Message, err error))`
++ `func (b *BotWrapper) SetSentCallback(cb func(chat *telebot.Chat, sent *telebot.Message, err error))`
++ `func (b *BotWrapper) SetPanicHandler(handler func(endpoint interface{}, v interface{}))`

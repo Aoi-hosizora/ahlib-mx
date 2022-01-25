@@ -10,16 +10,17 @@ import (
 	"runtime"
 )
 
-// CronTask represents a task, or job collection, which is implemented by wrapping cron.Cron.
+// CronTask represents a task, or a job collection, which is implemented by wrapping cron.Cron.
 type CronTask struct {
 	cron *cron.Cron
 	jobs []*FuncJob
 
-	jobAddedCallback   func(job *FuncJob)
-	jobRemovedCallback func(job *FuncJob)
-	beforeJobCallback  func(job *FuncJob)
-	panicHandler       func(job *FuncJob, v interface{})
-	errorHandler       func(job *FuncJob, err error)
+	jobAddedCallback     func(job *FuncJob)
+	jobRemovedCallback   func(job *FuncJob)
+	jobScheduledCallback func(job *FuncJob)
+
+	panicHandler func(job *FuncJob, v interface{})
+	errorHandler func(job *FuncJob, err error)
 }
 
 // FuncJob represents a cron.Job with some information such as title, cron.Schedule and cron.Entry, stored in CronTask.
@@ -46,15 +47,11 @@ func NewCronTask(c *cron.Cron) *CronTask {
 		cron: c,
 		jobs: make([]*FuncJob, 0),
 
-		jobAddedCallback: func(j *FuncJob) {
-			fmt.Printf("[Task-debug] %-29s --> %s (EntryID: %d)\n", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
-		},
-		jobRemovedCallback: func(j *FuncJob) {
-			fmt.Printf("[Task-debug] Remove job: %s, EntryID: %d\n", j.Title(), j.EntryID())
-		},
-		panicHandler: func(job *FuncJob, v interface{}) {
-			log.Printf("Warning: Job %s panics with `%v`", job.title, v)
-		},
+		jobAddedCallback:     defaultJobAddedCallback,
+		jobRemovedCallback:   defaultJobRemovedCallback,
+		jobScheduledCallback: defaultJobScheduledCallback,
+		panicHandler:         func(job *FuncJob, v interface{}) { log.Printf("Warning: Job %s panics with `%v`", job.title, v) },
+		errorHandler:         nil, // skip
 	}
 }
 
@@ -139,29 +136,47 @@ func (c *CronTask) RemoveJob(id cron.EntryID) {
 	}).([]*FuncJob)
 }
 
-// SetJobAddedCallback sets job added callback, this will be invoked after FuncJob added.
+// defaultJobAddedCallback is the default jobAddedCallback, can be modified by CronTask.SetJobAddedCallback.
 //
 // The default callback logs like:
-// 	[Task-debug] job1, 0/1 * * * * *           --> ... (EntryID: 1)
-// 	[Task-debug] job3, every 3s                --> ... (EntryID: 3)
-// 	[Task-debug] job4, <parsed SpecSchedule>   --> ... (EntryID: 4)
-// 	            |-----------------------------|   |----------------|
-// 	                          29                          ...
+// 	[Task-debug] job1, 0/1 * * * * *             --> ... (EntryID: 1)
+// 	[Task-debug] job3, every 3s                  --> ... (EntryID: 3)
+// 	[Task-debug] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
+// 	            |-------------------------------|   |----------------|
+// 	                           31                          ...
+func defaultJobAddedCallback(j *FuncJob) {
+	fmt.Printf("[Task-debug] %-31s --> %s (EntryID: %d)\n", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
+}
+
+// defaultJobRemovedCallback is the default jobRemovedCallback, can be modified by CronTask.SetJobRemovedCallback
+//
+// The default callback logs like:
+// 	[Task-debug] Remove job: job1, EntryID: 1
+// 	[Task-debug] Remove job: job2, EntryID: 2
+func defaultJobRemovedCallback(j *FuncJob) {
+	fmt.Printf("[Task-debug] Remove job: %s, EntryID: %d\n", j.Title(), j.EntryID())
+}
+
+// defaultJobScheduledCallback is the default jobRemovedCallback, can be modified by CronTask.SetJobScheduledCallback
+//
+// The default callback does nothing.
+func defaultJobScheduledCallback(*FuncJob) {
+	// skip
+}
+
+// SetJobAddedCallback sets job added callback, this will be invoked after FuncJob added.
 func (c *CronTask) SetJobAddedCallback(cb func(job *FuncJob)) {
 	c.jobAddedCallback = cb
 }
 
 // SetJobRemovedCallback sets job removed callback, this will be invoked after FuncJob removed.
-//
-// The default callback logs like:
-// 	[Task-debug] Remove job: job3, EntryID: 3
 func (c *CronTask) SetJobRemovedCallback(cb func(job *FuncJob)) {
 	c.jobRemovedCallback = cb
 }
 
-// SetBeforeJobCallback sets job executing callback, this will be invoked before FuncJob executed, defaults to do nothing.
-func (c *CronTask) SetBeforeJobCallback(cb func(job *FuncJob)) {
-	c.beforeJobCallback = cb
+// SetJobScheduledCallback sets job scheduled callback, this will be invoked when after FuncJob scheduled.
+func (c *CronTask) SetJobScheduledCallback(cb func(job *FuncJob)) {
+	c.jobScheduledCallback = cb
 }
 
 // SetPanicHandler sets panic handler for jobs executing, defaults to print warning message.
@@ -231,8 +246,8 @@ func (f *FuncJob) Run() {
 		}
 	}()
 
-	if f.parent.beforeJobCallback != nil {
-		f.parent.beforeJobCallback(f) // defaults to ignore
+	if f.parent.jobScheduledCallback != nil {
+		f.parent.jobScheduledCallback(f) // defaults to ignore
 	}
 	err := f.function()
 	if err != nil && f.parent.errorHandler != nil {

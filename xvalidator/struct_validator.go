@@ -12,7 +12,7 @@ import (
 // ValidateFieldsError related
 // ===========================
 
-// WrappedValidateFieldError represents a validator.FieldError with a custom message wrapped used in CustomStructValidator.
+// WrappedValidateFieldError represents a validator.FieldError with a custom message wrapped, is used in CustomStructValidator.
 type WrappedValidateFieldError struct {
 	origin  validator.FieldError
 	message string
@@ -59,7 +59,7 @@ func (v *ValidateFieldsError) Error() string {
 // otherwise in "$field" format.
 //
 // Example:
-// 	err := validator.Struct(&Struct{}).(xvalidator.ValidateFieldsError)
+// 	err := validator.ValidateStruct(&Struct{}).(xvalidator.ValidateFieldsError)
 // 	v.Translate(trans, true)  // => {Struct.int: int is a required field, Struct.str: str cannot be null and empty}
 // 	v.Translate(trans, false) // => {int:        int is a required field, str:        str cannot be null and empty}
 // 	// Here Struct.int's error is in validator.FieldError type, and Struct.str's error is in xvalidator.WrappedValidateFieldError type.
@@ -87,15 +87,15 @@ func (v *ValidateFieldsError) Translate(ut UtTranslator, useNamespace bool) map[
 	return result
 }
 
-// SplitToMap splits all the field errors to a field-message map without using UtTranslator, the returned map will be in format of
-// xvalidator.WrappedValidateFieldError's message and validator.FieldError's error message. See ValidateFieldsError.Translate for more.
+// FlatToMap splits and flats all the field errors to a field-message map without using UtTranslator, the returned map will be in format of
+// xvalidator.WrappedValidateFieldError's error message and validator.FieldError's error message. See ValidateFieldsError.Translate for more.
 //
 // Example:
-// 	err := validator.Struct(&Struct{}).(validator.ValidationErrors)
-// 	SplitValidationErrors(err, true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: str cannot be null and empty}
-// 	SplitValidationErrors(err, false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        str cannot be null and empty}
+// 	err := validator.ValidateStruct(&Struct{}).(xvalidator.ValidateFieldsError)
+// 	FlatValidateErrors(err, true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: str cannot be null and empty}
+// 	FlatValidateErrors(err, false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        str cannot be null and empty}
 // 	// Here Struct.int's error is in validator.FieldError type, and Struct.str's error is in xvalidator.WrappedValidateFieldError type.
-func (v *ValidateFieldsError) SplitToMap(useNamespace bool) map[string]string {
+func (v *ValidateFieldsError) FlatToMap(useNamespace bool) map[string]string {
 	keyFn := func(e validator.FieldError) string {
 		if useNamespace {
 			return e.Namespace()
@@ -156,14 +156,19 @@ func (v *CustomStructValidator) ValidateEngine() *validator.Validate {
 	return v.validate
 }
 
-// SetValidatorTagName sets the validator tag name for CustomStructValidator.
+// SetValidatorTagName sets the validator tag name for CustomStructValidator, defaults to `binding`.
 func (v *CustomStructValidator) SetValidatorTagName(name string) {
 	v.validate.SetTagName(name)
 }
 
-// SetMessageTagName sets the message tag name for CustomStructValidator.
+// SetMessageTagName sets the message tag name for CustomStructValidator, defaults to `validator_message`.
 func (v *CustomStructValidator) SetMessageTagName(name string) {
 	v.messageTag = name
+}
+
+// SetFieldNameTag sets a specific struct tag as field's alternate name, visit UseTagAsFieldName for details.
+func (v *CustomStructValidator) SetFieldNameTag(name string) {
+	UseTagAsFieldName(v.ValidateEngine(), name)
 }
 
 // ValidateStruct validates the given struct and returns the validator error, mostly in xvalidator.ValidateFieldsError type.

@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -113,9 +114,21 @@ func TestDumpRequest(t *testing.T) {
 func TestWrapPprof(t *testing.T) {
 	gin.SetMode(gin.DebugMode)
 	app := NewEngineWithoutDebugWarning()
-	rfn := HideDebugPrintRoute()
+	restore := HideDebugPrintRoute()
 	WrapPprof(app)
-	rfn()
+	// [GIN-debug] GET    /debug/pprof/             --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func12 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/heap         --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func13 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/goroutine    --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func14 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/allocs       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func15 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/block        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func16 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/threadcreate --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func17 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/cmdline      --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func18 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/profile      --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func19 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/symbol       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func20 (1 handlers)
+	// [GIN-debug] POST   /debug/pprof/symbol       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func20 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/trace        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func21 (1 handlers)
+	// [GIN-debug] GET    /debug/pprof/mutex        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func22 (1 handlers)
+	restore()
 	server := &http.Server{Addr: ":12345", Handler: app}
 	go server.ListenAndServe()
 	defer server.Shutdown(context.Background())
@@ -429,6 +442,42 @@ func TestCustomStructValidator(t *testing.T) {
 	}
 }
 
+func TestGetProxyEnv(t *testing.T) {
+	for _, key := range []string{
+		"http_proxy", "https_proxy", "socks_proxy",
+	} {
+		e, ok := os.LookupEnv(key)
+		if ok {
+			//goland:noinspection GoDeferInLoop
+			defer os.Setenv(key, e)
+		}
+	}
+
+	os.Setenv("http_proxy", "")
+	os.Setenv("https_proxy", "")
+	os.Setenv("socks_proxy", "")
+	hp, hsp, ssp := GetProxyEnv()
+	xtesting.Equal(t, hp, "")
+	xtesting.Equal(t, hsp, "")
+	xtesting.Equal(t, ssp, "")
+
+	os.Setenv("http_proxy", "http://localhost:9000")
+	os.Setenv("https_proxy", "https://localhost:9000")
+	os.Setenv("socks_proxy", "socks://localhost:9000")
+	hp, hsp, ssp = GetProxyEnv()
+	xtesting.Equal(t, hp, "http://localhost:9000")
+	xtesting.Equal(t, hsp, "https://localhost:9000")
+	xtesting.Equal(t, ssp, "socks://localhost:9000")
+
+	os.Setenv("http_proxy", "")
+	os.Setenv("https_proxy", "")
+	os.Setenv("socks_proxy", "")
+	hp, hsp, ssp = GetProxyEnv()
+	xtesting.Equal(t, hp, "")
+	xtesting.Equal(t, hsp, "")
+	xtesting.Equal(t, ssp, "")
+}
+
 func TestResponseLogger(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	rand.Seed(time.Now().UnixNano())
@@ -449,7 +498,7 @@ func TestResponseLogger(t *testing.T) {
 		// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		if custom {
 			FormatResponseFunc = func(p *ResponseLoggerParam) string {
-				msg := fmt.Sprintf("[Gin] %8d - %12s - %15s - %10s - %-7s %s", p.Status, p.Latency.String(), p.ClientIP, xnumber.RenderByte(float64(p.Length)), p.Method, p.Path)
+				msg := fmt.Sprintf("[Gin] %8d - %12s - %15s - %10s - %-7s %s", p.Status, p.Latency.String(), p.ClientIP, xnumber.FormatByteSize(float64(p.Length)), p.Method, p.Path)
 				if p.ErrorMsg != "" {
 					msg += fmt.Sprintf(" - err: %s", p.ErrorMsg)
 				}

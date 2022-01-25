@@ -5,8 +5,6 @@ import (
 	"github.com/Aoi-hosizora/ahlib-web/internal"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/tucnak/telebot.v2"
-	"reflect"
-	"runtime"
 	"time"
 )
 
@@ -103,7 +101,7 @@ func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, received *t
 	if logger == nil || received == nil {
 		return
 	}
-	epString, ok := renderEndpoint(endpoint)
+	epString, ok := formatEndpoint(endpoint)
 	if !ok {
 		return
 	}
@@ -121,7 +119,7 @@ func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, received 
 	if logger == nil || received == nil {
 		return
 	}
-	epString, ok := renderEndpoint(endpoint)
+	epString, ok := formatEndpoint(endpoint)
 	if !ok {
 		return
 	}
@@ -179,7 +177,7 @@ func extractReplyLoggerParam(received, replied *telebot.Message, err error) *Rep
 		Replied:      replied,
 		ReceivedID:   received.ID,
 		RepliedID:    replied.ID,
-		RepliedType:  renderMessageType(replied),
+		RepliedType:  formatMessageType(replied),
 		ReceivedTime: received.Time(),
 		RepliedTime:  replied.Time(),
 		Latency:      replied.Time().Sub(received.Time()),
@@ -308,7 +306,7 @@ func extractSendLoggerParam(chat *telebot.Chat, sent *telebot.Message, err error
 		Chat:     sent.Chat, // use `sent.Chat`
 		Sent:     sent,
 		SentID:   sent.ID,
-		SentType: renderMessageType(sent),
+		SentType: formatMessageType(sent),
 		SentTime: sent.Time(),
 		ChatID:   sent.Chat.ID,
 		ChatName: sent.Chat.Username,
@@ -393,8 +391,8 @@ func LogSendToLogger(logger logrus.StdLogger, chat *telebot.Chat, sent *telebot.
 // internal
 // ========
 
-// renderEndpoint renders an endpoint interface{} to string, only supported string, telebot.InlineButton and telebot.ReplyButton endpoint types.
-func renderEndpoint(endpoint interface{}) (string, bool) {
+// formatEndpoint formats an endpoint interface{} to string, only supported string, telebot.InlineButton and telebot.ReplyButton endpoint types.
+func formatEndpoint(endpoint interface{}) (string, bool) {
 	switch ep := endpoint.(type) {
 	case string:
 		if len(ep) <= 1 || (ep[0] != '/' && ep[0] != '\a') {
@@ -424,8 +422,8 @@ func renderEndpoint(endpoint interface{}) (string, bool) {
 	}
 }
 
-// renderMessageType renders a telebot.Message's type, see telebot.Sendable.
-func renderMessageType(m *telebot.Message) string {
+// formatMessageType formats a telebot.Message's type, visit telebot.Sendable.
+func formatMessageType(m *telebot.Message) string {
 	typ := "text" // default
 	switch {
 	case m.Photo != nil:
@@ -458,17 +456,4 @@ func renderMessageType(m *telebot.Message) string {
 	}
 
 	return "t:" + typ // t:xxx
-}
-
-// handledEndpointCallback renders arguments to string and invokes given callback function.
-func handledEndpointCallback(callback func(string, string), endpoint, handler interface{}) {
-	if callback == nil {
-		return
-	}
-	ep, ok := renderEndpoint(endpoint)
-	if !ok {
-		return
-	}
-	funcname := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
-	callback(ep, funcname)
 }

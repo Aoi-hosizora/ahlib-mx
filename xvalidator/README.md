@@ -36,7 +36,8 @@
 + `func DefaultRegistrationFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc`
 + `func DefaultTranslateFunc() validator.TranslationFunc`
 + `func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string`
-+ `func SplitValidationErrors(err validator.ValidationErrors, useNamespace bool) map[string]string`
++ `func FlatValidateErrors(err validator.ValidationErrors, useNamespace bool) map[string]string`
++ `func FlattedMapToError(kv map[string]string) error`
 + `func EnLocaleTranslator() locales.Translator`
 + `func EsLocaleTranslator() locales.Translator`
 + `func FrLocaleTranslator() locales.Translator`
@@ -87,9 +88,10 @@
 + `func (v *ValidateFieldsError) Fields() []error`
 + `func (v *ValidateFieldsError) Error() string `
 + `func (v *ValidateFieldsError) Translate(translator UtTranslator, useNamespace bool) map[string]string`
-+ `func (v *ValidateFieldsError) SplitToMap(useNamespace bool) map[string]string`
++ `func (v *ValidateFieldsError) FlatToMap(useNamespace bool) map[string]string`
 + `func (v *CustomStructValidator) Engine() interface{}`
 + `func (v *CustomStructValidator) ValidateEngine() *validator.Validate`
 + `func (v *CustomStructValidator) SetValidatorTagName(name string)`
 + `func (v *CustomStructValidator) SetMessageTagName(name string)`
++ `func (v *CustomStructValidator) SetFieldNameTag(name string)`
 + `func (v *CustomStructValidator) ValidateStruct(obj interface{}) error`

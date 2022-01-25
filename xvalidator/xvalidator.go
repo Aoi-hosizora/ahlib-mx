@@ -1,6 +1,7 @@
 package xvalidator
 
 import (
+	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/go-playground/locales"
@@ -32,6 +33,7 @@ import (
 	trans_zh_tw "github.com/go-playground/validator/v10/translations/zh_tw"
 	"log"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -216,14 +218,14 @@ func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, 
 	return result
 }
 
-// SplitValidationErrors splits all the field errors to a field-message map without SplitToMap UtTranslator, the returned map will be in format of
-// validator.FieldError's error message. See TranslateValidationErrors for more.
+// FlatValidateErrors splits and flats all the field errors to a field-message map without using UtTranslator, the returned map will be in format of
+// validator.FieldError's error message.
 //
 // Example:
 // 	err := validator.Struct(&Struct{}).(validator.ValidationErrors)
-// 	SplitValidationErrors(err, true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: Field validation for 'str' failed on the 'required' tag}
-// 	SplitValidationErrors(err, false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        Field validation for 'str' failed on the 'required' tag}
-func SplitValidationErrors(err validator.ValidationErrors, useNamespace bool) map[string]string {
+// 	FlatValidateErrors(err, true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: Field validation for 'str' failed on the 'required' tag}
+// 	FlatValidateErrors(err, false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        Field validation for 'str' failed on the 'required' tag}
+func FlatValidateErrors(err validator.ValidationErrors, useNamespace bool) map[string]string {
 	keyFn := func(e validator.FieldError) string {
 		if useNamespace {
 			return e.Namespace()
@@ -236,6 +238,27 @@ func SplitValidationErrors(err validator.ValidationErrors, useNamespace bool) ma
 		result[keyFn(fe)] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", fe.Field(), fe.Tag())
 	}
 	return result
+}
+
+// FlattedMapToError generates an error from given translated or flatted map to represent the translated or flatted result of validator.ValidationErrors
+// and xvalidator.ValidateFieldsError.
+func FlattedMapToError(kv map[string]string) error {
+	if len(kv) == 0 {
+		return nil
+	}
+	tuples := make([][2]string, 0, len(kv)) // map -> [][2]string
+	for k, v := range kv {
+		tuples = append(tuples, [2]string{k, v})
+	}
+	sort.Slice(tuples, func(i, j int) bool {
+		return tuples[i][0] < tuples[j][0] || (tuples[i][0] == tuples[j][0] && tuples[i][1] < tuples[j][1])
+	})
+	msgs := make([]string, 0, len(kv)) // sorted [][2]string -> []string
+	for _, t := range tuples {
+		msgs = append(msgs, t[1])
+	}
+	msg := strings.Join(msgs, "; ")
+	return errors.New(msg)
 }
 
 // =================

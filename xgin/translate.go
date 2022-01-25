@@ -169,13 +169,13 @@ var (
 	}
 	_validatorFieldsErrorFn = func(e validator.ValidationErrors, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 		if translator == nil {
-			return xvalidator.SplitValidationErrors(e, false), true
+			return xvalidator.FlatValidateErrors(e, false), true
 		}
 		return xvalidator.TranslateValidationErrors(e, translator, false), true
 	}
 	_xvalidatorValidateFieldsErrorFn = func(e *xvalidator.ValidateFieldsError, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 		if translator == nil {
-			return e.SplitToMap(false), true
+			return e.FlatToMap(false), true
 		}
 		return e.Translate(translator, false), true
 	}

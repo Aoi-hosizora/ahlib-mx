@@ -85,7 +85,7 @@ func TestFuncJob(t *testing.T) {
 		task.SetJobRemovedCallback(func(j *FuncJob) {
 			log.Printf("[Task] Remove job: %s | EntryID: %d", j.Title(), j.EntryID())
 		})
-		task.SetBeforeJobCallback(func(j *FuncJob) {
+		task.SetJobScheduledCallback(func(j *FuncJob) {
 			log.Printf("[Task] Executing job: %s", j.Title())
 		})
 		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() error {

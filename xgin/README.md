@@ -53,8 +53,9 @@
 + `func EnableRFC3339DateTimeBinding() error`
 + `func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
 + `func HideDebugPrintRoute() (restoreFn func())`
-+ `func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError`
 + `func NewEngineWithoutDebugWarning() *gin.Engine`
++ `func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError`
++ `func GetProxyEnv() (httpProxy string, httpsProxy string, socksProxy string)`
 + `func WithUtTranslator(translator xvalidator.UtTranslator) TranslateOption`
 + `func WithJsonInvalidUnmarshalError(fn func(*json.InvalidUnmarshalError) (result map[string]string, need4xx bool)) TranslateOption`
 + `func WithJsonUnmarshalTypeError(fn func(*json.UnmarshalTypeError) (result map[string]string, need4xx bool)) TranslateOption`

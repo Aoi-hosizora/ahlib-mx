@@ -35,7 +35,8 @@ func TestTranslateBindingError(t *testing.T) {
 	newVal := xvalidator.NewCustomStructValidator()
 	newVal.SetMessageTagName("message")
 	newVal.SetValidatorTagName("binding")
-	xvalidator.UseTagAsFieldName(newVal.ValidateEngine(), "json")
+	// xvalidator.UseTagAsFieldName(newVal.ValidateEngine(), "json")
+	newVal.SetFieldNameTag("json")
 
 	app := gin.New()
 	type testStruct struct {

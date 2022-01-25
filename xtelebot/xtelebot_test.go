@@ -292,16 +292,16 @@ func TestBotWrapperWithPoll(t *testing.T) {
 	l.SetLevel(logrus.TraceLevel)
 	l.SetFormatter(&logrus.TextFormatter{ForceColors: true, TimestampFormat: time.RFC3339, FullTimestamp: true})
 
-	br.SetEndpointHandledCallback(func(endpoint string, handlerName string) {
-		l.Debugf("[Telebot] %-12s | %s\n", endpoint, handlerName)
+	br.SetHandledCallback(func(endpoint interface{}, formattedEndpoint string, handlerName string) {
+		l.Debugf("[Telebot] %-12s | %s\n", formattedEndpoint, handlerName)
 	})
 	br.SetReceivedCallback(func(endpoint interface{}, received *telebot.Message) {
 		LogReceiveToLogrus(l, endpoint, received)
 	})
-	br.SetAfterRepliedCallback(func(received *telebot.Message, replied *telebot.Message, err error) {
+	br.SetRepliedCallback(func(received *telebot.Message, replied *telebot.Message, err error) {
 		LogReplyToLogrus(l, received, replied, err)
 	})
-	br.SetAfterSentCallback(func(chat *telebot.Chat, sent *telebot.Message, err error) {
+	br.SetSentCallback(func(chat *telebot.Chat, sent *telebot.Message, err error) {
 		LogSendToLogrus(l, chat, sent, err)
 	})
 
@@ -319,7 +319,7 @@ func TestBotWrapperWithPoll(t *testing.T) {
 				atomic.AddInt32(&count, 1)
 				origin := br.panicHandler
 				br.SetPanicHandler(func(endpoint interface{}, v interface{}) {
-					r, _ := renderEndpoint(endpoint)
+					r, _ := formatEndpoint(endpoint)
 					l.Errorf(">> Panic with `%v` | %s", v, r)
 					br.SetPanicHandler(origin)
 				})
@@ -382,10 +382,10 @@ func TestBotWrapperWithPoll(t *testing.T) {
 		xtesting.Equal(t, int(atomic.LoadInt32(&count)), 7)
 	})
 
-	t.Run("endpointHandledCallback", func(t *testing.T) {
+	t.Run("handledCallback", func(t *testing.T) {
 		// hack
-		handledEndpointCallback(nil, "/aaa", func() {})
-		handledEndpointCallback(func(s string, s2 string) {}, "", func() {})
+		processHandledCallback("/aaa", func() {}, nil)
+		processHandledCallback("", func() {}, func(e interface{}, s string, s2 string) {})
 	})
 }
 
