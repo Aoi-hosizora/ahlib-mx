@@ -7,7 +7,6 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"strings"
 	"time"
 )
 
@@ -35,7 +34,11 @@ func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 
 // ResponseLoggerParam stores some logger parameters and is used by LogResponseToLogrus and LogResponseToLogger.
 type ResponseLoggerParam struct {
-	Ctx       *gin.Context
+	// origin
+	Context *gin.Context
+	Errors  []*gin.Error
+
+	// field
 	Method    string
 	Path      string
 	Status    int
@@ -65,9 +68,10 @@ func extractResponseLoggerParam(c *gin.Context, start, end time.Time) *ResponseL
 	if length < 0 {
 		length = 0
 	}
-	errorMsg := c.Errors.ByType(gin.ErrorTypePrivate).String()
+	errors := c.Errors.ByType(gin.ErrorTypePublic | gin.ErrorTypePrivate)
 	return &ResponseLoggerParam{
-		Ctx:       c,
+		Context:   c,
+		Errors:    errors,
 		Method:    c.Request.Method,
 		Path:      path,
 		Status:    c.Writer.Status(),
@@ -76,21 +80,23 @@ func extractResponseLoggerParam(c *gin.Context, start, end time.Time) *ResponseL
 		Latency:   end.Sub(start),
 		Length:    int64(length),
 		ClientIP:  c.ClientIP(),
-		ErrorMsg:  strings.TrimSpace(errorMsg),
+		ErrorMsg:  errors.String(),
 	}
 }
 
 // formatResponseLoggerParam formats given ResponseLoggerParam to string for LogResponseToLogrus and LogResponseToLogger.
 //
 // The default format logs like:
-// 	[Gin]      200 |      993.3µs |             ::1 |        11B | GET     /test
-// 	     |--------| |------------| |---------------| |----------| |-------|-----|
-// 	         8            12               15             10          7     ...
+// 	[Gin]      200 |      993.3µs |        11B |             ::1 | GET     /test
+// 	[Gin]      500 |       2.34ms |       506B |       127.0.0.1 | POST    /test
+// 	[Gin]      404 |        5.67s |         0B |   192.168.1.102 | PUT     /erro | err: test error
+// 	     |--------| |------------| |----------| |---------------| |-------|-----|
+// 	         8            12            10              15            7     ...
 func formatResponseLoggerParam(p *ResponseLoggerParam) string {
 	if FormatResponseFunc != nil {
 		return FormatResponseFunc(p)
 	}
-	msg := fmt.Sprintf("[Gin] %8d | %12s | %15s | %10s | %-7s %s", p.Status, p.Latency.String(), p.ClientIP, xnumber.FormatByteSize(float64(p.Length)), p.Method, p.Path)
+	msg := fmt.Sprintf("[Gin] %8d | %12s | %10s | %15s | %-7s %s", p.Status, p.Latency.String(), xnumber.FormatByteSize(float64(p.Length)), p.ClientIP, p.Method, p.Path)
 	if p.ErrorMsg != "" {
 		msg += fmt.Sprintf(" | err: %s", p.ErrorMsg)
 	}
@@ -160,10 +166,16 @@ func LogResponseToLogger(logger logrus.StdLogger, c *gin.Context, start, end tim
 
 // RecoveryLoggerParam stores some logger parameters used by LogRecoveryToLogrus and LogRecoveryToLogger.
 type RecoveryLoggerParam struct {
+	// origin
+	PanicValue interface{}
+	TraceStack xruntime.TraceStack
+
+	// field
 	PanicMsg  string
-	Stack     xruntime.TraceStack
 	Filename  string
+	Funcname  string
 	LineIndex int
+	LineText  string
 }
 
 var (
@@ -177,16 +189,21 @@ var (
 // extractRecoveryLoggerParam extracts and returns ResponseLoggerParam using given parameters.
 func extractRecoveryLoggerParam(v interface{}, stack xruntime.TraceStack) *RecoveryLoggerParam {
 	msg := fmt.Sprintf("%v", v)
-	filename, line := "", 0
+	filename, funcname, lineIndex, lineText := "", "", 0, ""
 	if len(stack) > 0 {
 		filename = stack[0].Filename
-		line = stack[0].LineIndex
+		funcname = stack[0].FuncFullName
+		lineIndex = stack[0].LineIndex
+		lineText = stack[0].LineText
 	}
 	return &RecoveryLoggerParam{
-		PanicMsg:  msg,
-		Stack:     stack,
-		Filename:  filename,
-		LineIndex: line,
+		PanicValue: v,
+		TraceStack: stack,
+		PanicMsg:   msg,
+		Filename:   filename,
+		Funcname:   funcname,
+		LineIndex:  lineIndex,
+		LineText:   lineText,
 	}
 }
 
@@ -214,16 +231,15 @@ func fieldifyRecoveryLoggerParam(p *RecoveryLoggerParam) logrus.Fields {
 	if FieldifyRecoveryFunc != nil {
 		return FieldifyRecoveryFunc(p)
 	}
-	f := logrus.Fields{
+	return logrus.Fields{
 		"module":      "recovery",
 		"panic_msg":   p.PanicMsg,
-		"trace_stack": p.Stack.String(),
+		"trace_stack": p.TraceStack.String(),
+		"filename":    p.Filename,
+		"funcname":    p.Funcname,
+		"line_index":  p.LineIndex,
+		"line_text":   p.LineText,
 	}
-	if p.Filename != "" {
-		f["filename"] = p.Filename
-		f["line_index"] = p.LineIndex
-	}
-	return f
 }
 
 // LogRecoveryToLogrus logs panic message to logrus.Logger using given recover returned value and nil-able xruntime.TraceStack.

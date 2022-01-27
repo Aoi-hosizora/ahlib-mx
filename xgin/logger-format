@@ -1,0 +1,58 @@
+--- gin response
+
+---------------|--------------|------------|-----------------|
+[Gin]      200 |      993.3µs |        11B |             ::1 | GET     /test
+[Gin]      500 |       2.34ms |       506B |       127.0.0.1 | POST    /test
+[Gin]      404 |        5.67s |         0B |   192.168.1.102 | PUT     /erro | err: test error
+---------------|--------------|------------|-----------------|
+
+--- gin recovery
+
+[Recovery] panic recovered: test error | xxx.go:12
+
+--- telebot receive
+
+---------------|--------------|------------|-----------------|
+[Telebot] recv | msg#    3344 |               /test-endpoint | 12345678 Aoi-hosizora
+[Telebot] recv | msg#    3345 |                     $on_text | 12345678 Aoi-hosizora
+[Telebot] recv | msg#    3346 |         $rep_btn:button_text | 12345678 Aoi-hosizora
+[Telebot] recv | msg#    3347 |       $inl_btn:button_unique | 12345678 Aoi-hosizora
+---------------|--------------|------------|-----------------|
+
+--- telebot respond
+
+---------------|--------------|------------|-----------------|
+[Telebot]  rep | msg#    3348 |   4096 chr | rep_to#    3346 |      993.3µs | 12345678 Aoi-hosizora
+[Telebot] send | msg#    3348 |   4096 chr | 12345678 Aoi-hosizora
+[Telebot] edit | msg#    3348 |   4096 chr | 12345678 Aoi-hosizora
+[Telebot]  del | msg#    3348 |   4096 chr | 12345678 Aoi-hosizora
+[Telebot]  rep | 12345678 Aoi-hosizora | err: telegram: bot was blocked by the user (401)
+[Telebot] send | 12345678 Aoi-hosizora | err: test error
+---------------|--------------|------------|-----------------|
+
+--- gorm & gormv2
+
+---------------|--------------|------------|-----------------|
+[Gorm] [info] registering callback `new_deleted_at_before_query_callback` from F:/Projects/ahlib-db/xgorm/hook.go:36
+[Gorm] [log] Error 1062: Duplicate entry '1' for key 'PRIMARY'
+[Gorm]       1 |     1.9957ms | SELECT * FROM `tbl_test`   ORDER BY `tbl_test`.`id` ASC LIMIT 1 | F:/Projects/ahlib-db/xgorm/xgorm_test.go:48
+---------------|--------------|------------|-----------------|
+
+--- redis
+
+---------------|--------------|------------|-----------------|
+[Redis] err: ERR invalid password | SET test_a test_aaa | F:/Projects/ahlib-db/xredis/redis_test.go:41
+[Redis]    Nil |   305.9909ms | GET test | F:/Projects/ahlib-db/xredis/redis_test.go:126
+[Redis]      3 |      995.5µs | KEYS tes* | F:/Projects/ahlib-db/xredis/redis_test.go:146
+[Redis]     2i |      997.8µs | DEL test_ test_c | F:/Projects/ahlib-db/xredis/helper.go:21
+[Redis]      F |      997.3µs | HEXISTS test xxx | F:/Projects/ahlib-db/xredis/redis_test.go:141
+[Redis]     OK |    25.9306ms | SET 'test num' 1 | F:/Projects/ahlib-db/xredis/redis_test.go:59
+---------------|--------------|------------|-----------------|
+
+--- neo4j
+
+---------------|--------------|------------|-----------------|
+[Neo4j] err: Connection error: dial tcp [::1]:7687: connectex: No connection could be made because the target machine actively refused it. | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
+[Neo4j] err: Server error: [Neo.ClientError.Statement.SyntaxError] Invalid input 'n' (line 1, column 26 (offset: 25)) | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
+[Neo4j]     -1 |        999ms | MATCH (n {uid: 8}) RETURN n LIMIT 1 | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
+---------------|--------------|------------|-----------------|

@@ -1,7 +1,6 @@
 package xtask
 
 import (
-	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/robfig/cron/v3"
@@ -32,24 +31,24 @@ func TestCronTask(t *testing.T) {
 			task.AddJobByCronSpec("", "", nil)
 		})
 		xtesting.Panic(t, func() {
-			task.AddJobBySchedule("", nil, func() error { return nil })
+			task.AddJobBySchedule("", nil, func() { return })
 		})
 		xtesting.Panic(t, func() {
 			task.AddJobBySchedule("", cron.Every(time.Second), nil)
 		})
 
 		// 1
-		id1, err := task.AddJobByCronSpec("job1", "0/1 * * * * *", func() error { return nil })
+		id1, err := task.AddJobByCronSpec("job1", "0/1 * * * * *", func() { return })
 		xtesting.Nil(t, err)
 		xtesting.Equal(t, id1, cron.EntryID(1))
 		// 2
-		_, err = task.AddJobByCronSpec("job2", "@", func() error { return nil })
+		_, err = task.AddJobByCronSpec("job2", "@", func() { return })
 		xtesting.NotNil(t, err)
-		id2, err := task.AddJobByCronSpec("job2", "0/2 * * * * *", func() error { return nil })
+		id2, err := task.AddJobByCronSpec("job2", "0/2 * * * * *", func() { return })
 		xtesting.Equal(t, id2, cron.EntryID(2))
 		// 3
 		sch3 := cron.Every(time.Second * 3)
-		id3 := task.AddJobBySchedule("job3", sch3, func() error { return nil })
+		id3 := task.AddJobBySchedule("job3", sch3, func() { return })
 		xtesting.Equal(t, id3, cron.EntryID(3))
 		// remove 3
 		xtesting.Equal(t, task.Jobs()[2].ScheduleExpr(), "every 3s")
@@ -57,7 +56,7 @@ func TestCronTask(t *testing.T) {
 		// 4
 		sch4, err := task.ScheduleParser().Parse("0/4 * * * * *")
 		xtesting.Nil(t, err)
-		id4 := task.AddJobBySchedule("job4", sch4, func() error { return nil })
+		id4 := task.AddJobBySchedule("job4", sch4, func() { return })
 		xtesting.Equal(t, id4, cron.EntryID(4))
 
 		xtesting.Equal(t, task.Jobs()[0].Title(), "job1")
@@ -88,22 +87,18 @@ func TestFuncJob(t *testing.T) {
 		task.SetJobScheduledCallback(func(j *FuncJob) {
 			log.Printf("[Task] Executing job: %s", j.Title())
 		})
-		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() error {
+		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() {
 			log.Printf("every1s_1_%s", time.Now().Format(time.RFC3339Nano))
-			return nil
 		})
-		task.AddJobByCronSpec("every2s", "0/2 * * * * *", func() error {
+		task.AddJobByCronSpec("every2s", "0/2 * * * * *", func() {
 			log.Printf("every2s_2_%s", time.Now().Format(time.RFC3339Nano))
-			return nil
 		})
 		task.RemoveJob(2)
-		task.AddJobByCronSpec("every2s", "0/2 * * * * *", func() error {
+		task.AddJobByCronSpec("every2s", "0/2 * * * * *", func() {
 			log.Printf("every2s_3_%s", time.Now().Format(time.RFC3339Nano))
-			return nil
 		})
-		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() error {
+		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() {
 			log.Printf("every1s_4_%s", time.Now().Format(time.RFC3339Nano))
-			return nil
 		})
 		xtesting.Equal(t, len(task.Jobs()), 3)
 		xtesting.Equal(t, len(task.Cron().Entries()), 3)
@@ -113,25 +108,19 @@ func TestFuncJob(t *testing.T) {
 		<-task.Cron().Stop().Done()
 	})
 
-	t.Run("panic and error", func(t *testing.T) {
+	t.Run("panic", func(t *testing.T) {
 		c := cron.New(cron.WithSeconds())
 		task := NewCronTask(c)
-		task.AddJobBySchedule("panic", cron.Every(time.Second), func() error {
+		task.AddJobBySchedule("panic", cron.Every(time.Second), func() {
 			panic("test")
-		})
-		task.AddJobBySchedule("error", cron.Every(time.Second), func() error {
-			return errors.New("test")
 		})
 
 		task.Cron().Start()
 		time.Sleep(time.Second + time.Millisecond*200)
 		panicV := (interface{})(nil)
-		errorV := error(nil)
 		task.SetPanicHandler(func(job *FuncJob, v interface{}) { log.Printf("panic: %v | %s", v, job.Title()); panicV = v })
-		task.SetErrorHandler(func(job *FuncJob, err error) { log.Printf("error: %v | %s", err, job.Title()); errorV = err })
 		time.Sleep(time.Second + time.Millisecond*200)
 		xtesting.Equal(t, panicV, "test")
-		xtesting.Equal(t, errorV.Error(), "test")
 		<-task.Cron().Stop().Done()
 	})
 }

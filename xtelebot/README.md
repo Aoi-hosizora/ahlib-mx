@@ -52,8 +52,8 @@
 + `func (b *BotData) GetStateChats() []int64`
 + `func (b *BotData) GetState(chatID int64) (ChatState, bool)`
 + `func (b *BotData) GetStateOr(chatID int64, fallbackState ChatState) ChatState`
-+ `func (b *BotData) SetInitialState(s ChatState)`
 + `func (b *BotData) GetStateOrInit(chatID int64) ChatState`
++ `func (b *BotData) SetInitialState(s ChatState)`
 + `func (b *BotData) SetState(chatID int64, state ChatState)`
 + `func (b *BotData) ResetState(chatID int64)`
 + `func (b *BotData) DeleteState(chatID int64)`
@@ -66,6 +66,7 @@
 + `func (b *BotData) ClearCaches(chatID int64)`
 + `func (b *BotWrapper) Bot() *telebot.Bot`
 + `func (b *BotWrapper) Data() *BotData`
++ `func (b *BotWrapper) IsHandled(endpoint interface{}) bool`
 + `func (b *BotWrapper) HandleCommand(command string, handler MessageHandler)`
 + `func (b *BotWrapper) HandleReplyButton(button *telebot.ReplyButton, handler MessageHandler)`
 + `func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler CallbackHandler)`

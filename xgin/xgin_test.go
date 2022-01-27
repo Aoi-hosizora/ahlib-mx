@@ -583,10 +583,10 @@ func TestRecoveryLogger(t *testing.T) {
 				// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 				if custom {
 					FormatRecoveryFunc = func(p *RecoveryLoggerParam) string {
-						return fmt.Sprintf("[Recovery] %s, %s:%d", p.PanicMsg, p.Filename, p.LineIndex)
+						return fmt.Sprintf("[Recovery] %s, %s:%d, %s", p.PanicMsg, p.Filename, p.LineIndex, p.Funcname)
 					}
 					FieldifyRecoveryFunc = func(p *RecoveryLoggerParam) logrus.Fields {
-						return logrus.Fields{"module": "recovery", "panic_msg": p.PanicMsg, "#trace_stack": len(p.Stack)}
+						return logrus.Fields{"module": "recovery", "panic_msg": p.PanicMsg, "#trace_stack": len(p.TraceStack)}
 					}
 				}
 				if !std {

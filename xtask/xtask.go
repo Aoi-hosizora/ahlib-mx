@@ -18,9 +18,7 @@ type CronTask struct {
 	jobAddedCallback     func(job *FuncJob)
 	jobRemovedCallback   func(job *FuncJob)
 	jobScheduledCallback func(job *FuncJob)
-
-	panicHandler func(job *FuncJob, v interface{})
-	errorHandler func(job *FuncJob, err error)
+	panicHandler         func(job *FuncJob, v interface{})
 }
 
 // FuncJob represents a cron.Job with some information such as title, cron.Schedule and cron.Entry, stored in CronTask.
@@ -28,7 +26,7 @@ type FuncJob struct {
 	title    string
 	cronSpec string
 	schedule cron.Schedule
-	function func() error
+	function func()
 	entry    *cron.Entry
 	entryID  cron.EntryID
 
@@ -51,7 +49,6 @@ func NewCronTask(c *cron.Cron) *CronTask {
 		jobRemovedCallback:   defaultJobRemovedCallback,
 		jobScheduledCallback: defaultJobScheduledCallback,
 		panicHandler:         func(job *FuncJob, v interface{}) { log.Printf("Warning: Job %s panics with `%v`", job.title, v) },
-		errorHandler:         nil, // skip
 	}
 }
 
@@ -71,7 +68,7 @@ func (c *CronTask) ScheduleParser() cron.ScheduleParser {
 }
 
 // newFuncJob creates a FuncJob with given parameters with CronTask parent.
-func (c *CronTask) newFuncJob(title string, spec string, schedule cron.Schedule, f func() error) *FuncJob {
+func (c *CronTask) newFuncJob(title string, spec string, schedule cron.Schedule, f func()) *FuncJob {
 	return &FuncJob{parent: c, title: title, cronSpec: spec, schedule: schedule, function: f}
 }
 
@@ -81,7 +78,7 @@ const (
 )
 
 // AddJobByCronSpec adds a FuncJob to cron.Cron and CronTask by given title, cron spec and function.
-func (c *CronTask) AddJobByCronSpec(title string, spec string, f func() error) (cron.EntryID, error) {
+func (c *CronTask) AddJobByCronSpec(title string, spec string, f func()) (cron.EntryID, error) {
 	if f == nil {
 		panic(panicNilFunction)
 	}
@@ -102,7 +99,7 @@ func (c *CronTask) AddJobByCronSpec(title string, spec string, f func() error) (
 }
 
 // AddJobBySchedule adds a FuncJob to cron.Cron and CronTask by given title, cron.Schedule and function.
-func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func() error) cron.EntryID {
+func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func()) cron.EntryID {
 	if schedule == nil {
 		panic(panicNilSchedule)
 	}
@@ -184,11 +181,6 @@ func (c *CronTask) SetPanicHandler(handler func(job *FuncJob, v interface{})) {
 	c.panicHandler = handler
 }
 
-// SetErrorHandler sets error handler for jobs executing, defaults to do nothing.
-func (c *CronTask) SetErrorHandler(handler func(job *FuncJob, err error)) {
-	c.errorHandler = handler
-}
-
 // =======
 // FuncJob
 // =======
@@ -237,7 +229,7 @@ func (f *FuncJob) EntryID() cron.EntryID {
 	return f.entryID
 }
 
-// Run runs the FuncJob with panic handler and error handler, and implements cron.Job interface.
+// Run runs the FuncJob with panic handler, this implements cron.Job interface.
 func (f *FuncJob) Run() {
 	defer func() {
 		v := recover()
@@ -249,8 +241,5 @@ func (f *FuncJob) Run() {
 	if f.parent.jobScheduledCallback != nil {
 		f.parent.jobScheduledCallback(f) // defaults to ignore
 	}
-	err := f.function()
-	if err != nil && f.parent.errorHandler != nil {
-		f.parent.errorHandler(f, err) // defaults to ignore
-	}
+	f.function()
 }

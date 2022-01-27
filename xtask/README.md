@@ -29,14 +29,13 @@
 + `func (c *CronTask) Cron() *cron.Cron`
 + `func (c *CronTask) Jobs() []*FuncJob`
 + `func (c *CronTask) ScheduleParser() cron.ScheduleParser`
-+ `func (c *CronTask) AddJobByCronSpec(title string, spec string, f func() error) (cron.EntryID, error)`
-+ `func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func() error) cron.EntryID`
++ `func (c *CronTask) AddJobByCronSpec(title string, spec string, f func()) (cron.EntryID, error)`
++ `func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func()) cron.EntryID`
 + `func (c *CronTask) RemoveJob(id cron.EntryID)`
 + `func (c *CronTask) SetJobAddedCallback(cb func(job *FuncJob))`
 + `func (c *CronTask) SetJobRemovedCallback(cb func(job *FuncJob))`
 + `func (c *CronTask) SetJobScheduledCallback(cb func(job *FuncJob))`
 + `func (c *CronTask) SetPanicHandler(handler func(job *FuncJob, v interface{}))`
-+ `func (c *CronTask) SetErrorHandler(handler func(job *FuncJob, err error))`
 + `func (f *FuncJob) Title() string`
 + `func (f *FuncJob) CronSpec() string`
 + `func (f *FuncJob) Schedule() cron.Schedule`
