@@ -171,11 +171,11 @@ type RecoveryLoggerParam struct {
 	TraceStack xruntime.TraceStack
 
 	// field
-	PanicMsg  string
-	Filename  string
-	Funcname  string
-	LineIndex int
-	LineText  string
+	PanicMsg     string
+	FullFilename string
+	FullFuncname string
+	LineIndex    int
+	LineText     string
 }
 
 var (
@@ -197,13 +197,13 @@ func extractRecoveryLoggerParam(v interface{}, stack xruntime.TraceStack) *Recov
 		lineText = stack[0].LineText
 	}
 	return &RecoveryLoggerParam{
-		PanicValue: v,
-		TraceStack: stack,
-		PanicMsg:   msg,
-		Filename:   filename,
-		Funcname:   funcname,
-		LineIndex:  lineIndex,
-		LineText:   lineText,
+		PanicValue:   v,
+		TraceStack:   stack,
+		PanicMsg:     msg,
+		FullFilename: filename,
+		FullFuncname: funcname,
+		LineIndex:    lineIndex,
+		LineText:     lineText,
 	}
 }
 
@@ -218,15 +218,15 @@ func formatRecoveryLoggerParam(p *RecoveryLoggerParam) string {
 		return FormatRecoveryFunc(p)
 	}
 	msg := fmt.Sprintf("[Recovery] panic recovered: %s", p.PanicMsg)
-	if p.Filename != "" {
-		msg += fmt.Sprintf(" | %s:%d", p.Filename, p.LineIndex)
+	if p.FullFilename != "" {
+		msg += fmt.Sprintf(" | %s:%d", p.FullFilename, p.LineIndex)
 	}
 	return msg
 }
 
 // fieldifyRecoveryLoggerParam fieldifies given RecoveryLoggerParam to logrus.Fields for LogRecoveryToLogrus.
 //
-// The default contains the following fields: module, panic_msg, trace_stack, filename, line_index.
+// The default contains the following fields: module, panic_msg, trace_stack, filename, funcname, line_index, line_text.
 func fieldifyRecoveryLoggerParam(p *RecoveryLoggerParam) logrus.Fields {
 	if FieldifyRecoveryFunc != nil {
 		return FieldifyRecoveryFunc(p)
@@ -235,8 +235,8 @@ func fieldifyRecoveryLoggerParam(p *RecoveryLoggerParam) logrus.Fields {
 		"module":      "recovery",
 		"panic_msg":   p.PanicMsg,
 		"trace_stack": p.TraceStack.String(),
-		"filename":    p.Filename,
-		"funcname":    p.Funcname,
+		"filename":    p.FullFilename,
+		"funcname":    p.FullFuncname,
 		"line_index":  p.LineIndex,
 		"line_text":   p.LineText,
 	}

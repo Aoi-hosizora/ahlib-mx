@@ -26,8 +26,11 @@
 [Telebot] send | msg#    3348 |   4096 chr | 12345678 Aoi-hosizora
 [Telebot] edit | msg#    3348 |   4096 chr | 12345678 Aoi-hosizora
 [Telebot]  del | msg#    3348 |   4096 chr | 12345678 Aoi-hosizora
-[Telebot]  rep | 12345678 Aoi-hosizora | err: telegram: bot was blocked by the user (401)
-[Telebot] send | 12345678 Aoi-hosizora | err: test error
+[Telebot] call | msg#    3348 | with_alert | 12345678 Aoi-hosizora
+[Telebot] call | msg#    3348 |  with_text | 12345678 Aoi-hosizora
+[Telebot]  rep | msg#    3348 | 12345678 Aoi-hosizora | err: telegram: bot was blocked by the user (401)
+[Telebot] edit | msg#    3348 | 12345678 Aoi-hosizora | err: test error
+[Telebot] send | msg#       0 | 12345678 Aoi-hosizora | err: test error
 ---------------|--------------|------------|-----------------|
 
 --- gorm & gormv2
@@ -56,3 +59,34 @@
 [Neo4j] err: Server error: [Neo.ClientError.Statement.SyntaxError] Invalid input 'n' (line 1, column 26 (offset: 25)) | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
 [Neo4j]     -1 |        999ms | MATCH (n {uid: 8}) RETURN n LIMIT 1 | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
 ---------------|--------------|------------|-----------------|
+
+
+*****************************************
+*****************************************
+*****************************************
+
+
+--- gin handled (xgin.DefaultPrintRouteFunc)
+
+*********************************************-->
+[Gin-debug] GET    /debug/pprof/             --> ... (1 handlers)
+[Gin-debug] GET    /debug/pprof/threadcreate --> ... (1 handlers)
+[Gin-debug] POST   /debug/pprof/symbol       --> ... (1 handlers)
+*********************************************-->
+
+--- telebot handled (xtelebot.DefaultHandledCallback)
+
+*********************************************-->
+[Bot-debug] /test-endpoint                   --> ...
+[Bot-debug] $on_text                         --> ...
+[Bot-debug] $rep_btn:button_text             --> ...
+[Bot-debug] $inl_btn:button_unique           --> ...
+*********************************************-->
+
+--- task added (xtask.DefaultAddedCallback)
+
+*********************************************-->
+[Task-debug] job1, 0/1 * * * * *             --> ... (EntryID: 1)
+[Task-debug] job3, every 3s                  --> ... (EntryID: 3)
+[Task-debug] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
+*********************************************-->

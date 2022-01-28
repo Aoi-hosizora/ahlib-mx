@@ -53,7 +53,7 @@
 + `func EnableRFC3339DateTimeBinding() error`
 + `func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
 + `func HideDebugPrintRoute() (restoreFn func())`
-+ `func NewEngineWithoutDebugWarning() *gin.Engine`
++ `func NewEngineWithoutLogging() *gin.Engine`
 + `func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError`
 + `func GetProxyEnv() (httpProxy string, httpsProxy string, socksProxy string)`
 + `func WithUtTranslator(translator xvalidator.UtTranslator) TranslateOption`

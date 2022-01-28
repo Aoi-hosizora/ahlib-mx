@@ -32,9 +32,9 @@
 + `func (c *CronTask) AddJobByCronSpec(title string, spec string, f func()) (cron.EntryID, error)`
 + `func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func()) cron.EntryID`
 + `func (c *CronTask) RemoveJob(id cron.EntryID)`
-+ `func (c *CronTask) SetJobAddedCallback(cb func(job *FuncJob))`
-+ `func (c *CronTask) SetJobRemovedCallback(cb func(job *FuncJob))`
-+ `func (c *CronTask) SetJobScheduledCallback(cb func(job *FuncJob))`
++ `func (c *CronTask) SetAddedCallback(cb func(job *FuncJob))`
++ `func (c *CronTask) SetRemovedCallback(cb func(job *FuncJob))`
++ `func (c *CronTask) SetScheduledCallback(cb func(job *FuncJob))`
 + `func (c *CronTask) SetPanicHandler(handler func(job *FuncJob, v interface{}))`
 + `func (f *FuncJob) Title() string`
 + `func (f *FuncJob) CronSpec() string`

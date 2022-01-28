@@ -8,17 +8,19 @@ import (
 	"log"
 	"reflect"
 	"runtime"
+	"sync"
 )
 
 // CronTask represents a task, or a job collection, which is implemented by wrapping cron.Cron.
 type CronTask struct {
 	cron *cron.Cron
 	jobs []*FuncJob
+	mu   sync.RWMutex
 
-	jobAddedCallback     func(job *FuncJob)
-	jobRemovedCallback   func(job *FuncJob)
-	jobScheduledCallback func(job *FuncJob)
-	panicHandler         func(job *FuncJob, v interface{})
+	addedCallback     func(job *FuncJob)
+	removedCallback   func(job *FuncJob)
+	scheduledCallback func(job *FuncJob)
+	panicHandler      func(job *FuncJob, v interface{})
 }
 
 // FuncJob represents a cron.Job with some information such as title, cron.Schedule and cron.Entry, stored in CronTask.
@@ -45,10 +47,10 @@ func NewCronTask(c *cron.Cron) *CronTask {
 		cron: c,
 		jobs: make([]*FuncJob, 0),
 
-		jobAddedCallback:     defaultJobAddedCallback,
-		jobRemovedCallback:   defaultJobRemovedCallback,
-		jobScheduledCallback: defaultJobScheduledCallback,
-		panicHandler:         func(job *FuncJob, v interface{}) { log.Printf("Warning: Job %s panics with `%v`", job.title, v) },
+		addedCallback:     DefaultAddedCallback,
+		removedCallback:   defaultJobRemovedCallback,
+		scheduledCallback: nil, // defaults to do nothing
+		panicHandler:      func(job *FuncJob, v interface{}) { log.Printf("Warning: Job %s panics with `%v`", job.title, v) },
 	}
 }
 
@@ -59,7 +61,10 @@ func (c *CronTask) Cron() *cron.Cron {
 
 // Jobs returns FuncJob slice from CronTask.
 func (c *CronTask) Jobs() []*FuncJob {
-	return c.jobs
+	c.mu.RLock()
+	out := c.jobs
+	c.mu.RUnlock()
+	return out
 }
 
 // ScheduleParser returns cron.ScheduleParser from cron.Cron in CronTask.
@@ -73,32 +78,34 @@ func (c *CronTask) newFuncJob(title string, spec string, schedule cron.Schedule,
 }
 
 const (
-	panicNilFunction = "xtask: nil function"
-	panicNilSchedule = "xtask: nil schedule"
+	panicNilFunction = "xtask: nil job function"
+	panicNilSchedule = "xtask: nil cron schedule"
 )
 
-// AddJobByCronSpec adds a FuncJob to cron.Cron and CronTask by given title, cron spec and function.
+// AddJobByCronSpec adds a FuncJob to cron.Cron and CronTask by given repeatable title, cron spec and function.
 func (c *CronTask) AddJobByCronSpec(title string, spec string, f func()) (cron.EntryID, error) {
 	if f == nil {
 		panic(panicNilFunction)
 	}
 	job := c.newFuncJob(title, spec, nil, f)
+
+	c.mu.Lock()
 	id, err := c.cron.AddJob(spec, job) // <<<
 	if err != nil {
+		c.mu.Unlock()
 		return 0, err
 	}
-
-	entry := c.cron.Entry(id)
-	job.entry = &entry
-	job.entryID = id
+	job.updateEntry(c.cron.Entry(id))
 	c.jobs = append(c.jobs, job)
-	if c.jobAddedCallback != nil {
-		c.jobAddedCallback(job)
+	c.mu.Unlock()
+
+	if c.addedCallback != nil {
+		c.addedCallback(job)
 	}
 	return id, nil
 }
 
-// AddJobBySchedule adds a FuncJob to cron.Cron and CronTask by given title, cron.Schedule and function.
+// AddJobBySchedule adds a FuncJob to cron.Cron and CronTask by given repeatable title, cron.Schedule and function.
 func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func()) cron.EntryID {
 	if schedule == nil {
 		panic(panicNilSchedule)
@@ -107,45 +114,56 @@ func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func
 		panic(panicNilFunction)
 	}
 	job := c.newFuncJob(title, "", schedule, f)
-	id := c.cron.Schedule(schedule, job) // <<<
 
-	entry := c.cron.Entry(id)
-	job.entry = &entry
-	job.entryID = id
+	c.mu.Lock()
+	id := c.cron.Schedule(schedule, job) // <<<
+	job.updateEntry(c.cron.Entry(id))
 	c.jobs = append(c.jobs, job)
-	if c.jobAddedCallback != nil {
-		c.jobAddedCallback(job)
+	c.mu.Unlock()
+
+	if c.addedCallback != nil {
+		c.addedCallback(job)
 	}
 	return id
 }
 
 // RemoveJob removes a cron.Entry by given cron.EntryID from cron.Cron and CronTask.
 func (c *CronTask) RemoveJob(id cron.EntryID) {
+	c.mu.Lock()
 	c.cron.Remove(id)
 	c.jobs = xslice.DeleteAllWithG(c.jobs, &FuncJob{entryID: id}, func(i, j interface{}) bool {
 		if i.(*FuncJob).entryID == j.(*FuncJob).entryID {
-			if c.jobRemovedCallback != nil {
-				c.jobRemovedCallback(i.(*FuncJob))
+			if c.removedCallback != nil {
+				c.removedCallback(i.(*FuncJob))
 			}
 			return true
 		}
 		return false
 	}).([]*FuncJob)
+	c.mu.Unlock()
 }
 
-// defaultJobAddedCallback is the default jobAddedCallback, can be modified by CronTask.SetJobAddedCallback.
+// DefaultAddedCallback is the default CronTask's addedCallback, can be modified by CronTask.SetAddedCallback.
 //
-// The default callback logs like:
+// The default callback logs like (just like gin.DebugPrintRouteFunc):
 // 	[Task-debug] job1, 0/1 * * * * *             --> ... (EntryID: 1)
 // 	[Task-debug] job3, every 3s                  --> ... (EntryID: 3)
 // 	[Task-debug] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
 // 	            |-------------------------------|   |----------------|
 // 	                           31                          ...
-func defaultJobAddedCallback(j *FuncJob) {
+func DefaultAddedCallback(j *FuncJob) {
 	fmt.Printf("[Task-debug] %-31s --> %s (EntryID: %d)\n", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
 }
 
-// defaultJobRemovedCallback is the default jobRemovedCallback, can be modified by CronTask.SetJobRemovedCallback
+// DefaultColorizedAddedCallback is the DefaultAddedCallback (CronTask's addedCallback) in color.
+//
+// The default callback logs like (just like gin.DebugPrintRouteFunc):
+// 	[Task-debug]
+func DefaultColorizedAddedCallback(j *FuncJob) {
+	// TODO
+}
+
+// defaultJobRemovedCallback is the default removedCallback, can be modified by CronTask.SetRemovedCallback
 //
 // The default callback logs like:
 // 	[Task-debug] Remove job: job1, EntryID: 1
@@ -154,26 +172,19 @@ func defaultJobRemovedCallback(j *FuncJob) {
 	fmt.Printf("[Task-debug] Remove job: %s, EntryID: %d\n", j.Title(), j.EntryID())
 }
 
-// defaultJobScheduledCallback is the default jobRemovedCallback, can be modified by CronTask.SetJobScheduledCallback
-//
-// The default callback does nothing.
-func defaultJobScheduledCallback(*FuncJob) {
-	// skip
+// SetAddedCallback sets job added callback, this will be invoked after FuncJob added, defaults to DefaultAddedCallback.
+func (c *CronTask) SetAddedCallback(cb func(job *FuncJob)) {
+	c.addedCallback = cb
 }
 
-// SetJobAddedCallback sets job added callback, this will be invoked after FuncJob added.
-func (c *CronTask) SetJobAddedCallback(cb func(job *FuncJob)) {
-	c.jobAddedCallback = cb
+// SetRemovedCallback sets job removed callback, this will be invoked after FuncJob removed, defaults to defaultJobRemovedCallback.
+func (c *CronTask) SetRemovedCallback(cb func(job *FuncJob)) {
+	c.removedCallback = cb
 }
 
-// SetJobRemovedCallback sets job removed callback, this will be invoked after FuncJob removed.
-func (c *CronTask) SetJobRemovedCallback(cb func(job *FuncJob)) {
-	c.jobRemovedCallback = cb
-}
-
-// SetJobScheduledCallback sets job scheduled callback, this will be invoked when after FuncJob scheduled.
-func (c *CronTask) SetJobScheduledCallback(cb func(job *FuncJob)) {
-	c.jobScheduledCallback = cb
+// SetScheduledCallback sets job scheduled callback, this will be invoked when after FuncJob scheduled, defaults to do nothing.
+func (c *CronTask) SetScheduledCallback(cb func(job *FuncJob)) {
+	c.scheduledCallback = cb
 }
 
 // SetPanicHandler sets panic handler for jobs executing, defaults to print warning message.
@@ -219,6 +230,12 @@ func (f *FuncJob) Funcname() string {
 	return runtime.FuncForPC(reflect.ValueOf(f.function).Pointer()).Name()
 }
 
+// updateEntry adds and updates cron.Entry information to current FuncJob.
+func (f *FuncJob) updateEntry(entry cron.Entry) {
+	f.entry = &entry
+	f.entryID = entry.ID
+}
+
 // Entry returns cron.Entry from FuncJob.
 func (f *FuncJob) Entry() *cron.Entry {
 	return f.entry
@@ -234,12 +251,12 @@ func (f *FuncJob) Run() {
 	defer func() {
 		v := recover()
 		if v != nil && f.parent.panicHandler != nil {
-			f.parent.panicHandler(f, v) // defaults to log warning
+			f.parent.panicHandler(f, v) // defaults to print warning message
 		}
 	}()
 
-	if f.parent.jobScheduledCallback != nil {
-		f.parent.jobScheduledCallback(f) // defaults to ignore
+	if f.parent.scheduledCallback != nil {
+		f.parent.scheduledCallback(f) // defaults to do nothing
 	}
 	f.function()
 }

@@ -78,13 +78,13 @@ func TestFuncJob(t *testing.T) {
 		c := cron.New(cron.WithSeconds())
 		task := NewCronTask(c)
 
-		task.SetJobAddedCallback(func(j *FuncJob) {
+		task.SetAddedCallback(func(j *FuncJob) {
 			log.Printf("[Task] %-29s | %s (EntryID: %d)", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
 		})
-		task.SetJobRemovedCallback(func(j *FuncJob) {
+		task.SetRemovedCallback(func(j *FuncJob) {
 			log.Printf("[Task] Remove job: %s | EntryID: %d", j.Title(), j.EntryID())
 		})
-		task.SetJobScheduledCallback(func(j *FuncJob) {
+		task.SetScheduledCallback(func(j *FuncJob) {
 			log.Printf("[Task] Executing job: %s", j.Title())
 		})
 		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() {

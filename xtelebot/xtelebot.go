@@ -17,7 +17,7 @@ func TextBtn(text string) *telebot.ReplyButton {
 	return _markup.Text(text).Reply()
 }
 
-// DataBtn creates a telebot.InlineButton using given button text, callback unique and data.
+// DataBtn creates a telebot.InlineButton using given button text, callback unique and callback data.
 func DataBtn(text, unique string, data ...string) *telebot.InlineButton {
 	return _markup.Data(text, unique, data...).Inline()
 }
@@ -38,7 +38,7 @@ type (
 // InlineKeyboard creates a telebot.InlineButton keyboard with given InlineRow-s.
 //
 // Example:
-// 	&telebot.ReplyMarkup{
+// 	markup := &telebot.ReplyMarkup{
 // 		InlineKeyboard: xtelebot.InlineKeyboard(
 // 			xtelebot.InlineRow{button.InlineBtn1},
 // 			xtelebot.InlineRow{button.InlineBtn2, button.InlineBtn3},
@@ -59,7 +59,7 @@ func InlineKeyboard(rows ...InlineRow) [][]telebot.InlineButton {
 // ReplyKeyboard creates a telebot.ReplyButton keyboard with given ReplyRow-s.
 //
 // Example:
-// 	&telebot.ReplyMarkup{
+// 	markup := &telebot.ReplyMarkup{
 // 		ResizeReplyKeyboard: true,
 // 		ReplyKeyboard: xtelebot.ReplyKeyboard(
 // 			xtelebot.ReplyRow{button.ReplyBtn1, button.ReplyBtn2},
@@ -78,15 +78,30 @@ func ReplyKeyboard(rows ...ReplyRow) [][]telebot.ReplyButton {
 	return out
 }
 
+// RemoveInlineKeyboard creates a telebot.ReplyMarkup for removing telebot.InlineButton keyboard.
+func RemoveInlineKeyboard() *telebot.ReplyMarkup {
+	return &telebot.ReplyMarkup{InlineKeyboard: nil /* dummy */}
+}
+
+// RemoveReplyKeyboard creates a telebot.ReplyMarkup for removing telebot.ReplyButton keyboard.
+func RemoveReplyKeyboard() *telebot.ReplyMarkup {
+	return &telebot.ReplyMarkup{ReplyKeyboardRemove: true}
+}
+
+// CallbackShowAlert creates a telebot.CallbackResponse for show alert in telebot.Callback.
+func CallbackShowAlert(text string, showAlert bool) *telebot.CallbackResponse {
+	return &telebot.CallbackResponse{Text: text, ShowAlert: showAlert}
+}
+
 // ==================
 // chat state related
 // ==================
 
-// ChatState is a type of chat states, is used in BotData and can be used in custom finite state machine.
+// ChatState is a type of chat state, is used in StateHandlerSet and BotData, also can be used in custom finite state machine.
 type ChatState uint64
 
-// StateHandlerSet is a container for specific ChatState and MessageHandler-s, can be used to get MessageHandler for custom
-// ChatState (using finite state machine) in telebot.OnText handler.
+// StateHandlerSet is a container for ChatState and MessageHandler pairs, can be used to get MessageHandler for specific ChatState,
+// with using finite state machine, in telebot.OnText handler.
 type StateHandlerSet struct {
 	handlers map[ChatState]MessageHandler
 	muH      sync.RWMutex
@@ -97,7 +112,7 @@ func NewStateHandlerSet() *StateHandlerSet {
 	return &StateHandlerSet{handlers: make(map[ChatState]MessageHandler)}
 }
 
-// IsRegistered checks whether given ChatState has registered a MessageHandler or not.
+// IsRegistered checks whether given ChatState has registered a MessageHandler.
 func (s *StateHandlerSet) IsRegistered(state ChatState) bool {
 	s.muH.RLock()
 	_, ok := s.handlers[state]
@@ -105,16 +120,20 @@ func (s *StateHandlerSet) IsRegistered(state ChatState) bool {
 	return ok
 }
 
-// GetHandler returns the MessageHandler for given ChatState.
+// GetHandler returns the registered MessageHandler for given ChatState, returns nil if handler for given ChatState has not registered yet.
 func (s *StateHandlerSet) GetHandler(state ChatState) MessageHandler {
 	s.muH.RLock()
 	handler, ok := s.handlers[state]
-	s.muH.Unlock()
+	s.muH.RUnlock()
 	if !ok {
 		return nil
 	}
 	return handler
 }
+
+const (
+	panicNilHandler = "xtelebot: nil handler"
+)
 
 // Register registers a MessageHandler for given ChatState, panics when using nil handler.
 func (s *StateHandlerSet) Register(state ChatState, handler MessageHandler) {

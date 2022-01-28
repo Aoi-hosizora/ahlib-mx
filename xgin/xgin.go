@@ -1,14 +1,9 @@
 package xgin
 
 import (
-	"errors"
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
 	"github.com/Aoi-hosizora/ahlib/xstring"
-	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -193,111 +188,14 @@ func WrapPprof(engine *gin.Engine) {
 	}
 }
 
-// ======================
-// validator & translator
-// ======================
-
-var (
-	errValidatorNotSupported = errors.New("xgin: gin's validator engine is not validator.Validate from github.com/go-playground/validator/v10")
-)
-
-// GetValidatorEngine returns gin's binding validator engine, which only supports validator.Validate from github.com/go-playground/validator/v10.
-func GetValidatorEngine() (*validator.Validate, error) {
-	val, ok := binding.Validator.Engine().(*validator.Validate)
-	if !ok {
-		return nil, errValidatorNotSupported
-	}
-	return val, nil
-}
-
-// GetValidatorTranslator applies and returns xvalidator.UtTranslator for validator.Validate using given parameters. Also see xvalidator.ApplyTranslator.
-//
-// Example:
-// 	translator, _ := xgin.GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-// 	result := err.(validator.ValidationErrors).Translate(translator)
-func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvalidator.TranslationRegisterHandler) (xvalidator.UtTranslator, error) {
-	val, err := GetValidatorEngine()
-	if err != nil {
-		return nil, err // errValidatorNotSupported
-	}
-	return xvalidator.ApplyTranslator(val, locale, registerFn) // create translator with locale, register translator to validator
-}
-
-// _globalTranslator is a global xvalidator.UtTranslator set by SetGlobalTranslator and can be got by GetGlobalTranslator.
-var _globalTranslator xvalidator.UtTranslator
-
-// SetGlobalTranslator stores given xvalidator.UtTranslator to global, it can be got by using GetGlobalTranslator.
-func SetGlobalTranslator(translator xvalidator.UtTranslator) {
-	_globalTranslator = translator
-}
-
-// GetGlobalTranslator gets the stored translator by SetGlobalTranslator, it will return nil if this function is called before SetGlobalTranslator.
-func GetGlobalTranslator() xvalidator.UtTranslator {
-	return _globalTranslator
-}
-
-// AddBinding registers custom validation function to gin's validator engine. You can use your custom validator.Func or functions from xvalidator package
-// such as xvalidator.RegexpValidator and xvalidator.DateTimeValidator.
-//
-// Example:
-// 	err := xgin.AddBinding("regexp", xvalidator.ParamRegexpValidator())
-// 	err := xgin.AddBinding("xxx", func(fl validator.FieldLevel) bool { /* ... */ })
-func AddBinding(tag string, fn validator.Func) error {
-	v, err := GetValidatorEngine()
-	if err != nil {
-		return err
-	}
-	return v.RegisterValidation(tag, fn)
-}
-
-// AddTranslation registers custom validation translation to gin's validator engine, using given tag, message and override flag. Also see xvalidator.DefaultTranslateFunc.
-//
-// Example:
-// 	err := xgin.AddTranslation(translator, "regexp", "{0} must match regexp /{1}/", true)
-// 	err := xgin.AddTranslation(translator, "email", "{0} must be an email", true)
-func AddTranslation(translator xvalidator.UtTranslator, tag, message string, override bool) error {
-	v, err := GetValidatorEngine()
-	if err != nil {
-		return err
-	}
-	regisFn := xvalidator.DefaultRegistrationFunc(tag, message, override)
-	transFn := xvalidator.DefaultTranslateFunc()
-	return v.RegisterTranslation(tag, translator, regisFn, transFn)
-}
-
-// EnableParamRegexpBinding enables parameterized regexp validator to `regexp` binding tag, see xvalidator.ParamRegexpValidator.
-func EnableParamRegexpBinding() error {
-	return AddBinding("regexp", xvalidator.ParamRegexpValidator())
-}
-
-// EnableParamRegexpBindingTranslator enables parameterized regexp validator `regexp`'s translation using given xvalidator.UtTranslator.
-func EnableParamRegexpBindingTranslator(translator xvalidator.UtTranslator) error {
-	return AddTranslation(translator, "regexp", "{0} should match regexp /{1}/", true)
-}
-
-// EnableRFC3339DateBinding enables rfc3339 date validator to `date` binding tag, see xvalidator.DateTimeValidator.
-func EnableRFC3339DateBinding() error {
-	return AddBinding("date", xvalidator.DateTimeValidator(xtime.RFC3339Date))
-}
-
-// EnableRFC3339DateBindingTranslator enables rfc3339 date validator `date`'s translation using given xvalidator.UtTranslator.
-func EnableRFC3339DateBindingTranslator(translator xvalidator.UtTranslator) error {
-	return AddTranslation(translator, "date", "{0} should be an RFC3339 date", true)
-}
-
-// EnableRFC3339DateTimeBinding enables rfc3339 datetime validator to `datetime` binding tag, see xvalidator.DateTimeValidator.
-func EnableRFC3339DateTimeBinding() error {
-	return AddBinding("datetime", xvalidator.DateTimeValidator(xtime.RFC3339DateTime))
-}
-
-// EnableRFC3339DateTimeBindingTranslator enables rfc3339 datetime validator `datetime`'s translation using given xvalidator.UtTranslator.
-func EnableRFC3339DateTimeBindingTranslator(translator xvalidator.UtTranslator) error {
-	return AddTranslation(translator, "datetime", "{0} should be an RFC3339 datetime", true)
-}
-
 // ========================
 // mass functions and types
 // ========================
+
+// SetPrintRouteFunc sets gin.Engine's debug print route func by modifying gin.DebugPrintRouteFunc directly, defaults to DefaultPrintRouteFunc.
+func SetPrintRouteFunc(f func(httpMethod, absolutePath, handlerName string, numHandlers int)) {
+	gin.DebugPrintRouteFunc = f
+}
 
 // HideDebugPrintRoute hides the gin.DebugPrintRouteFunc logging and returns a function to restore this behavior.
 func HideDebugPrintRoute() (restoreFn func()) {
@@ -308,8 +206,31 @@ func HideDebugPrintRoute() (restoreFn func()) {
 	}
 }
 
-// NewEngineWithoutDebugWarning creates a new gin.Engine without gin.debugPrintWARNINGNew behavior.
-func NewEngineWithoutDebugWarning() *gin.Engine {
+func init() {
+	// set gin.DebugPrintRouteFunc to DefaultPrintRouteFunc in default.
+	SetPrintRouteFunc(DefaultPrintRouteFunc)
+}
+
+// DefaultPrintRouteFunc is the default gin.DebugPrintRouteFunc, can be modified by SetPrintRouteFunc.
+//
+// The default format logs like (just like gin.DebugPrintRouteFunc):
+// 	[Gin-debug] GET    /debug/pprof/             --> ... (1 handlers)
+// 	[Gin-debug] GET    /debug/pprof/threadcreate --> ... (1 handlers)
+// 	[Gin-debug] POST   /debug/pprof/symbol       --> ... (1 handlers)
+func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int) {
+	fmt.Printf("[Gin-debug] %-6s %-25s --> %s (%d handlers)\n", httpMethod, absolutePath, handlerName, numHandlers)
+}
+
+// DefaultColorizedPrintRouteFunc is the DefaultPrintRouteFunc in color.
+//
+// The default format logs like (just like gin.DebugPrintRouteFunc):
+// 	[Gin-debug]
+func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int) {
+	// TODO
+}
+
+// NewEngineWithoutLogging creates a new gin.Engine without gin.debugPrintWARNINGNew behavior.
+func NewEngineWithoutLogging() *gin.Engine {
 	originWriter := gin.DefaultWriter
 	gin.DefaultWriter = io.Discard
 	engine := gin.New()
