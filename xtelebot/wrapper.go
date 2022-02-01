@@ -3,10 +3,12 @@ package xtelebot
 import (
 	"errors"
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib/xreflect"
-	"gopkg.in/tucnak/telebot.v2"
 	"log"
 	"reflect"
+
+	"github.com/Aoi-hosizora/ahlib/xcolor"
+	"github.com/Aoi-hosizora/ahlib/xreflect"
+	"gopkg.in/tucnak/telebot.v2"
 )
 
 // ================
@@ -23,7 +25,7 @@ type BotWrapper struct {
 	handledCallback   func(endpoint interface{}, formattedEndpoint string, handlerName string)
 	receivedCallback  func(endpoint interface{}, received *telebot.Message)
 	respondedCallback func(typ RespondEventType, event *RespondEvent)
-	panicHandler      func(endpoint, source, value interface{})
+	panicHandler      func(endpoint, messageOrCallback, value interface{})
 }
 
 const (
@@ -112,7 +114,7 @@ func (b *BotWrapper) RemoveHandler(endpoint interface{}) {
 // HandleCommand handles string command with MessageHandler to telebot.Bot, panics when using invalid command or nil handler, visit
 // https://github.com/tucnak/telebot/tree/v2#commands for more details.
 func (b *BotWrapper) HandleCommand(command string, handler MessageHandler) {
-	if len(command) <= 1 || (command[0] != '/' && command[0] != '\a') {
+	if !isCommandValid(command) {
 		panic(panicInvalidCommand)
 	}
 	if handler == nil {
@@ -212,8 +214,8 @@ const (
 	RespondCallbackEvent RespondEventType = "callback" // RespondEventType for BotWrapper.RespondCallback.
 )
 
-// RespondEvent is a type of respond event, containing arguments of respond method (such as BotWrapper.RespondSend) and responded result (almost is
-// a telebot.Message, except RespondCallbackEvent), will be used in respondedCallback, LogRespondToLogrus and LogRespondToLogger.
+// RespondEvent is a type of respond event, containing arguments of respond method (such as BotWrapper.RespondSend) and responded result and error,
+// this will be used in respondedCallback, LogRespondToLogrus and LogRespondToLogger.
 type RespondEvent struct {
 	// for RespondSendEvent
 	SendSource  *telebot.Chat
@@ -392,9 +394,14 @@ func DefaultHandledCallback(_ interface{}, formattedEndpoint string, handlerName
 // DefaultColorizedHandledCallback is the DefaultAddedCallback (BotWrapper's handledCallback) in color.
 //
 // The default callback logs like (just like gin.DebugPrintRouteFunc):
-// 	[Bot-debug]
+// 	[Bot-debug] /test-endpoint                   --> ...
+// 	[Bot-debug] $on_text                         --> ...
+// 	[Bot-debug] $rep_btn:button_text             --> ...
+// 	[Bot-debug] $inl_btn:button_unique           --> ...
+// 	           |--------------------------------|   |---|
+// 	                       32 (blue)                 ...
 func DefaultColorizedHandledCallback(_ interface{}, formattedEndpoint string, handlerName string) {
-	// TODO
+	fmt.Printf("[Bot-debug] %s --> %s\n", xcolor.Blue.Sprintf(fmt.Sprintf("%-32s", formattedEndpoint)), handlerName)
 }
 
 // SetHandledCallback sets endpoint handled callback, callback will be invoked in handling methods, defaults to DefaultHandledCallback.
@@ -412,8 +419,8 @@ func (b *BotWrapper) SetRespondedCallback(cb func(typ RespondEventType, event *R
 	b.respondedCallback = cb
 }
 
-// SetPanicHandler sets panic handler to all handlers, notes that the `source` parameter means handler's parameter, that is telebot.Message for
-// MessageHandler and telebot.Callback for CallbackHandler, defaults to print warning message with given panicked value.
-func (b *BotWrapper) SetPanicHandler(handler func(endpoint, source, value interface{})) {
+// SetPanicHandler sets panic handler to all handlers, notes that the `messageOrCallback` parameter means handler's parameter, that is telebot.Message 
+// for MessageHandler and telebot.Callback for CallbackHandler, defaults to print warning message with given panicked value.
+func (b *BotWrapper) SetPanicHandler(handler func(endpoint, messageOrCallback, value interface{})) {
 	b.panicHandler = handler
 }

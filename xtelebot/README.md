@@ -41,8 +41,8 @@
 
 ### Functions
 
-+ `func TextBtn(text string) *telebot.ReplyButton`
 + `func DataBtn(text, unique string, data ...string) *telebot.InlineButton`
++ `func TextBtn(text string) *telebot.ReplyButton`
 + `func URLBtn(text, url string) *telebot.InlineButton`
 + `func InlineKeyboard(rows ...InlineRow) [][]telebot.InlineButton`
 + `func ReplyKeyboard(rows ...ReplyRow) [][]telebot.ReplyButton`
@@ -70,6 +70,7 @@
 + `func (b *BotData) GetState(chatID int64) (ChatState, bool)`
 + `func (b *BotData) GetStateOr(chatID int64, fallbackState ChatState) ChatState`
 + `func (b *BotData) GetStateOrInit(chatID int64) ChatState`
++ `func (b *BotData) InitialState() ChatState`
 + `func (b *BotData) SetInitialState(s ChatState)`
 + `func (b *BotData) SetState(chatID int64, state ChatState)`
 + `func (b *BotData) ResetState(chatID int64)`

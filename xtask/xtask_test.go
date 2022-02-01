@@ -11,7 +11,8 @@ import (
 
 func TestCronTask(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
-		c := cron.New(cron.WithSeconds() /*, cron.WithLogger(cron.DiscardLogger)*/)
+		c := cron.New(cron.WithSeconds())
+		// c := cron.New(cron.WithSeconds(), cron.WithLogger(cron.DiscardLogger))
 		task := NewCronTask(c)
 		xtesting.Equal(t, task.Cron(), c)
 		xtesting.Equal(t, len(task.Jobs()), 0)
@@ -69,7 +70,8 @@ func TestCronTask(t *testing.T) {
 		xtesting.Equal(t, task.Jobs()[0].ScheduleExpr(), "0/1 * * * * *")
 		xtesting.Equal(t, task.Jobs()[1].ScheduleExpr(), "0/2 * * * * *")
 		xtesting.Equal(t, task.Jobs()[2].ScheduleExpr(), "<parsed SpecSchedule>")
-		xtesting.Equal(t, task.newFuncJob("", "", nil, nil).ScheduleExpr(), "<unknown Schedule>") // fake
+		f := &FuncJob{schedule: nil}
+		xtesting.Equal(t, f.ScheduleExpr(), "<unknown Schedule>") // fake
 	})
 }
 
@@ -78,27 +80,28 @@ func TestFuncJob(t *testing.T) {
 		c := cron.New(cron.WithSeconds())
 		task := NewCronTask(c)
 
-		task.SetAddedCallback(func(j *FuncJob) {
-			log.Printf("[Task] %-29s | %s (EntryID: %d)", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
+		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() {
+			log.Printf("every1s_1_%s", time.Now().Format(time.RFC3339Nano))
+		})
+		task.SetAddedCallback(DefaultColorizedAddedCallback)
+		task.AddJobByCronSpec("every2s", "0/2 * * * * *", func() {
+			log.Printf("every2s_2_%s", time.Now().Format(time.RFC3339Nano))
 		})
 		task.SetRemovedCallback(func(j *FuncJob) {
 			log.Printf("[Task] Remove job: %s | EntryID: %d", j.Title(), j.EntryID())
 		})
-		task.SetScheduledCallback(func(j *FuncJob) {
-			log.Printf("[Task] Executing job: %s", j.Title())
-		})
-		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() {
-			log.Printf("every1s_1_%s", time.Now().Format(time.RFC3339Nano))
-		})
-		task.AddJobByCronSpec("every2s", "0/2 * * * * *", func() {
-			log.Printf("every2s_2_%s", time.Now().Format(time.RFC3339Nano))
-		})
 		task.RemoveJob(2)
+		task.SetAddedCallback(func(j *FuncJob) {
+			log.Printf("[Task] %-29s | %s (EntryID: %d)", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
+		})
 		task.AddJobByCronSpec("every2s", "0/2 * * * * *", func() {
 			log.Printf("every2s_3_%s", time.Now().Format(time.RFC3339Nano))
 		})
 		task.AddJobByCronSpec("every1s", "0/1 * * * * *", func() {
 			log.Printf("every1s_4_%s", time.Now().Format(time.RFC3339Nano))
+		})
+		task.SetScheduledCallback(func(j *FuncJob) {
+			log.Printf("[Task] Executing job: %s", j.Title())
 		})
 		xtesting.Equal(t, len(task.Jobs()), 3)
 		xtesting.Equal(t, len(task.Cron().Entries()), 3)

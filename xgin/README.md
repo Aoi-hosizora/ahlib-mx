@@ -40,6 +40,13 @@
 + `func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string`
 + `func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string`
 + `func WrapPprof(engine *gin.Engine)`
++ `func HideDebugLogging() (restoreFn func())`
++ `func HideDebugPrintRoute() (restoreFn func())`
++ `func SetPrintRouteFunc(f func(httpMethod, absolutePath, handlerName string, numHandlers int))`
++ `func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
++ `func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
++ `func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError`
++ `func GetProxyEnv() (httpProxy string, httpsProxy string, socksProxy string)`
 + `func GetValidatorEngine() (*validator.Validate, error)`
 + `func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvalidator.TranslationRegisterHandler) (xvalidator.UtTranslator, error)`
 + `func SetGlobalTranslator(translator xvalidator.UtTranslator)`
@@ -52,10 +59,6 @@
 + `func EnableRFC3339DateBindingTranslator(translator ut.Translator) error`
 + `func EnableRFC3339DateTimeBinding() error`
 + `func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
-+ `func HideDebugPrintRoute() (restoreFn func())`
-+ `func NewEngineWithoutLogging() *gin.Engine`
-+ `func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError`
-+ `func GetProxyEnv() (httpProxy string, httpsProxy string, socksProxy string)`
 + `func WithUtTranslator(translator xvalidator.UtTranslator) TranslateOption`
 + `func WithJsonInvalidUnmarshalError(fn func(*json.InvalidUnmarshalError) (result map[string]string, need4xx bool)) TranslateOption`
 + `func WithJsonUnmarshalTypeError(fn func(*json.UnmarshalTypeError) (result map[string]string, need4xx bool)) TranslateOption`

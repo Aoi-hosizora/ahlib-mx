@@ -12,6 +12,10 @@ import (
 	"unsafe"
 )
 
+// =============
+// for demo only
+// =============
+
 func TestRequiredAndOmitempty(t *testing.T) {
 	// 1. `required` + non-pointer (common)
 	// 	A uint64 `binding:"required"` // cannot be nil and 0
@@ -213,17 +217,14 @@ func TestUseTagAsFieldName(t *testing.T) {
 	v1 := validator.New()
 	v2 := validator.New()
 	xtesting.Panic(t, func() { UseTagAsFieldName(nil, "a") })
-	xtesting.Panic(t, func() { UseTagAsFieldName(v1, "") })
-	xtesting.Panic(t, func() { UseTagAsFieldName(v1, " ") })
-	xtesting.Panic(t, func() { UseDefaultFieldName(nil) })
 	UseTagAsFieldName(v1, "json")
 	UseTagAsFieldName(v2, "json")
-	UseDefaultFieldName(v2)
+	UseTagAsFieldName(v2, "") // unregister
 
 	type S struct {
 		F1 string  `validate:"required,gt=3" json:"f_1"`
 		F2 int32   `validate:"required,ne=5" json:"f_2"`
-		F3 float32 `validate:"required" json:"-"`
+		F3 float32 `validate:"required"      json:"-"`
 		F4 float32 `validate:"required"`
 	}
 	for _, tc := range []struct {

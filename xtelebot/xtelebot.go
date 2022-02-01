@@ -12,14 +12,14 @@ import (
 // _markup is a global telebot.ReplyMarkup for telebot.InlineButton and telebot.ReplyButton helpers.
 var _markup = &telebot.ReplyMarkup{}
 
-// TextBtn creates a telebot.ReplyButton using given button text.
-func TextBtn(text string) *telebot.ReplyButton {
-	return _markup.Text(text).Reply()
-}
-
 // DataBtn creates a telebot.InlineButton using given button text, callback unique and callback data.
 func DataBtn(text, unique string, data ...string) *telebot.InlineButton {
 	return _markup.Data(text, unique, data...).Inline()
+}
+
+// TextBtn creates a telebot.ReplyButton using given button text.
+func TextBtn(text string) *telebot.ReplyButton {
+	return _markup.Text(text).Reply()
 }
 
 // URLBtn creates a telebot.InlineButton using given button text and url.
@@ -88,7 +88,7 @@ func RemoveReplyKeyboard() *telebot.ReplyMarkup {
 	return &telebot.ReplyMarkup{ReplyKeyboardRemove: true}
 }
 
-// CallbackShowAlert creates a telebot.CallbackResponse for show alert in telebot.Callback.
+// CallbackShowAlert creates a telebot.CallbackResponse for showing alert in telebot.Callback.
 func CallbackShowAlert(text string, showAlert bool) *telebot.CallbackResponse {
 	return &telebot.CallbackResponse{Text: text, ShowAlert: showAlert}
 }
@@ -217,6 +217,14 @@ func (b *BotData) GetStateOrInit(chatID int64) ChatState {
 		b.states[chatID] = s
 	}
 	b.muS.Unlock()
+	return s
+}
+
+// InitialState returns the initial ChatState from BotData/
+func (b *BotData) InitialState() ChatState {
+	b.muS.RLock()
+	s := b.initialState
+	b.muS.RUnlock()
 	return s
 }
 

@@ -5,11 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
-	"github.com/Aoi-hosizora/ahlib/xtesting"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,45 +13,76 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xtesting"
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
-type mockValidator struct{}
-
-func (f mockValidator) ValidateStruct(interface{}) error { return nil }
-func (f mockValidator) Engine() interface{}              { return nil /* fake */ }
-
-func TestValidatorAndTranslator(t *testing.T) {
-	// validator
-	val, err := GetValidatorEngine()
+func TestValidator(t *testing.T) {
+	val, err := GetValidatorEngine() // gin's default validator.Validator
 	xtesting.Nil(t, err)
+
+	// default
 	type testStruct1 struct {
 		String string `binding:"required"`
 	}
 	xtesting.NotNil(t, val.Struct(&testStruct1{}))
 	xtesting.Nil(t, val.Struct(&testStruct1{String: "xxx"}))
-	val.SetTagName("validate") // change to use validate
+
+	// custom tag
+	val.SetTagName("validate") // let the global validator use `validate` tag
 	type testStruct2 struct {
 		String string `validate:"required,gt=2"`
 	}
-	xtesting.NotNil(t, val.Struct(&testStruct2{}))
-	xtesting.NotNil(t, val.Struct(&testStruct2{String: "xx"}))
+	xtesting.NotNil(t, val.Struct(&testStruct2{}))             // err: required
+	xtesting.NotNil(t, val.Struct(&testStruct2{String: "xx"})) // err: gt
 	xtesting.Nil(t, val.Struct(&testStruct2{String: "xxx"}))
-	val.SetTagName("binding") // default tag is binding
+	val.SetTagName("binding") // default to `binding`
 
-	// translator
-	xtesting.Nil(t, GetGlobalTranslator())
-	ut, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-	xtesting.Nil(t, err)
-	SetGlobalTranslator(ut)
-	xtesting.NotNil(t, GetGlobalTranslator())
-	SetGlobalTranslator(nil)
-	xtesting.Nil(t, GetGlobalTranslator())
+	// custom field name
 	type testStruct3 struct {
 		String string `binding:"required,ne=hhh" json:"str"`
 	}
-	xvalidator.UseTagAsFieldName(val, "json")
+	xvalidator.UseTagAsFieldName(val, "json") // let the global validator use `json` as field name
 	xtesting.Equal(t, val.Struct(&testStruct3{}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'required' tag")
 	xtesting.Equal(t, val.Struct(&testStruct3{String: "hhh"}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'ne' tag")
+	xvalidator.UseTagAsFieldName(val, "") // defaults to no use
+	xtesting.Equal(t, val.Struct(&testStruct3{}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'required' tag") // TODO
+	xtesting.Equal(t, val.Struct(&testStruct3{String: "hhh"}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'ne' tag")
+	type testStruct4 struct {
+		String string `binding:"required,lt=3" json:"str"`
+	}
+	xtesting.Equal(t, val.Struct(&testStruct4{}).Error(), "Key: 'testStruct4.String' Error:Field validation for 'String' failed on the 'required' tag")
+	xtesting.Equal(t, val.Struct(&testStruct4{String: "hhh"}).Error(), "Key: 'testStruct4.String' Error:Field validation for 'String' failed on the 'lt' tag")
+}
+
+type mockValidator struct{}
+
+func (f mockValidator) ValidateStruct(interface{}) error { return nil }
+func (f mockValidator) Engine() interface{}              { return nil } // fake
+
+func TestTranslator(t *testing.T) {
+	val, err := GetValidatorEngine()
+	xtesting.Nil(t, err)
+	ut, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+	xtesting.Nil(t, err)
+
+	// global
+	xtesting.Nil(t, GetGlobalTranslator())
+	SetGlobalTranslator(ut)
+	xtesting.Equal(t, GetGlobalTranslator(), ut)
+	SetGlobalTranslator(nil)
+	xtesting.Nil(t, GetGlobalTranslator())
+
+	// translate
+	type testStruct struct {
+		String string `binding:"required,ne=hhh" json:"str"`
+	}
+	xvalidator.UseTagAsFieldName(val, "json")
+	defer func() { xvalidator.UseTagAsFieldName(val, "") }()
 	for _, tc := range []struct {
 		giveLoc          xvalidator.LocaleTranslator
 		giveReg          xvalidator.TranslationRegisterHandler
@@ -72,54 +98,53 @@ func TestValidatorAndTranslator(t *testing.T) {
 	} {
 		ut, err := GetValidatorTranslator(tc.giveLoc, tc.giveReg)
 		xtesting.Nil(t, err)
-
-		reqText := val.Struct(&testStruct3{}).(validator.ValidationErrors).Translate(ut)["testStruct3.str"]
-		xtesting.Equal(t, reqText, tc.wantRequiredText)
-		neText := val.Struct(&testStruct3{String: "hhh"}).(validator.ValidationErrors).Translate(ut)["testStruct3.str"]
-		xtesting.Equal(t, neText, tc.wantNotEqualText)
-
-		reqText = xvalidator.TranslateValidationErrors(val.Struct(&testStruct3{}).(validator.ValidationErrors), ut, false)["str"]
-		xtesting.Equal(t, reqText, tc.wantRequiredText)
-		neText = xvalidator.TranslateValidationErrors(val.Struct(&testStruct3{String: "hhh"}).(validator.ValidationErrors), ut, false)["str"]
-		xtesting.Equal(t, neText, tc.wantNotEqualText)
+		reqErr := val.Struct(&testStruct{}).(validator.ValidationErrors)
+		neErr := val.Struct(&testStruct{String: "hhh"}).(validator.ValidationErrors)
+		xtesting.Equal(t, reqErr.Translate(ut)["testStruct.str"], tc.wantRequiredText)
+		xtesting.Equal(t, neErr.Translate(ut)["testStruct.str"], tc.wantNotEqualText)
+		xtesting.Equal(t, xvalidator.TranslateValidationErrors(reqErr, ut, false)["str"], tc.wantRequiredText)
+		xtesting.Equal(t, xvalidator.TranslateValidationErrors(neErr, ut, false)["str"], tc.wantNotEqualText)
 	}
 
-	// mismatched validator engine
-	motoVal := binding.Validator
-	motoTrans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-	binding.Validator = &mockValidator{}
-	_, err = GetValidatorEngine()
-	xtesting.NotNil(t, err)
-	_, err = GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-	xtesting.NotNil(t, err)
-	xtesting.NotNil(t, EnableParamRegexpBinding())
-	xtesting.NotNil(t, EnableRFC3339DateBinding())
-	xtesting.NotNil(t, EnableParamRegexpBindingTranslator(motoTrans))
-	xtesting.NotNil(t, EnableRFC3339DateBindingTranslator(motoTrans))
+	t.Run("mismatch", func(t *testing.T) {
+		// mismatched validator engine
+		originVal := binding.Validator
+		originTrans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+		binding.Validator = &mockValidator{}
+		_, err = GetValidatorEngine()
+		xtesting.NotNil(t, err)
+		_, err = GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+		xtesting.NotNil(t, err)
+		xtesting.NotNil(t, EnableParamRegexpBinding())
+		xtesting.NotNil(t, EnableRFC3339DateBinding())
+		xtesting.NotNil(t, EnableParamRegexpBindingTranslator(originTrans))
+		xtesting.NotNil(t, EnableRFC3339DateBindingTranslator(originTrans))
 
-	binding.Validator = motoVal
-	_, err = GetValidatorEngine()
-	xtesting.Nil(t, err)
-	trans, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-	xtesting.Nil(t, err)
-	xtesting.Nil(t, EnableRFC3339DateTimeBinding())
-	xtesting.Nil(t, EnableRFC3339DateTimeBindingTranslator(trans))
+		binding.Validator = originVal
+		_, err = GetValidatorEngine()
+		xtesting.Nil(t, err)
+		trans, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+		xtesting.Nil(t, err)
+		xtesting.Nil(t, EnableRFC3339DateTimeBinding())
+		xtesting.Nil(t, EnableRFC3339DateTimeBindingTranslator(trans))
+	})
 }
 
-func TestAddBindingAndTranslator(t *testing.T) {
+func TestBinding(t *testing.T) {
 	val, _ := GetValidatorEngine()
 	xvalidator.UseTagAsFieldName(val, "json")
 	trans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-	xtesting.Nil(t, AddBinding("re_number", xvalidator.RegexpValidator(regexp.MustCompile(`^[0-9]+$`))))
-	xtesting.Nil(t, AddTranslation(trans, "re_number", "{0} should be a number string", true))
-	xtesting.Nil(t, AddBinding("range_name", xvalidator.LengthInRangeValidator(3, 10)))
-	xtesting.Nil(t, AddTranslation(trans, "range_name", "{0} should be in range of [3, 10]", true))
+
 	xtesting.Nil(t, EnableParamRegexpBinding())
 	xtesting.Nil(t, EnableParamRegexpBindingTranslator(trans))
 	xtesting.Nil(t, EnableRFC3339DateBinding())
 	xtesting.Nil(t, EnableRFC3339DateBindingTranslator(trans))
 	xtesting.Nil(t, EnableRFC3339DateTimeBinding())
 	xtesting.Nil(t, EnableRFC3339DateTimeBindingTranslator(trans))
+	xtesting.Nil(t, AddBinding("re_number", xvalidator.RegexpValidator(regexp.MustCompile(`^[0-9]+$`))))
+	xtesting.Nil(t, AddTranslation(trans, "re_number", "{0} should be a number string", true))
+	xtesting.Nil(t, AddBinding("range_name", xvalidator.LengthInRangeValidator(3, 10)))
+	xtesting.Nil(t, AddTranslation(trans, "range_name", "{0} should be in range of [3, 10]", true))
 
 	type testStruct struct {
 		Number   string `json:"number"   form:"number"   binding:"required,re_number"`
@@ -219,12 +244,13 @@ func TestAddBindingAndTranslator(t *testing.T) {
 }
 
 func TestCustomStructValidator(t *testing.T) {
-	motoVal := binding.Validator
+	originVal := binding.Validator
 	sv := xvalidator.NewCustomStructValidator()
 	sv.SetMessageTagName("message")
 	sv.SetValidatorTagName("binding")
 	binding.Validator = sv
-	defer func() { binding.Validator = motoVal }()
+	defer func() { binding.Validator = originVal }()
+
 	val, err := GetValidatorEngine()
 	xtesting.Nil(t, err)
 	trans, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
@@ -234,18 +260,25 @@ func TestCustomStructValidator(t *testing.T) {
 	xtesting.Nil(t, EnableParamRegexpBindingTranslator(trans))
 	xtesting.Nil(t, AddBinding("re_number", xvalidator.RegexpValidator(regexp.MustCompile(`^[0-9]+$`))))
 	xtesting.Nil(t, AddTranslation(trans, "re_number", "{0} should be a number string", true))
-	xtesting.Nil(t, AddBinding("range_int", xvalidator.Or(xvalidator.EqualValidator(0), xvalidator.And(xvalidator.GreaterThenOrEqualValidator(4), xvalidator.NotEqualValidator(5)))))
+	xtesting.Nil(t, AddBinding("rg_int", xvalidator.Or(xvalidator.EqualValidator(0), xvalidator.And(xvalidator.GreaterThenOrEqualValidator(4), xvalidator.NotEqualValidator(5)))))
 
 	type testStruct struct {
-		Str string `binding:"required,re_number" json:"_str" form:"_str" message:"required|_str should be set and can not be empty"`
-		Int *int32 `binding:"required,range_int" json:"_int" form:"_int" message:"range_int|_int should be in (x == 0) \\|\\| (x >= 4 && x != 5)"`
+		String string  `binding:"required,re_number" json:"_string" form:"_string" message:"required|_string should be set and can not be empty"`
+		Int    *int32  `binding:"required,rg_int"    json:"_int"    form:"_int"    message:"rg_int|_int should be in specific range"`
+		Float  float64 `binding:"required,gt=0.3"    json:"_float"  form:"_float"`
 	}
 
 	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
 	app.GET("", func(ctx *gin.Context) {
 		if err := ctx.ShouldBindQuery(&testStruct{}); err != nil {
-			ctx.JSON(400, gin.H{"success": false, "details": err.(*xvalidator.ValidateFieldsError).Translate(trans, false)})
+			if verr, ok := err.(*xvalidator.ValidateFieldsError); ok {
+				ctx.JSON(400, gin.H{"success": false, "details": verr.Translate(trans, false)})
+			} else if nerr, ok := err.(*strconv.NumError); ok {
+				ctx.JSON(400, gin.H{"success": false, "details": gin.H{"__json": nerr.Error()}})
+			} else {
+				ctx.JSON(400, gin.H{"success": false, "details": "?"})
+			}
 		} else {
 			ctx.JSON(200, gin.H{"success": true})
 		}
@@ -260,18 +293,30 @@ func TestCustomStructValidator(t *testing.T) {
 		wantMap     map[string]interface{}
 	}{
 		{nil, false,
-			map[string]interface{}{"_str": "_str should be set and can not be empty", "_int": "_int is a required field"},
+			map[string]interface{}{"_string": "_string should be set and can not be empty", "_int": "_int is a required field", "_float": "_float is a required field"},
 		},
-		{map[string]interface{}{"_str": "", "_int": "0"}, false,
-			map[string]interface{}{"_str": "_str should be set and can not be empty"},
+		{map[string]interface{}{"_int": "0"}, false,
+			map[string]interface{}{"_string": "_string should be set and can not be empty", "_float": "_float is a required field"},
 		},
-		{map[string]interface{}{"_str": "a0", "_int": "3"}, false,
-			map[string]interface{}{"_str": "_str should be a number string", "_int": "_int should be in (x == 0) || (x >= 4 && x != 5)"},
+		{map[string]interface{}{"_string": "", "_int": "", "_float": ""}, false,
+			map[string]interface{}{"_string": "_string should be set and can not be empty", "_float": "_float is a required field"}, // TODO
 		},
-		{map[string]interface{}{"_str": "abc", "_int": "5"}, false,
-			map[string]interface{}{"_str": "_str should be a number string", "_int": "_int should be in (x == 0) || (x >= 4 && x != 5)"},
+		{map[string]interface{}{"_string": "a0", "_int": " ", "_float": "0.0"}, false,
+			map[string]interface{}{"__json":"strconv.ParseInt: parsing \" \": invalid syntax"},
 		},
-		{map[string]interface{}{"_str": "123", "_int": "4"}, true, nil},
+		{map[string]interface{}{"_string": " 0", "_int": "3", "_float": "0.3"}, false,
+			map[string]interface{}{"_string": "_string should be a number string", "_int": "_int should be in specific range", "_float": "_float must be greater than 0.3"},
+		},
+		{map[string]interface{}{"_string": "1", "_int": "5.1", "_float": "1"}, false,
+			map[string]interface{}{"__json":"strconv.ParseInt: parsing \"5.1\": invalid syntax"},
+		},
+		{map[string]interface{}{"_string": "1.2", "_int": "5", "_float": "0_1"}, false,
+			map[string]interface{}{"_string": "_string should be a number string", "_int":"_int should be in specific range"},
+		},
+		{map[string]interface{}{"_string": "abc", "_int": "0", "_float": "0"}, false,
+			map[string]interface{}{"_string": "_string should be a number string", "_float": "_float is a required field"},
+		},
+		{map[string]interface{}{"_string": "123", "_int": "4", "_float": "1.1"}, true, nil},
 	} {
 		value := url.Values{}
 		for k, v := range tc.giveMap {
@@ -309,11 +354,11 @@ func TestTranslateBindingError(t *testing.T) {
 	val, _ := GetValidatorEngine()
 	xvalidator.UseTagAsFieldName(val, "json")
 	trans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-	newVal := xvalidator.NewCustomStructValidator()
-	newVal.SetMessageTagName("message")
-	newVal.SetValidatorTagName("binding")
-	// xvalidator.UseTagAsFieldName(newVal.ValidateEngine(), "json")
-	newVal.SetFieldNameTag("json")
+	sv := xvalidator.NewCustomStructValidator()
+	sv.SetMessageTagName("message")
+	sv.SetValidatorTagName("binding")
+	// xvalidator.UseTagAsFieldName(sv.ValidateEngine(), "json")
+	sv.SetFieldNameTag("json")
 
 	app := gin.New()
 	type testStruct struct {
@@ -338,9 +383,9 @@ func TestTranslateBindingError(t *testing.T) {
 			opts = append(opts, WithUtTranslator(trans))
 		}
 		if c.Query("useCustom") == "true" {
-			motoVal := binding.Validator
-			binding.Validator = newVal
-			defer func() { binding.Validator = motoVal }()
+			originVal := binding.Validator
+			binding.Validator = sv
+			defer func() { binding.Validator = originVal }()
 		}
 		if err := c.ShouldBind(ptr); err != nil {
 			if result, need4xx := TranslateBindingError(err, opts...); need4xx {
@@ -506,7 +551,7 @@ func TestTranslateBindingError(t *testing.T) {
 		})
 	}
 
-	// other
+	// for coverage
 	for _, tc := range []struct {
 		name     string
 		giveErr  error

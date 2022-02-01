@@ -15,6 +15,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -22,46 +23,12 @@ import (
 func TestDumpRequest(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
-	app.GET("nil", func(c *gin.Context) { c.JSON(200, DumpRequest(nil)) })
-	app.GET("nil_http", func(c *gin.Context) { c.JSON(200, DumpHttpRequest(nil)) })
-	app.GET("all", func(c *gin.Context) { c.JSON(200, DumpRequest(c)) })
-	app.GET("all_http", func(c *gin.Context) { c.JSON(200, DumpHttpRequest(c.Request)) })
-	app.GET("reqline", func(c *gin.Context) { c.JSON(200, DumpRequest(c, WithIgnoreRequestLine(true))) })
-	app.GET("reqline_http", func(c *gin.Context) { c.JSON(200, DumpRequest(c, WithIgnoreRequestLine(true))) })
-	app.GET("retain1", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithRetainHeaders("X-Test")))
-	})
-	app.GET("retain2", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithRetainHeaders("X-TEST", "User-Agent")))
-	})
-	app.GET("retain3", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithRetainHeaders("X-Multi", "X-XXX"), WithIgnoreHeaders("Host")))
-	})
-	app.GET("ignore1", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithIgnoreHeaders("X-Test")))
-	})
-	app.GET("ignore2", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithIgnoreHeaders("X-TEST", "Host", "X-XXX")))
-	})
-	app.GET("ignore3", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithIgnoreHeaders("X-Multi")))
-	})
-	app.GET("secret1", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithSecretHeaders("X-Test"), WithIgnoreHeaders("X-Multi")))
-	})
-	app.GET("secret2", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithIgnoreHeaders("X-Multi"), WithSecretHeaders("X-TEST"), WithSecretPlaceholder("***")))
-	})
-	app.GET("secret3", func(c *gin.Context) {
-		c.JSON(200, DumpRequest(c, WithRetainHeaders("X-Multi"), WithSecretHeaders("X-Multi"), WithSecretPlaceholder("***")))
-	})
-
 	server := &http.Server{Addr: ":12345", Handler: app}
 	go server.ListenAndServe()
 	defer server.Shutdown(context.Background())
 
-	req := func(method, url string) []string {
-		req, _ := http.NewRequest(method, url, nil)
+	req := func(ep string) []string {
+		req, _ := http.NewRequest("GET", "http://127.0.0.1:12345/" + ep, nil)
 		req.Header = http.Header{
 			"Host":            []string{"localhost:12345"},
 			"Accept-Encoding": []string{"gzip"},
@@ -81,36 +48,68 @@ func TestDumpRequest(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		giveEp  string
-		wantArr []string
+		giveEp string
+		giveFn func(c *gin.Context) []string
+		want   []string
 	}{
-		{"nil", nil},
-		{"nil_http", nil},
-		{"all", []string{"GET /all HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
-		{"all_http", []string{"GET /all_http HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
-		{"reqline", []string{"Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
-		{"reqline_http", []string{"Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
-		{"retain1", []string{"GET /retain1 HTTP/1.1", "X-Test: xxx"}},
-		{"retain2", []string{"GET /retain2 HTTP/1.1", "User-Agent: Go-http-client/1.1", "X-Test: xxx"}},
-		{"retain3", []string{"GET /retain3 HTTP/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
-		{"ignore1", []string{"GET /ignore1 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
-		{"ignore2", []string{"GET /ignore2 HTTP/1.1", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
-		{"ignore3", []string{"GET /ignore3 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Test: xxx"}},
-		{"secret1", []string{"GET /secret1 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Test: *"}},
-		{"secret2", []string{"GET /secret2 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Test: ***"}},
-		{"secret3", []string{"GET /secret3 HTTP/1.1", "X-Multi: ***", "X-Multi: ***"}},
+		{"nil", func(c *gin.Context) []string { return DumpRequest(nil) }, nil},
+		{"nil_http", func(c *gin.Context) []string { return DumpHttpRequest(nil) }, nil},
+		{"all", func(c *gin.Context) []string {
+			return DumpRequest(c)
+		}, []string{"GET /all HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
+		{"all_http", func(c *gin.Context) []string {
+			return DumpHttpRequest(c.Request)
+		}, []string{"GET /all_http HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
+		{"reqline", func(c *gin.Context) []string {
+			return DumpRequest(c, WithIgnoreRequestLine(true))
+		}, []string{"Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
+		{"reqline_http", func(c *gin.Context) []string {
+			return DumpRequest(c, WithIgnoreRequestLine(true))
+		}, []string{"Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
+		{"retain1", func(c *gin.Context) []string { 
+			return DumpRequest(c, WithRetainHeaders("X-Test"))
+		}, []string{"GET /retain1 HTTP/1.1", "X-Test: xxx"}},
+		{"retain2", func(c *gin.Context) []string { 
+			return DumpRequest(c, WithRetainHeaders("X-TEST", "User-Agent"))
+		}, []string{"GET /retain2 HTTP/1.1", "User-Agent: Go-http-client/1.1", "X-Test: xxx"}},
+		{"retain3", func(c *gin.Context) []string { 
+			return DumpRequest(c, WithRetainHeaders("X-Multi", "X-XXX"), WithIgnoreHeaders("Host"))
+		}, []string{"GET /retain3 HTTP/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
+		{"ignore1", func(c *gin.Context) []string { 
+			return DumpRequest(c, WithIgnoreHeaders("X-Test"))
+		}, []string{"GET /ignore1 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
+		{"ignore2", func(c *gin.Context) []string {
+			return DumpRequest(c, WithIgnoreHeaders("X-TEST", "Host", "X-XXX"))
+		}, []string{"GET /ignore2 HTTP/1.1", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
+		{"ignore3", func(c *gin.Context) []string {
+			return DumpRequest(c, WithIgnoreHeaders("X-Multi"))
+		}, []string{"GET /ignore3 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Test: xxx"}},
+		{"secret1", func(c *gin.Context) []string {
+			return DumpRequest(c, WithSecretHeaders("X-Test"), WithIgnoreHeaders("X-Multi"))
+		}, []string{"GET /secret1 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Test: *"}},
+		{"secret2", func(c *gin.Context) []string {
+			return DumpRequest(c, WithIgnoreHeaders("X-Multi"), WithSecretHeaders("X-TEST"), WithSecretPlaceholder("***"))
+		}, []string{"GET /secret2 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Test: ***"}},
+		{"secret3", func(c *gin.Context) []string {
+			return DumpRequest(c, WithRetainHeaders("X-Multi"), WithSecretHeaders("X-Multi"), WithSecretPlaceholder("***"))
+		}, []string{"GET /secret3 HTTP/1.1", "X-Multi: ***", "X-Multi: ***"}},
 	} {
 		t.Run(tc.giveEp, func(t *testing.T) {
-			xtesting.Equal(t, req("GET", "http://127.0.0.1:12345/"+tc.giveEp), tc.wantArr)
+			app.GET(tc.giveEp, func(c *gin.Context) {
+				c.JSON(200, tc.giveFn(c))
+			})
+			xtesting.Equal(t, req(tc.giveEp), tc.want)
 		})
 	}
 }
 
 func TestWrapPprof(t *testing.T) {
 	gin.SetMode(gin.DebugMode)
-	app := NewEngineWithoutLogging()
-	restore := HideDebugPrintRoute()
-	WrapPprof(app)
+
+	// 1.
+	log.Println("============ 1")
+	app := gin.New() // <<< with warning
+	WrapPprof(app) // <<< with [Gin-debug]
 	// [GIN-debug] GET    /debug/pprof/             --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func12 (1 handlers)
 	// [GIN-debug] GET    /debug/pprof/heap         --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func13 (1 handlers)
 	// [GIN-debug] GET    /debug/pprof/goroutine    --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func14 (1 handlers)
@@ -123,6 +122,20 @@ func TestWrapPprof(t *testing.T) {
 	// [GIN-debug] POST   /debug/pprof/symbol       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func20 (1 handlers)
 	// [GIN-debug] GET    /debug/pprof/trace        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func21 (1 handlers)
 	// [GIN-debug] GET    /debug/pprof/mutex        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func22 (1 handlers)
+
+	// 2.
+	log.Println("============ 2")
+	app = gin.New() // <<< with warning
+	SetPrintRouteFunc(DefaultColorizedPrintRouteFunc)
+	WrapPprof(app) // <<< with colorized [Gin-debug]
+
+	// 3.
+	log.Println("============ 3")
+	restore := HideDebugLogging()
+	app = gin.New() // <<< no warning
+	restore()
+	restore = HideDebugPrintRoute()
+	WrapPprof(app) // <<< no [Gin-debug]
 	restore()
 	server := &http.Server{Addr: ":12345", Handler: app}
 	go server.ListenAndServe()
@@ -146,9 +159,8 @@ func TestWrapPprof(t *testing.T) {
 		{"GET", "debug/pprof/mutex"},
 	} {
 		t.Run(tc.giveUrl, func(t *testing.T) {
-			u := "http://localhost:12345/" + tc.giveUrl
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			req, _ := http.NewRequestWithContext(ctx, tc.giveMethod, u, nil) // after go113
+			req, _ := http.NewRequestWithContext(ctx, tc.giveMethod, "http://localhost:12345/"+tc.giveUrl, nil) // after go113
 			if tc.giveMethod == "POST" {
 				req.Header.Set("Content-Type", "application/json")
 			}
@@ -161,6 +173,29 @@ func TestWrapPprof(t *testing.T) {
 			cancel()
 		})
 	}
+}
+
+func TestRouterDecodeError(t *testing.T) {
+	_, err := strconv.Atoi("1a")
+	rerr := NewRouterDecodeError("", "1a", err, "")
+	xtesting.Equal(t, rerr.Field, "")
+	xtesting.Equal(t, rerr.Input, "1a")
+	xtesting.Equal(t, rerr.Err, err)
+	xtesting.Equal(t, rerr.Message, "")
+	xtesting.Equal(t, rerr.Error(), "parsing \"1a\": strconv.Atoi: parsing \"1a\": invalid syntax")
+	xtesting.Equal(t, rerr.Unwrap(), err)
+	xtesting.True(t, errors.Is(rerr, err))
+
+	err = errors.New("non-positive number")
+	rerr = NewRouterDecodeError("id", "0", err, "must be a positive number")
+	xtesting.Equal(t, rerr.Field, "id")
+	xtesting.Equal(t, rerr.Input, "0")
+	xtesting.Equal(t, rerr.Err, err)
+	xtesting.Equal(t, rerr.Message, "must be a positive number")
+	xtesting.Equal(t, rerr.Error(), "parsing id \"0\": non-positive number")
+	xtesting.Equal(t, rerr.Unwrap(), err)
+
+	xtesting.Panic(t, func() { NewRouterDecodeError("", "", nil, "") })
 }
 
 func TestGetProxyEnv(t *testing.T) {
@@ -219,7 +254,11 @@ func TestResponseLogger(t *testing.T) {
 		// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		if custom {
 			FormatResponseFunc = func(p *ResponseLoggerParam) string {
-				msg := fmt.Sprintf("[Gin] %8d - %12s - %15s - %10s - %-7s %s", p.Status, p.Latency.String(), p.ClientIP, xnumber.FormatByteSize(float64(p.Length)), p.Method, p.Path)
+				path := p.Path
+				if p.Query != "" {
+					path += "?" + p.Query
+				}
+				msg := fmt.Sprintf("[Gin] %8d - %12s - %15s - %10s - %-7s %s", p.Status, p.Latency.String(), p.ClientIP, xnumber.FormatByteSize(float64(p.Length)), p.Method, path)
 				if p.ErrorMsg != "" {
 					msg += fmt.Sprintf(" - err: %s", p.ErrorMsg)
 				}

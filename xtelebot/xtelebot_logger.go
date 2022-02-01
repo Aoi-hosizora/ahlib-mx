@@ -405,6 +405,11 @@ func LogRespondToLogger(logger logrus.StdLogger, typ RespondEventType, ev *Respo
 // internal
 // ========
 
+// isCommandValid checks whether given command is valid.
+func isCommandValid(command string) bool {
+	return len(command) > 1 && (command[0] == '/' || command[0] == '\a')
+}
+
 // handlerFuncName returns the name of handler function, used for handledCallback.
 func handlerFuncName(handler interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
@@ -414,7 +419,7 @@ func handlerFuncName(handler interface{}) string {
 func formatEndpoint(endpoint interface{}) (formatted string, supported bool) {
 	switch ep := endpoint.(type) {
 	case string:
-		if len(ep) <= 1 || (ep[0] != '/' && ep[0] != '\a') {
+		if !isCommandValid(ep) {
 			return "", false // empty
 		}
 		out := ""

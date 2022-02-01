@@ -1,18 +1,110 @@
 package xtelebot
 
 import (
-	"context"
-	"encoding/json"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
-	"github.com/gin-gonic/gin"
 	"gopkg.in/tucnak/telebot.v2"
-	"io/ioutil"
-	"net/http"
-	"strconv"
 	"sync"
 	"testing"
+	"github.com/sirupsen/logrus"
+	"log"
+	"fmt"
 	"time"
 )
+
+func TestMarkups(t *testing.T) {
+	t.Run("xxx_btn", func(t *testing.T) {
+		data := DataBtn("text", "unique", "data1", "data2", "data3")
+		xtesting.Equal(t, data.Text, "text")
+		xtesting.Equal(t, data.Unique, "unique")
+		xtesting.Equal(t, data.Data, "data1|data2|data3")
+		text := TextBtn("text")
+		xtesting.Equal(t, text.Text, "text")
+		url := URLBtn("text", "url")
+		xtesting.Equal(t, url.Text, "text")
+		xtesting.Equal(t, url.URL, "url")
+	})
+
+	t.Run("xxx_keyboard", func(t *testing.T) {
+		inlines := InlineKeyboard(
+			InlineRow{DataBtn("text1", "unique1"), DataBtn("text2", "unique2")},
+			InlineRow{DataBtn("text3", "unique3")},
+		)
+		replies := ReplyKeyboard(
+			ReplyRow{TextBtn("text1"), TextBtn("text2")},
+			ReplyRow{TextBtn("text3")},
+		)
+		xtesting.Equal(t, inlines[0][0], *DataBtn("text1", "unique1"))
+		xtesting.Equal(t, inlines[0][1], *DataBtn("text2", "unique2"))
+		xtesting.Equal(t, inlines[1][0], *DataBtn("text3", "unique3"))
+		xtesting.Equal(t, replies[0][0], *TextBtn("text1"))
+		xtesting.Equal(t, replies[0][1], *TextBtn("text2"))
+		xtesting.Equal(t, replies[1][0], *TextBtn("text3"))
+	})
+
+	t.Run("mass_functions", func(t *testing.T) {
+		xtesting.Equal(t, RemoveInlineKeyboard(), &telebot.ReplyMarkup{InlineKeyboard: nil})
+		xtesting.Equal(t, RemoveReplyKeyboard(), &telebot.ReplyMarkup{ReplyKeyboardRemove: true})
+		xtesting.Equal(t, CallbackShowAlert("text", true), &telebot.CallbackResponse{Text: "text", ShowAlert: true})
+	})
+}
+
+func TestStateHandlerSet(t *testing.T) {
+	t.Run("Methods", func(t *testing.T) {
+		shs := NewStateHandlerSet()
+
+		// initial
+		xtesting.Equal(t, shs.IsRegistered(0), false) // IsRegistered
+		xtesting.Nil(t, shs.GetHandler(0)) // GetHandler
+
+		// register
+		xtesting.Panic(t, func() { shs.Register(0, nil) }) // Register
+		tmp := 0
+		shs.Register(0, func(bw *BotWrapper, m *telebot.Message) { })
+		xtesting.Equal(t, shs.IsRegistered(0), true)
+		xtesting.NotNil(t, shs.GetHandler(0))
+		shs.Register(0, func(bw *BotWrapper, m *telebot.Message) { tmp++ })
+		xtesting.Equal(t, tmp, 0)
+		shs.GetHandler(0)(nil, nil)
+		xtesting.Equal(t, tmp, 1)
+		shs.Register(1, func(bw *BotWrapper, m *telebot.Message) { tmp += 2 })
+		shs.GetHandler(1)(nil, nil)
+		xtesting.Equal(t, tmp, 3)
+
+		// unregister
+		xtesting.NotPanic(t, func() { shs.Unregister(999) }) // Unregister
+		xtesting.True(t, shs.IsRegistered(1))
+		xtesting.NotNil(t, shs.GetHandler(1))
+		shs.Unregister(1)
+		xtesting.False(t, shs.IsRegistered(1))
+		xtesting.Nil(t, shs.GetHandler(1))
+		xtesting.True(t, shs.IsRegistered(0))
+		xtesting.NotNil(t, shs.GetHandler(0))
+		shs.Unregister(0)
+		xtesting.False(t, shs.IsRegistered(0))
+		xtesting.Nil(t, shs.GetHandler(0))
+		xtesting.Equal(t, len(shs.handlers), 0)
+	})
+
+	t.Run("Concurrency", func(t *testing.T) {
+		shs := NewStateHandlerSet()
+		wg := sync.WaitGroup{}
+		f := func(bw *BotWrapper, m *telebot.Message) { }
+		for i := 0; i < 1000; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				xtesting.NotPanic(t, func() {
+					shs.IsRegistered(0)
+					shs.GetHandler(0)
+					shs.Register(0, f)
+					shs.Unregister(0)
+				})
+			}()
+		}
+		wg.Wait()
+		xtesting.Equal(t, len(shs.handlers), 0)
+	})
+}
 
 func TestBotDataState(t *testing.T) {
 	const (
@@ -26,7 +118,9 @@ func TestBotDataState(t *testing.T) {
 
 	t.Run("Methods", func(t *testing.T) {
 		bd := NewBotData()
+		xtesting.Equal(t, bd.InitialState(), ChatState(0))
 		bd.SetInitialState(InitState)
+		xtesting.Equal(t, bd.InitialState(), InitState)
 
 		// initial
 		xtesting.Equal(t, bd.GetStateChats(), []int64{})   // GetStateChats
@@ -67,18 +161,19 @@ func TestBotDataState(t *testing.T) {
 		xtesting.Equal(t, bd.GetStateOrInit(0), InitState)
 	})
 
-	t.Run("Mutex", func(t *testing.T) {
+	t.Run("Concurrency", func(t *testing.T) {
 		bd := NewBotData()
 		wg := sync.WaitGroup{}
 		for i := 0; i < 1000; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-
 				xtesting.NotPanic(t, func() {
 					bd.GetStateChats()
 					bd.GetState(0)
-					bd.GetStateOr(0, 0)
+					bd.GetStateOr(0, 1)
+					bd.InitialState()
+					bd.SetInitialState(1)
 					bd.GetStateOrInit(0)
 					bd.SetState(0, 0)
 					bd.ResetState(0)
@@ -87,6 +182,7 @@ func TestBotDataState(t *testing.T) {
 			}()
 		}
 		wg.Wait()
+		xtesting.Equal(t, len(bd.states), 0)
 	})
 }
 
@@ -134,14 +230,13 @@ func TestBotDataCache(t *testing.T) {
 		xtesting.True(t, ok)
 	})
 
-	t.Run("Mutex", func(t *testing.T) {
+	t.Run("Concurrency", func(t *testing.T) {
 		bd := NewBotData()
 		wg := sync.WaitGroup{}
 		for i := 0; i < 1000; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-
 				xtesting.NotPanic(t, func() {
 					bd.GetCacheChats()
 					bd.GetCache(0, "")
@@ -154,85 +249,9 @@ func TestBotDataCache(t *testing.T) {
 			}()
 		}
 		wg.Wait()
+		xtesting.Equal(t, len(bd.caches), 0)
 	})
 }
-
-func mockTelebotApi(t *testing.T) (bot *telebot.Bot, shutdown func()) {
-	gin.SetMode(gin.ReleaseMode)
-	app := gin.New()
-	app.Use(func(c *gin.Context) {
-		// log.Printf("%s %s", c.Request.Method, c.Request.URL.Path)
-	})
-
-	app.POST("/botxxx:yyy/getMe", func(c *gin.Context) {
-		fakeUser := &telebot.User{ID: 1, FirstName: "FIRSTNAME", LastName: "LASTNAME", Username: "USERNAME", IsBot: true, SupportsInline: true}
-		c.JSON(200, gin.H{"ok": true, "Result": fakeUser})
-	})
-	app.POST("/botxxx:yyy/sendMessage", func(c *gin.Context) {
-		bs, _ := ioutil.ReadAll(c.Request.Body)
-		data := make(map[string]interface{})
-		_ = json.Unmarshal(bs, &data)
-		chatId, _ := strconv.ParseInt(data["chat_id"].(string), 10, 64)
-		fakeMessage := &telebot.Message{ID: 111, Text: data["text"].(string), Chat: &telebot.Chat{ID: chatId, Username: "?"}, Unixtime: time.Now().Unix() + 2}
-		c.JSON(200, gin.H{"ok": true, "Result": fakeMessage})
-	})
-	app.POST("/botxxx:yyy/getUpdates", func(c *gin.Context) {
-		bs, _ := ioutil.ReadAll(c.Request.Body)
-		data := make(map[string]interface{})
-		_ = json.Unmarshal(bs, &data)
-		if data["offset"] != "1" {
-			c.JSON(200, gin.H{"ok": true})
-			return
-		}
-		fakeChat1 := &telebot.Chat{ID: 11111111, Username: "?"}
-		fakeChat2 := &telebot.Chat{ID: 22222222, Username: "panic"}
-		fakeUpdate1 := &telebot.Update{ID: 1, Message: &telebot.Message{ID: 111, Text: "/panic 1", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
-		fakeUpdate2 := &telebot.Update{ID: 2, Message: &telebot.Message{ID: 111, Text: "/panic 2", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
-		fakeUpdate3 := &telebot.Update{ID: 3, Message: &telebot.Message{ID: 111, Text: "/command something", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
-		fakeUpdate4 := &telebot.Update{ID: 4, Message: &telebot.Message{ID: 111, Text: "reply", Unixtime: time.Now().Unix(), Chat: fakeChat1}}
-		fakeUpdate5 := &telebot.Update{ID: 4, Message: &telebot.Message{ID: 111, Text: "reply", Unixtime: time.Now().Unix(), Chat: fakeChat2}}
-		fakeUpdate6 := &telebot.Update{ID: 4, Callback: &telebot.Callback{Data: "\finline", Message: &telebot.Message{ID: 111, Text: "inline", Unixtime: time.Now().Unix(), Chat: fakeChat1}}}
-		fakeUpdate7 := &telebot.Update{ID: 4, Callback: &telebot.Callback{Data: "\finline", Message: &telebot.Message{ID: 111, Text: "inline", Unixtime: time.Now().Unix(), Chat: fakeChat2}}}
-		c.JSON(200, gin.H{"ok": true, "Result": []*telebot.Update{fakeUpdate1, fakeUpdate2, fakeUpdate3, fakeUpdate4, fakeUpdate5, fakeUpdate6, fakeUpdate7}})
-	})
-
-	server := &http.Server{Addr: ":12345", Handler: app}
-	go server.ListenAndServe()
-
-	mockBot, err := telebot.NewBot(telebot.Settings{
-		URL:     "http://localhost:12345",
-		Token:   "xxx:yyy",
-		Verbose: false,
-		Poller:  &telebot.LongPoller{Timeout: time.Millisecond * 200},
-	})
-	xtesting.Nil(t, err)
-	xtesting.Equal(t, mockBot.Me.Username, "USERNAME")
-	return mockBot, func() {
-		server.Shutdown(context.Background())
-	}
-}
-
-var (
-	timestamp = time.Now().Unix()
-	chat      = &telebot.Chat{ID: 12345678, Username: "Aoi-hosizora"}
-	text      = &telebot.Message{ID: 3344, Chat: chat, Text: "text", Unixtime: timestamp - 2}
-	text2     = &telebot.Message{ID: 3345, Chat: chat, Text: "text", Unixtime: timestamp}
-	photo     = &telebot.Message{ID: 3345, Chat: chat, Photo: &telebot.Photo{}, Unixtime: timestamp}
-	sticker   = &telebot.Message{ID: 3345, Chat: chat, Sticker: &telebot.Sticker{}, Unixtime: timestamp}
-	video     = &telebot.Message{ID: 3345, Chat: chat, Video: &telebot.Video{}, Unixtime: timestamp}
-	audio     = &telebot.Message{ID: 3345, Chat: chat, Audio: &telebot.Audio{}, Unixtime: timestamp}
-	voice     = &telebot.Message{ID: 3345, Chat: chat, Voice: &telebot.Voice{}, Unixtime: timestamp}
-	loc       = &telebot.Message{ID: 3345, Chat: chat, Location: &telebot.Location{}, Unixtime: timestamp}
-	animation = &telebot.Message{ID: 3345, Chat: chat, Animation: &telebot.Animation{}, Unixtime: timestamp}
-	dice      = &telebot.Message{ID: 3345, Chat: chat, Dice: &telebot.Dice{}, Unixtime: timestamp}
-	document  = &telebot.Message{ID: 3345, Chat: chat, Document: &telebot.Document{}, Unixtime: timestamp}
-	invoice   = &telebot.Message{ID: 3345, Chat: chat, Invoice: &telebot.Invoice{}, Unixtime: timestamp}
-	poll      = &telebot.Message{ID: 3345, Chat: chat, Poll: &telebot.Poll{}, Unixtime: timestamp}
-	venue     = &telebot.Message{ID: 3345, Chat: chat, Venue: &telebot.Venue{}, Unixtime: timestamp}
-	videoNote = &telebot.Message{ID: 3345, Chat: chat, VideoNote: &telebot.VideoNote{}, Unixtime: timestamp}
-)
-
-/*
 
 func TestReceiveLogger(t *testing.T) {
 	l1 := logrus.New()
@@ -270,10 +289,10 @@ func TestReceiveLogger(t *testing.T) {
 			} {
 				if custom {
 					FormatReceiveFunc = func(p *ReceiveLoggerParam) string {
-						return fmt.Sprintf("[Telebot] %4d - %30s - %d %s", p.ReceivedID, p.FormattedEp, p.ChatID, p.ChatName)
+						return fmt.Sprintf("[Telebot] %4d - %30s - %d %s", p.MessageID, p.FormattedEp, p.ChatID, p.ChatName)
 					}
 					FieldifyReceiveFunc = func(p *ReceiveLoggerParam) logrus.Fields {
-						return logrus.Fields{"module": "telebot", "action": p.Action}
+						return logrus.Fields{"module": "telebot", "action": "received"}
 					}
 				}
 				if !std {
@@ -302,6 +321,8 @@ func TestReceiveLogger(t *testing.T) {
 		LogReceiveToLogger(nil, nil, nil)
 	})
 }
+
+/*
 
 func TestReplyLogger(t *testing.T) {
 	l1 := logrus.New()

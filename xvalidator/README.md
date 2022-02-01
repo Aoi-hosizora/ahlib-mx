@@ -31,13 +31,9 @@
 + `func IsValidationError(err error) bool`
 + `func IsRequiredError(err error) bool`
 + `func UseTagAsFieldName(v *validator.Validate, tagName string)`
-+ `func UseDefaultFieldName(v *validator.Validate)`
 + `func ApplyTranslator(validator *validator.Validate, locale LocaleTranslator, registerFn TranslationRegisterHandler) (UtTranslator, error)`
 + `func DefaultRegistrationFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc`
 + `func DefaultTranslateFunc() validator.TranslationFunc`
-+ `func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string`
-+ `func FlatValidateErrors(err validator.ValidationErrors, useNamespace bool) map[string]string`
-+ `func FlattedMapToError(kv map[string]string) error`
 + `func EnLocaleTranslator() locales.Translator`
 + `func EsLocaleTranslator() locales.Translator`
 + `func FrLocaleTranslator() locales.Translator`
@@ -62,6 +58,9 @@
 + `func TrTranslationRegisterFunc() TranslationRegisterHandler`
 + `func ZhTranslationRegisterFunc() TranslationRegisterHandler`
 + `func ZhHantTranslationRegisterFunc() TranslationRegisterHandler`
++ `func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string`
++ `func FlatValidationErrors(err validator.ValidationErrors, useNamespace bool) map[string]string`
++ `func MapToError(result map[string]string) error`
 + `func NewCustomStructValidator() *CustomStructValidator`
 + `func ParamRegexpValidator() validator.Func`
 + `func RegexpValidator(re *regexp.Regexp) validator.Func`
@@ -85,7 +84,8 @@
 + `func (v *WrappedValidateFieldError) Origin() validator.FieldError`
 + `func (v *WrappedValidateFieldError) Message() string`
 + `func (v *WrappedValidateFieldError) Error() string`
-+ `func (v *ValidateFieldsError) Fields() []error`
++ `func (v *WrappedValidateFieldError) Unwrap() error`
++ `func (v *ValidateFieldsError) Errors() []error`
 + `func (v *ValidateFieldsError) Error() string `
 + `func (v *ValidateFieldsError) Translate(translator UtTranslator, useNamespace bool) map[string]string`
 + `func (v *ValidateFieldsError) FlatToMap(useNamespace bool) map[string]string`

@@ -41,6 +41,7 @@ type ResponseLoggerParam struct {
 	// field
 	Method    string
 	Path      string
+	Query     string
 	Status    int
 	StartTime time.Time
 	EndTime   time.Time
@@ -60,25 +61,18 @@ var (
 
 // extractResponseLoggerParam extracts and returns ResponseLoggerParam using given parameters.
 func extractResponseLoggerParam(c *gin.Context, start, end time.Time) *ResponseLoggerParam {
-	path := c.Request.URL.Path
-	if raw := c.Request.URL.RawQuery; raw != "" {
-		path = path + "?" + raw
-	}
-	length := c.Writer.Size()
-	if length < 0 {
-		length = 0
-	}
 	errors := c.Errors.ByType(gin.ErrorTypePublic | gin.ErrorTypePrivate)
 	return &ResponseLoggerParam{
 		Context:   c,
 		Errors:    errors,
 		Method:    c.Request.Method,
-		Path:      path,
+		Path:      c.Request.URL.Path,
+		Query:     c.Request.URL.RawQuery,
 		Status:    c.Writer.Status(),
 		StartTime: start,
 		EndTime:   end,
 		Latency:   end.Sub(start),
-		Length:    int64(length),
+		Length:    int64(c.Writer.Size()),
 		ClientIP:  c.ClientIP(),
 		ErrorMsg:  errors.String(),
 	}
@@ -105,7 +99,7 @@ func formatResponseLoggerParam(p *ResponseLoggerParam) string {
 
 // fieldifyResponseLoggerParam fieldifies given ResponseLoggerParam to logrus.Fields for LogResponseToLogrus.
 //
-// The default contains the following fields: module, method, path, status, start_time, end_time, latency, length, client_ip, error_msg.
+// The default contains the following fields: module, method, path, query, status, start_time, end_time, latency, length, client_ip, error_msg.
 func fieldifyResponseLoggerParam(p *ResponseLoggerParam) logrus.Fields {
 	if FieldifyResponseFunc != nil {
 		return FieldifyResponseFunc(p)
@@ -114,6 +108,7 @@ func fieldifyResponseLoggerParam(p *ResponseLoggerParam) logrus.Fields {
 		"module":     "gin",
 		"method":     p.Method,
 		"path":       p.Path,
+		"query":      p.Query,
 		"status":     p.Status,
 		"start_time": p.StartTime,
 		"end_time":   p.EndTime,

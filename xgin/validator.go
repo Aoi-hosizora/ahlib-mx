@@ -120,7 +120,7 @@ func EnableRFC3339DateTimeBindingTranslator(translator xvalidator.UtTranslator) 
 
 // TranslatableError is an interface contains Translate method used in TranslateBindingError, can be used to specific the translation result of your error type.
 type TranslatableError interface {
-	error
+	Error() string
 	Translate() (result map[string]string, need4xx bool)
 }
 
@@ -138,8 +138,7 @@ type translateOptions struct {
 	validatorFieldsErrorFn          func(validator.ValidationErrors, xvalidator.UtTranslator) (result map[string]string, need4xx bool)
 	translatableErrorFn             func(TranslatableError) (result map[string]string, need4xx bool)
 	xvalidatorValidateFieldsErrorFn func(*xvalidator.ValidateFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool)
-
-	extraErrorsTranslateFn func(error) (result map[string]string, need4xx bool)
+	extraErrorsTranslateFn          func(error) (result map[string]string, need4xx bool)
 }
 
 // TranslateOption represents an option for TranslateBindingError's options, can be created by WithXXX functions.
@@ -277,7 +276,7 @@ var (
 	}
 	_validatorFieldsErrorFn = func(e validator.ValidationErrors, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 		if translator == nil {
-			return xvalidator.FlatValidateErrors(e, false), true
+			return xvalidator.FlatValidationErrors(e, false), true
 		}
 		return xvalidator.TranslateValidationErrors(e, translator, false), true
 	}

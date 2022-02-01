@@ -1,8 +1,6 @@
 package xvalidator
 
 import (
-	"errors"
-	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/go-playground/locales"
 	loc_en "github.com/go-playground/locales/en"
@@ -33,7 +31,6 @@ import (
 	trans_zh_tw "github.com/go-playground/validator/v10/translations/zh_tw"
 	"log"
 	"reflect"
-	"sort"
 	"strings"
 )
 
@@ -64,16 +61,17 @@ func IsRequiredError(err error) bool {
 
 const (
 	panicNilValidator = "xvalidator: nil validator"
-	panicEmptyTagName = "xvalidator: empty tag name"
 )
 
-// UseTagAsFieldName sets a specific struct tag as field's alternate name, this name will be used and returned by validator.FieldError's Namespace() and Field()
-// methods, and the origin name will be returned by StructField() and StructNamespace() methods. Note that this will change validator.FieldError's the return
-// value of Error() and the translated result.
+// UseTagAsFieldName sets a specific struct tag as field's alternate name, this name will be used in validator.FieldError's Namespace() and Field() methods,
+// and this will change the error string and translated result. Moreover the origin field name will be used in StructField() and StructNamespace() methods,
+// and you can use the empty tagName to remove alternate name. Attention: please use this function before all validate methods, because any validation method
+// will change the validator's structCache, even if you remove alternate name, structCache will be not cleared.
 //
 // Example:
 // 	v := validator.New()
 // 	xvalidator.UseTagAsFieldName(v, "json")
+// 	// xvalidator.UseTagAsFieldName(v, "") // remove field's alternate name
 // 	type s struct {
 // 		Str string `validate:"required,gt=2,lt=10" json:"sss"`
 // 	}
@@ -83,12 +81,20 @@ const (
 // 	// errs[0].StructField()     => Str
 // 	// errs[0].StructNamespace() => s.Str
 // 	// errs[0].Error()           => Key: 's.sss' Error:Field validation for 'sss' failed on the 'lt' tag
+// 	//                                   |-----|                            |---|               |--|
+// 	//                                  namespace                           field                tag
 func UseTagAsFieldName(v *validator.Validate, tagName string) {
 	if v == nil {
 		panic(panicNilValidator)
 	}
-	if tagName = strings.TrimSpace(tagName); tagName == "" {
-		panic(panicEmptyTagName)
+	tagName = strings.TrimSpace(tagName)
+	if tagName == "" {
+		// unregister RegisterTagNameFunc
+		var nilFunc validator.TagNameFunc = nil
+		xreflect.SetUnexportedField(reflect.ValueOf(v).Elem().FieldByName("tagNameFunc"), reflect.ValueOf(nilFunc))
+		xreflect.SetUnexportedField(reflect.ValueOf(v).Elem().FieldByName("hasTagNameFunc"), reflect.ValueOf(false))
+		// ignore structCache !!!
+		return
 	}
 	v.RegisterTagNameFunc(func(field reflect.StructField) string {
 		tagMsg, ok := field.Tag.Lookup(tagName)
@@ -97,20 +103,10 @@ func UseTagAsFieldName(v *validator.Validate, tagName string) {
 		}
 		name := strings.SplitN(tagMsg, ",", 2)[0]
 		if name == "" || name == "-" {
-			return ""
+			return "" // use origin name
 		}
 		return name // fe.Field() -> tag msg
 	})
-}
-
-// UseDefaultFieldName unregisters tagNameFunc for validator.Validate and remove field's alternate name, also see UseTagAsFieldName.
-func UseDefaultFieldName(v *validator.Validate) {
-	if v == nil {
-		panic(panicNilValidator)
-	}
-	var nilFunc validator.TagNameFunc = nil
-	xreflect.SetUnexportedField(reflect.ValueOf(v).Elem().FieldByName("tagNameFunc"), reflect.ValueOf(nilFunc))
-	xreflect.SetUnexportedField(reflect.ValueOf(v).Elem().FieldByName("hasTagNameFunc"), reflect.ValueOf(false))
 }
 
 // ==================
@@ -190,75 +186,6 @@ func DefaultTranslateFunc() validator.TranslationFunc {
 		}
 		return t
 	}
-}
-
-// TranslateValidationErrors translates all the field errors using given UtTranslator to a field-message map. Note that if you set useNamespace
-// flag to true, the keys from returned map will be shown in "$struct.$field" format, that is the same with validator.ValidationErrors' Translate(),
-// otherwise those will be shown in "$field" format.
-//
-// Example:
-// 	err := validator.Struct(&Struct{}).(validator.ValidationErrors)
-// 	TranslateValidationErrors(err, trans, true)  // => {Struct.int: int is a required field, Struct.str: str is a required field}
-// 	TranslateValidationErrors(err, trans, false) // => {int:        int is a required field, str:        str is a required field}
-func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string {
-	if ut == nil {
-		panic(panicNilUtTranslator)
-	}
-	keyFn := func(e validator.FieldError) string {
-		if useNamespace {
-			return e.Namespace()
-		}
-		return e.Field()
-	}
-
-	result := make(map[string]string, len(err))
-	for _, fe := range err {
-		result[keyFn(fe)] = fe.Translate(ut)
-	}
-	return result
-}
-
-// FlatValidateErrors splits and flats all the field errors to a field-message map without using UtTranslator, the returned map will be in format of
-// validator.FieldError's error message.
-//
-// Example:
-// 	err := validator.Struct(&Struct{}).(validator.ValidationErrors)
-// 	FlatValidateErrors(err, true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: Field validation for 'str' failed on the 'required' tag}
-// 	FlatValidateErrors(err, false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        Field validation for 'str' failed on the 'required' tag}
-func FlatValidateErrors(err validator.ValidationErrors, useNamespace bool) map[string]string {
-	keyFn := func(e validator.FieldError) string {
-		if useNamespace {
-			return e.Namespace()
-		}
-		return e.Field()
-	}
-
-	result := make(map[string]string, len(err))
-	for _, fe := range err {
-		result[keyFn(fe)] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", fe.Field(), fe.Tag())
-	}
-	return result
-}
-
-// FlattedMapToError generates an error from given translated or flatted map to represent the translated or flatted result of validator.ValidationErrors
-// and xvalidator.ValidateFieldsError.
-func FlattedMapToError(kv map[string]string) error {
-	if len(kv) == 0 {
-		return nil
-	}
-	tuples := make([][2]string, 0, len(kv)) // map -> [][2]string
-	for k, v := range kv {
-		tuples = append(tuples, [2]string{k, v})
-	}
-	sort.Slice(tuples, func(i, j int) bool {
-		return tuples[i][0] < tuples[j][0] || (tuples[i][0] == tuples[j][0] && tuples[i][1] < tuples[j][1])
-	})
-	msgs := make([]string, 0, len(kv)) // sorted [][2]string -> []string
-	for _, t := range tuples {
-		msgs = append(msgs, t[1])
-	}
-	msg := strings.Join(msgs, "; ")
-	return errors.New(msg)
 }
 
 // =================

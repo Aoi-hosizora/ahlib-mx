@@ -23,6 +23,8 @@
 ### Functions
 
 + `func NewCronTask(c *cron.Cron) *CronTask`
++ `func DefaultAddedCallback(j *FuncJob)`
++ `func DefaultColorizedAddedCallback(j *FuncJob)`
 
 ### Methods
 
