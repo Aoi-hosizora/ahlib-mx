@@ -64,48 +64,60 @@ const (
 )
 
 // UseTagAsFieldName sets a specific struct tag as field's alternate name, this name will be used in validator.FieldError's Namespace() and Field() methods,
-// and this will change the error string and translated result. Moreover the origin field name will be used in StructField() and StructNamespace() methods,
-// and you can use the empty tagName to remove alternate name. Attention: please use this function before all validate methods, because any validation method
-// will change the validator's structCache, even if you remove alternate name, structCache will be not cleared.
+// and will change the error string and translated result. You can pass more than one tagName, and it will use the current tagName if it exists and is valid.
+//
+// Note: the origin field name will be returned by StructField() and StructNamespace() methods; 2. you can pass empty tagName to remove this alternate name.
+//
+// Attention: please use this function before all validate methods, because any validation method will change the validator's structCache, even if you remove
+// alternate name by `UseTagAsFieldName(v, "")`, structCache will be not cleared.
 //
 // Example:
 // 	v := validator.New()
-// 	xvalidator.UseTagAsFieldName(v, "json")
-// 	// xvalidator.UseTagAsFieldName(v, "") // remove field's alternate name
+// 	xvalidator.UseTagAsFieldName(v, "json", "yaml")
+// 	// xvalidator.UseTagAsFieldName(v) // remove field's alternate name
 // 	type s struct {
-// 		Str string `validate:"required,gt=2,lt=10" json:"sss"`
+// 		Str string `validate:"required,gt=2,lte=10" json:"sss"`
 // 	}
-// 	errs := v.Struct(&s{"1234567890"}).(validator.ValidationErrors)
-// 	// errs[0].Field()           => sss
-// 	// errs[0].Namespace()       => s.sss
-// 	// errs[0].StructField()     => Str
-// 	// errs[0].StructNamespace() => s.Str
-// 	// errs[0].Error()           => Key: 's.sss' Error:Field validation for 'sss' failed on the 'lt' tag
-// 	//                                   |-----|                            |---|               |--|
-// 	//                                  namespace                           field                tag
-func UseTagAsFieldName(v *validator.Validate, tagName string) {
+// 	errs := v.Struct(&s{"01234567890"}).(validator.ValidationErrors)
+// 	// errs[0].Field()           => sss   (alternate name)
+// 	// errs[0].Namespace()       => s.sss (alternate name with struct typename)
+// 	// errs[0].StructField()     => Str   (origin field name)
+// 	// errs[0].StructNamespace() => s.Str (origin field name with struct typename)
+// 	// errs[0].Error()           => Key: 's.sss' Error:Field validation for 'sss' failed on the 'lte' tag
+// 	//                                   |-----|                            |---|               |---|
+// 	//                                  Namespace                           Field                Tag
+func UseTagAsFieldName(v *validator.Validate, tagName ...string) {
 	if v == nil {
 		panic(panicNilValidator)
 	}
-	tagName = strings.TrimSpace(tagName)
-	if tagName == "" {
-		// unregister RegisterTagNameFunc
+	tags := make([]string, 0, len(tagName))
+	for _, tag := range tagName {
+		t := strings.TrimSpace(tag)
+		if t != "" {
+			tags = append(tags, t)
+		}
+	}
+	if len(tags) == 0 {
+		// undo v.RegisterTagNameFunc, but not to clear v.structCache
 		var nilFunc validator.TagNameFunc = nil
-		xreflect.SetUnexportedField(reflect.ValueOf(v).Elem().FieldByName("tagNameFunc"), reflect.ValueOf(nilFunc))
-		xreflect.SetUnexportedField(reflect.ValueOf(v).Elem().FieldByName("hasTagNameFunc"), reflect.ValueOf(false))
-		// ignore structCache !!!
+		xreflect.SetUnexportedField(xreflect.FieldValueOf(v, "tagNameFunc"), reflect.ValueOf(nilFunc))
+		xreflect.SetUnexportedField(xreflect.FieldValueOf(v, "hasTagNameFunc"), reflect.ValueOf(false))
+		// v.RegisterTagNameFunc(func(field reflect.StructField) string { return "" })
 		return
 	}
 	v.RegisterTagNameFunc(func(field reflect.StructField) string {
-		tagMsg, ok := field.Tag.Lookup(tagName)
-		if !ok {
-			return "" // use origin name
+		for _, t := range tags {
+			s, ok := field.Tag.Lookup(t)
+			if !ok {
+				continue
+			}
+			name := strings.SplitN(s, ",", 2)[0]
+			if name == "" || name == "-" {
+				continue
+			}
+			return name // fe.Field() -> tag string
 		}
-		name := strings.SplitN(tagMsg, ",", 2)[0]
-		if name == "" || name == "-" {
-			return "" // use origin name
-		}
-		return name // fe.Field() -> tag msg
+		return "" // use origin name
 	})
 }
 
@@ -161,8 +173,14 @@ func ApplyTranslator(validator *validator.Validate, locale LocaleTranslator, reg
 	return translator, nil
 }
 
-// DefaultRegistrationFunc returns a validator.RegisterTranslationsFunc function, it uses the given tag, translation and override flag to register
-// normal translation information for a UtTranslator, {#} is the only replacement type accepted and will be set by validator.TranslationFunc.
+// ApplyEnglishTranslator applies English translator to validator.Validate, this is a simplified usage of ApplyTranslator(validator, xvalidator.EnLocaleTranslator(),
+// xvalidator.EnTranslationRegisterFunc()), see ApplyTranslator for more information.
+func ApplyEnglishTranslator(validator *validator.Validate) (UtTranslator, error) {
+	return ApplyTranslator(validator, EnLocaleTranslator(), EnTranslationRegisterFunc())
+}
+
+// DefaultRegistrationFunc returns a validator.RegisterTranslationsFunc function, it uses given tag, translation and override flag to register normal
+// translation information for a UtTranslator, {#} is the only replacement type accepted and will be set by validator.TranslationFunc.
 //
 // This function can be used for validator.Validate RegisterTranslation() method's second parameter translationFn, also see ApplyTranslator.
 func DefaultRegistrationFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc {
@@ -173,7 +191,7 @@ func DefaultRegistrationFunc(tag string, translation string, override bool) vali
 }
 
 // DefaultTranslateFunc returns a validator.TranslationFunc function, it uses the struct field name as {0} and the validator tag param as {1} from
-// validator.FieldError's methods to create the translation for the given tag. Note that if the tag is not found, it will log a warning message.
+// validator.FieldError's methods to create the translation for given tag. Note that if the tag is not found, it will log a warning message.
 //
 // This function can be used for validator.Validate RegisterTranslation() method's third parameter registerFn, also see ApplyTranslator.
 func DefaultTranslateFunc() validator.TranslationFunc {
@@ -181,7 +199,7 @@ func DefaultTranslateFunc() validator.TranslationFunc {
 		t, err := ut.T(fe.Tag(), fe.Field(), fe.Param()) // {0} => fe.Field(), {1} => fe.Param()
 		if err != nil {
 			// ut.ErrUnknownTranslation
-			log.Printf("warning: error translating FieldError: %#v", fe)
+			log.Printf("xvalidator warning: error translating FieldError: %#v", fe)
 			return fe.(error).Error()
 		}
 		return t

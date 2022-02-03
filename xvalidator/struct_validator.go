@@ -10,50 +10,51 @@ import (
 	"sync"
 )
 
-// ===========================
-// ValidateFieldsError related
-// ===========================
+// ========================
+// MultiFieldsError related
+// ========================
 
-// WrappedValidateFieldError represents a validator.FieldError wrapped with a custom message, is used in CustomStructValidator.
-type WrappedValidateFieldError struct {
+// WrappedFieldError represents a validator.FieldError wrapped with a custom message, will be used in MessagedValidator.
+type WrappedFieldError struct {
 	origin  validator.FieldError
 	message string
 }
 
-// Origin returns the origin validator.FieldError from WrappedValidateFieldError.
-func (v *WrappedValidateFieldError) Origin() validator.FieldError {
-	return v.origin
+// Origin returns the origin validator.FieldError from WrappedFieldError.
+func (w *WrappedFieldError) Origin() validator.FieldError {
+	return w.origin
 }
 
-// Message returns the wrapped message from WrappedValidateFieldError.
-func (v *WrappedValidateFieldError) Message() string {
-	return v.message
+// Unwrap returns the origin validator.FieldError from WrappedFieldError, and this implements the error wrapper interface.
+func (w *WrappedFieldError) Unwrap() error {
+	return w.origin
 }
 
-// Unwrap returns the origin validator.FieldError from WrappedValidateFieldError, and implements the wrapper interface.
-func (v *WrappedValidateFieldError) Unwrap() error {
-	return v.origin
+// Message returns the wrapped message from WrappedFieldError.
+func (w *WrappedFieldError) Message() string {
+	return w.message
 }
 
-// Error returns the formatted error message from WrappedValidateFieldError, and has the same format with validator.FieldError.Error.
-func (v *WrappedValidateFieldError) Error() string {
-	return fmt.Sprintf("Key: '%s' Error:%s", v.origin.Namespace(), v.message)
+// Error returns the formatted error message from WrappedFieldError, and this has the same format with validator.FieldError's Error().
+func (w *WrappedFieldError) Error() string {
+	return fmt.Sprintf("Key: '%s' Error:%s", w.origin.Namespace(), w.message)
 }
 
-// ValidateFieldsError represents the validation error, which is returned by CustomStructValidator.ValidateStruct.
-type ValidateFieldsError struct {
-	fields []error // validator.FieldError or WrappedValidateFieldError
+// MultiFieldsError represents the multiple fields' error in validation that contains errors in validator.FieldError or xvalidator.WrappedFieldError
+// type, will be returned by MessagedValidator.ValidateStruct.
+type MultiFieldsError struct {
+	fields []error // validator.FieldError or xvalidator.WrappedFieldError
 }
 
-// Errors returns the fields' errors from ValidateFieldsError.
-func (v *ValidateFieldsError) Errors() []error {
-	return v.fields
+// Errors returns the fields' errors from MultiFieldsError.
+func (m *MultiFieldsError) Errors() []error {
+	return m.fields
 }
 
-// Error returns the formatted error message (split by "; ") from ValidateFieldsError.
-func (v *ValidateFieldsError) Error() string {
-	msgs := make([]string, 0, len(v.fields))
-	for _, fe := range v.fields {
+// Error returns the formatted error message (split by "; ") from MultiFieldsError.
+func (m *MultiFieldsError) Error() string {
+	msgs := make([]string, 0, len(m.fields))
+	for _, fe := range m.fields {
 		if fe != nil {
 			msgs = append(msgs, fe.Error())
 		}
@@ -65,8 +66,8 @@ func (v *ValidateFieldsError) Error() string {
 // translate & flat
 // ================
 
-// Translate translates all field errors (include validator.FieldError and WrappedValidateFieldError) using given UtTranslator to a field-message map. 
-// Here errors in WrappedValidateFieldError type will use wrapped message directly, also note that if you set useNamespace to true, keys from returned 
+// Translate translates all the field errors (include validator.FieldError and xvalidator.WrappedFieldError) using given UtTranslator to a field-message map.
+// Here errors in xvalidator.WrappedFieldError type will use wrapped message directly, also note that if you set useNamespace to true, keys from returned
 // map will be shown in "$struct.$field" format, otherwise in "$field" format.
 //
 // Example:
@@ -74,12 +75,12 @@ func (v *ValidateFieldsError) Error() string {
 // 		Int int    `validate:"required"`
 // 		Str string `validate:"required" message:"required|str cannot be null and empty"`
 // 	}
-// 	val := NewCustomStructValidator()
+// 	val := NewMessagedValidator()
 // 	// ...
-// 	err := val.ValidateStruct(&Struct{}).(xvalidator.ValidateFieldsError)
+// 	err := val.ValidateStruct(&Struct{}).(xvalidator.MultiFieldsError)
 // 	err.Translate(trans, true)  // => {Struct.int: int is a required field, Struct.str: str cannot be null and empty}
 // 	err.Translate(trans, false) // => {int:        int is a required field, str:        str cannot be null and empty}
-func (v *ValidateFieldsError) Translate(ut UtTranslator, useNamespace bool) map[string]string {
+func (m *MultiFieldsError) Translate(ut UtTranslator, useNamespace bool) map[string]string {
 	if ut == nil {
 		panic(panicNilUtTranslator)
 	}
@@ -90,11 +91,11 @@ func (v *ValidateFieldsError) Translate(ut UtTranslator, useNamespace bool) map[
 		return e.Field()
 	}
 
-	result := make(map[string]string, len(v.fields))
-	for _, err := range v.fields {
+	result := make(map[string]string, len(m.fields))
+	for _, err := range m.fields {
 		if fe, ok := err.(validator.FieldError); ok {
 			result[keyFn(fe)] = fe.Translate(ut)
-		} else if we, ok := err.(*WrappedValidateFieldError); ok {
+		} else if we, ok := err.(*WrappedFieldError); ok {
 			result[keyFn(we.origin)] = we.message
 		} else {
 			// skip
@@ -103,9 +104,9 @@ func (v *ValidateFieldsError) Translate(ut UtTranslator, useNamespace bool) map[
 	return result
 }
 
-// TranslateValidationErrors translates all validator.FieldError in validator.ValidationErrors using given UtTranslator to a field-message map. Note that 
-// if you set useNamespace to true, keys from returned map will be shown in "$struct.$field" format, that is the same with validator.ValidationErrors' 
-// Translate(), otherwise in "$field" format.
+// TranslateValidationErrors translates all validator.FieldError in validator.ValidationErrors using given UtTranslator to a field-message map. Note that
+// if you set useNamespace to true, keys from returned map will be shown in "$struct.$field" format, the same as validator.ValidationErrors' Translate(),
+// otherwise in "$field" format.
 //
 // Example:
 // 	type Struct struct {
@@ -135,20 +136,20 @@ func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, 
 	return result
 }
 
-// FlatToMap flats all field errors (include validator.FieldError and WrappedValidateFieldError) to a field-message map without using UtTranslator. 
-// Here values from returned map will be the error message directly. Also see ValidateFieldsError.Translate for more.
+// FlatToMap flats all the field errors (include validator.FieldError and xvalidator.WrappedFieldError) to a field-message map without using UtTranslator.
+// Here values from returned map come from the error message directly. Also see MultiFieldsError.Translate for more.
 //
 // Example:
 // 	type Struct struct {
 // 		Int int    `validate:"required"`
 // 		Str string `validate:"required" message:"required|str cannot be null and empty"`
 // 	}
-// 	val := NewCustomStructValidator()
+// 	val := NewMessagedValidator()
 // 	// ...
-// 	err := validator.ValidateStruct(&Struct{}).(xvalidator.ValidateFieldsError)
+// 	err := validator.ValidateStruct(&Struct{}).(xvalidator.MultiFieldsError)
 // 	err.FlatToMap(true)  // => {Struct.int: Field validation for 'int' failed on the 'required' tag, Struct.str: str cannot be null and empty}
 // 	err.FlatToMap(false) // => {int:        Field validation for 'int' failed on the 'required' tag, str:        str cannot be null and empty}
-func (v *ValidateFieldsError) FlatToMap(useNamespace bool) map[string]string {
+func (m *MultiFieldsError) FlatToMap(useNamespace bool) map[string]string {
 	keyFn := func(e validator.FieldError) string {
 		if useNamespace {
 			return e.Namespace()
@@ -156,11 +157,11 @@ func (v *ValidateFieldsError) FlatToMap(useNamespace bool) map[string]string {
 		return e.Field()
 	}
 
-	result := make(map[string]string, len(v.fields))
-	for _, err := range v.fields {
+	result := make(map[string]string, len(m.fields))
+	for _, err := range m.fields {
 		if fe, ok := err.(validator.FieldError); ok {
 			result[keyFn(fe)] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", fe.Field(), fe.Tag())
-		} else if we, ok := err.(*WrappedValidateFieldError); ok {
+		} else if we, ok := err.(*WrappedFieldError); ok {
 			result[keyFn(we.origin)] = we.message
 		} else {
 			// skip
@@ -169,8 +170,8 @@ func (v *ValidateFieldsError) FlatToMap(useNamespace bool) map[string]string {
 	return result
 }
 
-// FlatValidationErrors flats all all validator.FieldError in validator.ValidationErrors to a field-message map without using UtTranslator. Here values
-// from returned map will be the error message directly. Also see TranslateValidationErrors for more.
+// FlatValidationErrors flats all the validator.FieldError in validator.ValidationErrors to a field-message map without using UtTranslator. Here values
+// from returned map come from the error message directly. Also see TranslateValidationErrors for more.
 //
 // Example:
 // 	type Struct struct {
@@ -192,13 +193,14 @@ func FlatValidationErrors(err validator.ValidationErrors, useNamespace bool) map
 
 	result := make(map[string]string, len(err))
 	for _, fe := range err {
+		// has the same format as fe.Error()
 		result[keyFn(fe)] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", fe.Field(), fe.Tag())
 	}
 	return result
 }
 
-// MapToError generates an error from given translated or flatted map to represent the translated or flatted error from validator.ValidationErrors or
-// xvalidator.ValidateFieldsError.
+// MapToError generates a single error from given map generated by translate or flat, to represent the translated or flatted error from
+// validator.ValidationErrors or xvalidator.MultiFieldsError.
 func MapToError(result map[string]string) error {
 	if len(result) == 0 {
 		return nil
@@ -217,11 +219,11 @@ func MapToError(result map[string]string) error {
 	return errors.New(strings.Join(msgs, "; "))
 }
 
-// =============================
-// CustomStructValidator related
-// =============================
+// =========================
+// MessagedValidator related
+// =========================
 
-// CustomStructValidator represents a custom validator.Validate, which allows some fields to specify their custom error message, and you can set this to
+// MessagedValidator represents a messaged validator.Validate, which allows some fields to specify their custom error message, and you can set this to
 // gin's binding.Validator as a binding.StructValidator.
 //
 // Struct example:
@@ -230,56 +232,56 @@ func MapToError(result map[string]string) error {
 //		Name string  `json:"name" form:"name" validate:"required,gt=4,lt=20"    validate_message:"*|name is invalid"`
 //		Bio  *string `json:"bio"  form:"bio"  validate:"required,gte=0,lte=255" validate_message:"xxx"`
 // 	}
-type CustomStructValidator struct {
+type MessagedValidator struct {
 	validate   *validator.Validate
 	messageTag string
 
 	once sync.Once
 }
 
-// NewCustomStructValidator creates a new NewCustomStructValidator, with `validate` validator tag name and `validate_message` message tag name.
-func NewCustomStructValidator() *CustomStructValidator {
-	v := &CustomStructValidator{
+// NewMessagedValidator creates a new NewMessagedValidator, with `validate` validator tag name and `validate_message` message tag name.
+func NewMessagedValidator() *MessagedValidator {
+	m := &MessagedValidator{
 		validate:   validator.New(),
 		messageTag: "validate_message",
 	}
-	v.validate.SetTagName("validate")
-	return v
+	m.validate.SetTagName("validate")
+	return m
 }
 
-// Engine returns the internal validator.Validate from CustomStructValidator.
-func (v *CustomStructValidator) Engine() interface{} {
-	return v.validate
+// Engine returns the internal validator.Validate from MessagedValidator.
+func (m *MessagedValidator) Engine() interface{} {
+	return m.validate
 }
 
-// ValidateEngine returns the internal validator.Validate from CustomStructValidator.
-func (v *CustomStructValidator) ValidateEngine() *validator.Validate {
-	return v.validate
+// ValidateEngine returns the internal validator.Validate from MessagedValidator.
+func (m *MessagedValidator) ValidateEngine() *validator.Validate {
+	return m.validate
 }
 
-// SetValidatorTagName sets validator tag name for CustomStructValidator, defaults to `validate`.
-func (v *CustomStructValidator) SetValidatorTagName(name string) {
-	v.validate.SetTagName(name)
+// SetValidateTagName sets validate tag name for MessagedValidator, defaults to `validate`.
+func (m *MessagedValidator) SetValidateTagName(name string) {
+	m.validate.SetTagName(name)
 }
 
-// SetMessageTagName sets message tag name for CustomStructValidator, defaults to `validate_message`.
-func (v *CustomStructValidator) SetMessageTagName(name string) {
-	v.messageTag = name
+// SetMessageTagName sets message tag name for MessagedValidator, defaults to `validate_message`.
+func (m *MessagedValidator) SetMessageTagName(name string) {
+	m.messageTag = name
 }
 
-// SetFieldNameTag sets a specific struct tag as field's alternate name, see UseTagAsFieldName for more details.
-func (v *CustomStructValidator) SetFieldNameTag(name string) {
-	UseTagAsFieldName(v.ValidateEngine(), name)
+// UseTagAsFieldName sets a specific struct tag as field's alternate name, see UseTagAsFieldName for more details.
+func (m *MessagedValidator) UseTagAsFieldName(name ...string) {
+	UseTagAsFieldName(m.ValidateEngine(), name...)
 }
 
-// ValidateStruct validates the given struct and returns the validator error, mostly in xvalidator.ValidateFieldsError type.
-func (v *CustomStructValidator) ValidateStruct(obj interface{}) error {
-	val, ok := v.extractToStruct(obj)
+// ValidateStruct validates given struct and returns the validator error, mostly in xvalidator.MultiFieldsError type.
+func (m *MessagedValidator) ValidateStruct(obj interface{}) error {
+	itf, ok := m.extractToStruct(obj)
 	if !ok {
 		return &validator.InvalidValidationError{Type: reflect.TypeOf(obj)}
 	}
 
-	err := v.validate.Struct(val)
+	err := m.validate.Struct(itf)
 	if err == nil {
 		return nil
 	}
@@ -288,21 +290,21 @@ func (v *CustomStructValidator) ValidateStruct(obj interface{}) error {
 		return err // unreachable
 	}
 
-	typ := reflect.TypeOf(val)
+	typ := reflect.TypeOf(itf)
 	errs := make([]error, 0, len(ve))
 	for _, fe := range ve {
-		if m, found := v.applyCustomMessage(typ, fe.StructField(), fe.Tag()); found {
-			we := &WrappedValidateFieldError{origin: fe, message: m}
-			errs = append(errs, we) // WrappedValidateFieldError
+		if m, found := m.applyCustomMessage(typ, fe.StructField(), fe.Tag()); found {
+			we := &WrappedFieldError{origin: fe, message: m}
+			errs = append(errs, we) // xvalidator.WrappedFieldError
 		} else {
 			errs = append(errs, fe) // validator.FieldError
 		}
 	}
-	return &ValidateFieldsError{fields: errs}
+	return &MultiFieldsError{fields: errs} // MultiFieldsError
 }
 
-// extractToStruct checks and extracts the given interface to struct type.
-func (v *CustomStructValidator) extractToStruct(obj interface{}) (interface{}, bool) {
+// extractToStruct checks and extracts given interface to struct type.
+func (m *MessagedValidator) extractToStruct(obj interface{}) (interface{}, bool) {
 	if obj == nil {
 		return nil, false
 	}
@@ -319,14 +321,14 @@ func (v *CustomStructValidator) extractToStruct(obj interface{}) (interface{}, b
 	return val.Interface(), true
 }
 
-// applyCustomMessage checks the struct field and wraps validator.FieldError to WrappedValidateFieldError. Note that "\|" is used to represent
-// a single "|", such as "*|name \|is\| invalid" means the message for "*" is set to "name |is| invalid".
-func (v *CustomStructValidator) applyCustomMessage(typ reflect.Type, fieldName, validateTag string) (string, bool) {
+// applyCustomMessage checks the struct field and wraps validator.FieldError to xvalidator.WrappedFieldError. Note that "\|" represents a single "|",
+// such as "*|name \|is\| invalid" means the validation message for "*" (all tags) is "name |is| invalid".
+func (m *MessagedValidator) applyCustomMessage(typ reflect.Type, fieldName, validateTag string) (string, bool) {
 	sf, ok := typ.FieldByName(fieldName)
 	if !ok {
 		return "", false // unreachable
 	}
-	msg := sf.Tag.Get(v.messageTag)
+	msg := sf.Tag.Get(m.messageTag)
 	if msg == "" {
 		return "", false // no msg
 	}

@@ -142,7 +142,7 @@ func TestFieldErrorMethods(t *testing.T) {
 	})
 	v.RegisterAlias("range_1", "gt=2,lt=10")
 	v.RegisterAlias("range_2", "lt=8|len=12")
-	tr, _ := ApplyTranslator(v, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	tr, _ := ApplyEnglishTranslator(v)
 
 	type S struct {
 		A uint64 `binding:"required,lt=10|eq=12,ne=8"  json:"a"`
@@ -218,8 +218,8 @@ func TestUseTagAsFieldName(t *testing.T) {
 	v2 := validator.New()
 	xtesting.Panic(t, func() { UseTagAsFieldName(nil, "a") })
 	UseTagAsFieldName(v1, "json")
-	UseTagAsFieldName(v2, "json")
-	UseTagAsFieldName(v2, "") // unregister
+	UseTagAsFieldName(v2, "yaml", "json")
+	UseTagAsFieldName(v2) // unregister
 
 	type S struct {
 		F1 string  `validate:"required,gt=3" json:"f_1"`
@@ -269,6 +269,9 @@ func TestApplyTranslator(t *testing.T) {
 		{EnLocaleTranslator(), EnTranslationRegisterFunc(),
 			"String is a required field", "String should not be equal to hhh",
 			"String must be at maximum 8 characters in length", "String must be greater than 1 character in length"},
+		{nil, nil,
+			"String is a required field", "String should not be equal to hhh",
+			"String must be at maximum 8 characters in length", "String must be greater than 1 character in length"},
 		{FrLocaleTranslator(), FrTranslationRegisterFunc(),
 			"String est un champ obligatoire", "String ne doit pas être égal à hhh",
 			"String doit faire une taille maximum de 8 caractères", "String doit avoir une taille supérieur à 1 caractère"},
@@ -285,10 +288,18 @@ func TestApplyTranslator(t *testing.T) {
 			"String為必填欄位", "String不能等於hhh",
 			"String長度不能超過8個字元", "String長度必須大於1個字元"},
 	} {
-		translator, err := ApplyTranslator(v, tc.giveLoc, tc.giveReg)
-		xtesting.Nil(t, err)
+		var translator UtTranslator
+		if tc.giveLoc != nil {
+			var err error
+			translator, err = ApplyTranslator(v, tc.giveLoc, tc.giveReg)
+			xtesting.Nil(t, err)
+		} else {
+			var err error
+			translator, err = ApplyEnglishTranslator(v)
+			xtesting.Nil(t, err)
+		}
 
-		err = v.Struct(&testStruct{}) // required
+		err := v.Struct(&testStruct{}) // required
 		xtesting.NotNil(t, err)
 		result := err.(validator.ValidationErrors).Translate(translator)
 		xtesting.Equal(t, result["testStruct.String"], tc.wantReqText)
@@ -310,6 +321,7 @@ func TestApplyTranslator(t *testing.T) {
 	}
 
 	xtesting.Panic(t, func() { _, _ = ApplyTranslator(nil, EnLocaleTranslator(), EnTranslationRegisterFunc()) })
+	xtesting.Panic(t, func() { _, _ = ApplyEnglishTranslator(nil) })
 	xtesting.Panic(t, func() { _, _ = ApplyTranslator(v, nil, EnTranslationRegisterFunc()) })
 	xtesting.Panic(t, func() { _, _ = ApplyTranslator(v, EnLocaleTranslator(), nil) })
 	errRegisterFn := func(v *validator.Validate, trans UtTranslator) error { return errors.New("test error") }
@@ -323,7 +335,7 @@ func TestRegisterTranslation(t *testing.T) {
 	type testStruct1 struct {
 		String string `validate:"required"`
 	}
-	trans, _ := ApplyTranslator(val, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	trans, _ := ApplyEnglishTranslator(val)
 	fn := DefaultRegistrationFunc("required", "required {0}!!!", true)
 	_ = val.RegisterTranslation("required", trans, fn, DefaultTranslateFunc())
 
@@ -338,7 +350,7 @@ func TestRegisterTranslation(t *testing.T) {
 	type testStruct2 struct {
 		String string `validate:"test"`
 	}
-	trans, _ = ApplyTranslator(val, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	trans, _ = ApplyEnglishTranslator(val)
 	fn = DefaultRegistrationFunc("no_test", "translator for test tag", true)
 	_ = val.RegisterTranslation("test", trans, fn, DefaultTranslateFunc())
 
@@ -354,7 +366,7 @@ func TestRegisterTranslation(t *testing.T) {
 		String1 string `validate:"test"`
 		String2 string `validate:"test=hhh"`
 	}
-	trans, _ = ApplyTranslator(val, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	trans, _ = ApplyEnglishTranslator(val)
 	fn = DefaultRegistrationFunc("test", "{0} <- {1}", true)
 	_ = val.RegisterTranslation("test", trans, fn, DefaultTranslateFunc())
 
@@ -417,7 +429,7 @@ func TestLocaleTranslatorsAndTranslationRegisterFunc(t *testing.T) {
 		trans, err := ApplyTranslator(val, tc.giveLoc, tc.giveReg)
 		xtesting.Nil(t, err)
 
-		translations := xreflect.GetUnexportedField(reflect.ValueOf(trans).Elem().FieldByName("translations"))
+		translations := xreflect.GetUnexportedField(xreflect.FieldValueOf(trans, "translations"))
 		transTextPtr := translations.MapIndex(reflect.ValueOf("required")).Elem()
 		xtesting.Equal(t, (*transText)(unsafe.Pointer(transTextPtr.UnsafeAddr())).text, tc.wantRequiredText)
 		transTextPtr = translations.MapIndex(reflect.ValueOf("ne")).Elem()

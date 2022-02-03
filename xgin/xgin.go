@@ -64,7 +64,7 @@ func WithSecretPlaceholder(placeholder string) DumpRequestOption {
 	}
 }
 
-// isSpecificHeader checks whether the given param is the same specific header in case-insensitive.
+// isSpecificHeader checks whether given param is the same specific header in case-insensitive.
 func isSpecificHeader(param, header string) bool {
 	param = strings.ToLower(param)
 	header = strings.ToLower(header)
@@ -147,23 +147,29 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 	return result
 }
 
-// ==========
-// wrap pprof
-// ==========
+// =============
+// route & pprof
+// =============
 
-var (
-	_indexHandler        = func(ctx *gin.Context) { pprof.Index(ctx.Writer, ctx.Request) }
-	_heapHandler         = func(ctx *gin.Context) { pprof.Handler("heap").ServeHTTP(ctx.Writer, ctx.Request) }
-	_goroutineHandler    = func(ctx *gin.Context) { pprof.Handler("goroutine").ServeHTTP(ctx.Writer, ctx.Request) }
-	_allocsHandler       = func(ctx *gin.Context) { pprof.Handler("allocs").ServeHTTP(ctx.Writer, ctx.Request) }
-	_blockHandler        = func(ctx *gin.Context) { pprof.Handler("block").ServeHTTP(ctx.Writer, ctx.Request) }
-	_threadcreateHandler = func(ctx *gin.Context) { pprof.Handler("threadcreate").ServeHTTP(ctx.Writer, ctx.Request) }
-	_cmdlineHandler      = func(ctx *gin.Context) { pprof.Cmdline(ctx.Writer, ctx.Request) }
-	_profileHandler      = func(ctx *gin.Context) { pprof.Profile(ctx.Writer, ctx.Request) }
-	_symbolHandler       = func(ctx *gin.Context) { pprof.Symbol(ctx.Writer, ctx.Request) }
-	_traceHandler        = func(ctx *gin.Context) { pprof.Trace(ctx.Writer, ctx.Request) }
-	_mutexHandler        = func(ctx *gin.Context) { pprof.Handler("mutex").ServeHTTP(ctx.Writer, ctx.Request) }
-)
+// RedirectHandler creates a gin.HandlerFunc that behaviors a redirection with given code (such as http.StatusMovedPermanently or http.StatusTemporaryRedirect)
+// and redirect target location.
+func RedirectHandler(code int, location string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Redirect(code, location)
+	}
+}
+
+func pprofIndexHandler(c *gin.Context)     { pprof.Index(c.Writer, c.Request) }                             // GET
+func pprofCmdlineHandler(c *gin.Context)   { pprof.Cmdline(c.Writer, c.Request) }                           // GET
+func pprofProfileHandler(c *gin.Context)   { pprof.Profile(c.Writer, c.Request) }                           // GET
+func pprofSymbolHandler(c *gin.Context)    { pprof.Symbol(c.Writer, c.Request) }                            // GET / POST
+func pprofTraceHandler(c *gin.Context)     { pprof.Trace(c.Writer, c.Request) }                             // GET
+func pprofAllocsHandler(c *gin.Context)    { pprof.Handler("allocs").ServeHTTP(c.Writer, c.Request) }       // GET
+func pprofBlockHandler(c *gin.Context)     { pprof.Handler("block").ServeHTTP(c.Writer, c.Request) }        // GET
+func pprofGoroutineHandler(c *gin.Context) { pprof.Handler("goroutine").ServeHTTP(c.Writer, c.Request) }    // GET
+func pprofHeapHandler(c *gin.Context)      { pprof.Handler("heap").ServeHTTP(c.Writer, c.Request) }         // GET
+func pprofMutexHandler(c *gin.Context)     { pprof.Handler("mutex").ServeHTTP(c.Writer, c.Request) }        // GET
+func pprofThreadHandler(c *gin.Context)    { pprof.Handler("threadcreate").ServeHTTP(c.Writer, c.Request) } // GET
 
 // WrapPprof registers several routes from package `net/http/pprof` to gin.Engine. For more, please visit https://github.com/DeanThompson/ginpprof.
 func WrapPprof(engine *gin.Engine) {
@@ -172,18 +178,18 @@ func WrapPprof(engine *gin.Engine) {
 		path    string
 		handler gin.HandlerFunc
 	}{
-		{"GET", "/debug/pprof/", _indexHandler},
-		{"GET", "/debug/pprof/heap", _heapHandler},
-		{"GET", "/debug/pprof/goroutine", _goroutineHandler},
-		{"GET", "/debug/pprof/allocs", _allocsHandler},
-		{"GET", "/debug/pprof/block", _blockHandler},
-		{"GET", "/debug/pprof/threadcreate", _threadcreateHandler},
-		{"GET", "/debug/pprof/cmdline", _cmdlineHandler},
-		{"GET", "/debug/pprof/profile", _profileHandler},
-		{"GET", "/debug/pprof/symbol", _symbolHandler},
-		{"POST", "/debug/pprof/symbol", _symbolHandler},
-		{"GET", "/debug/pprof/trace", _traceHandler},
-		{"GET", "/debug/pprof/mutex", _mutexHandler},
+		{"GET", "/debug/pprof/", pprofIndexHandler},
+		{"GET", "/debug/pprof/heap", pprofHeapHandler},
+		{"GET", "/debug/pprof/goroutine", pprofGoroutineHandler},
+		{"GET", "/debug/pprof/allocs", pprofAllocsHandler},
+		{"GET", "/debug/pprof/block", pprofBlockHandler},
+		{"GET", "/debug/pprof/threadcreate", pprofThreadHandler},
+		{"GET", "/debug/pprof/cmdline", pprofCmdlineHandler},
+		{"GET", "/debug/pprof/profile", pprofProfileHandler},
+		{"GET", "/debug/pprof/symbol", pprofSymbolHandler},
+		{"POST", "/debug/pprof/symbol", pprofSymbolHandler},
+		{"GET", "/debug/pprof/trace", pprofTraceHandler},
+		{"GET", "/debug/pprof/mutex", pprofMutexHandler},
 	} {
 		engine.Handle(r.method, r.path, r.handler) // use path directly
 	}
@@ -217,7 +223,7 @@ func SetPrintRouteFunc(f func(httpMethod, absolutePath, handlerName string, numH
 }
 
 func init() {
-	// set gin's mode to gin.DebugMode and debugPrintRouteFunc to DefaultPrintRouteFunc in default
+	// set gin's mode to gin.DebugMode, and set debugPrintRouteFunc to DefaultPrintRouteFunc in default
 	gin.SetMode(gin.DebugMode)
 	SetPrintRouteFunc(DefaultPrintRouteFunc)
 }
@@ -250,8 +256,8 @@ const (
 	panicNilError = "xgin: nil error for RouterDecodeError"
 )
 
-// RouterDecodeError is an error type for router parameter decoding. At most of the time, the Err field is in strconv.NumError type generated by functions from strconv
-// package such as strconv.ParseInt and strconv.Atoi. This type also supports custom translation in TranslateBindingError and WithXginRouterDecodeError.
+// RouterDecodeError is an error type for router parameter decoding. At most of the time, the Err field is in strconv.NumError type generated by functions from
+// strconv package such as strconv.ParseInt and strconv.Atoi. This type also supports custom translation in TranslateBindingError with WithXginRouterDecodeError.
 type RouterDecodeError struct {
 	Field   string
 	Input   string

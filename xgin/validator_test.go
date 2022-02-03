@@ -5,6 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xtesting"
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,13 +18,12 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
-	"github.com/Aoi-hosizora/ahlib/xtesting"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 )
+
+type mockValidator struct{}
+
+func (f mockValidator) ValidateStruct(interface{}) error { return nil }
+func (f mockValidator) Engine() interface{}              { return nil } // fake
 
 func TestValidator(t *testing.T) {
 	val, err := GetValidatorEngine() // gin's default validator.Validator
@@ -50,19 +54,14 @@ func TestValidator(t *testing.T) {
 	xtesting.Equal(t, val.Struct(&testStruct3{}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'required' tag")
 	xtesting.Equal(t, val.Struct(&testStruct3{String: "hhh"}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'ne' tag")
 	xvalidator.UseTagAsFieldName(val, "") // defaults to no use
-	xtesting.Equal(t, val.Struct(&testStruct3{}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'required' tag") // TODO
-	xtesting.Equal(t, val.Struct(&testStruct3{String: "hhh"}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'ne' tag")
+	xtesting.Equal(t, val.Struct(&testStruct3{}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'required' tag")
+	xtesting.Equal(t, val.Struct(&testStruct3{String: "hhh"}).Error(), "Key: 'testStruct3.str' Error:Field validation for 'str' failed on the 'ne' tag") // <<< with structCache
 	type testStruct4 struct {
 		String string `binding:"required,lt=3" json:"str"`
 	}
 	xtesting.Equal(t, val.Struct(&testStruct4{}).Error(), "Key: 'testStruct4.String' Error:Field validation for 'String' failed on the 'required' tag")
 	xtesting.Equal(t, val.Struct(&testStruct4{String: "hhh"}).Error(), "Key: 'testStruct4.String' Error:Field validation for 'String' failed on the 'lt' tag")
 }
-
-type mockValidator struct{}
-
-func (f mockValidator) ValidateStruct(interface{}) error { return nil }
-func (f mockValidator) Engine() interface{}              { return nil } // fake
 
 func TestTranslator(t *testing.T) {
 	val, err := GetValidatorEngine()
@@ -106,7 +105,7 @@ func TestTranslator(t *testing.T) {
 		xtesting.Equal(t, xvalidator.TranslateValidationErrors(neErr, ut, false)["str"], tc.wantNotEqualText)
 	}
 
-	t.Run("mismatch", func(t *testing.T) {
+	t.Run("mismatch validator type", func(t *testing.T) {
 		// mismatched validator engine
 		originVal := binding.Validator
 		originTrans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
@@ -130,7 +129,7 @@ func TestTranslator(t *testing.T) {
 	})
 }
 
-func TestBinding(t *testing.T) {
+func TestAddBindingAndAddTranslator(t *testing.T) {
 	val, _ := GetValidatorEngine()
 	xvalidator.UseTagAsFieldName(val, "json")
 	trans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
@@ -220,7 +219,9 @@ func TestBinding(t *testing.T) {
 				"datetime": "datetime is a required field",
 			},
 		},
-		{map[string]interface{}{"number": "123", "abc": "aabbcc", "date": "2021-02-03", "datetime": "2021-02-03T02:10:13+08:00", "username": "333", "num": -1}, true, nil},
+		{map[string]interface{}{"number": "123", "abc": "aabbcc", "date": "2021-02-03", "datetime": "2021-02-03T02:10:13+08:00", "username": "333", "num": -1}, true,
+			nil,
+		},
 	} {
 		value := url.Values{}
 		for k, v := range tc.giveMap {
@@ -231,7 +232,6 @@ func TestBinding(t *testing.T) {
 			resp, err := http.Get("http://localhost:12345?" + query)
 			xtesting.Nil(t, err)
 			bs, _ := ioutil.ReadAll(resp.Body)
-
 			r := make(map[string]interface{})
 			err = json.Unmarshal(bs, &r)
 			xtesting.Nil(t, err)
@@ -245,10 +245,11 @@ func TestBinding(t *testing.T) {
 
 func TestCustomStructValidator(t *testing.T) {
 	originVal := binding.Validator
-	sv := xvalidator.NewCustomStructValidator()
-	sv.SetMessageTagName("message")
-	sv.SetValidatorTagName("binding")
-	binding.Validator = sv
+	mv := xvalidator.NewMessagedValidator()
+	mv.SetValidateTagName("binding")
+	mv.SetMessageTagName("message")
+	mv.UseTagAsFieldName("json")
+	binding.Validator = mv
 	defer func() { binding.Validator = originVal }()
 
 	val, err := GetValidatorEngine()
@@ -271,8 +272,12 @@ func TestCustomStructValidator(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
 	app.GET("", func(ctx *gin.Context) {
-		if err := ctx.ShouldBindQuery(&testStruct{}); err != nil {
-			if verr, ok := err.(*xvalidator.ValidateFieldsError); ok {
+		s := &testStruct{}
+		if err := ctx.ShouldBindQuery(s); err != nil {
+			// if s.Int != nil {
+			// 	log.Print(*s.Int)
+			// }
+			if verr, ok := err.(*xvalidator.MultiFieldsError); ok {
 				ctx.JSON(400, gin.H{"success": false, "details": verr.Translate(trans, false)})
 			} else if nerr, ok := err.(*strconv.NumError); ok {
 				ctx.JSON(400, gin.H{"success": false, "details": gin.H{"__json": nerr.Error()}})
@@ -299,19 +304,22 @@ func TestCustomStructValidator(t *testing.T) {
 			map[string]interface{}{"_string": "_string should be set and can not be empty", "_float": "_float is a required field"},
 		},
 		{map[string]interface{}{"_string": "", "_int": "", "_float": ""}, false,
-			map[string]interface{}{"_string": "_string should be set and can not be empty", "_float": "_float is a required field"}, // TODO
+			map[string]interface{}{"_string": "_string should be set and can not be empty", "_float": "_float is a required field"}, // _int == 0 in query
+		},
+		{map[string]interface{}{"_string": "", "_int": "_", "_float": ""}, false,
+			map[string]interface{}{"__json": "strconv.ParseInt: parsing \"_\": invalid syntax"},
 		},
 		{map[string]interface{}{"_string": "a0", "_int": " ", "_float": "0.0"}, false,
-			map[string]interface{}{"__json":"strconv.ParseInt: parsing \" \": invalid syntax"},
+			map[string]interface{}{"__json": "strconv.ParseInt: parsing \" \": invalid syntax"},
 		},
 		{map[string]interface{}{"_string": " 0", "_int": "3", "_float": "0.3"}, false,
 			map[string]interface{}{"_string": "_string should be a number string", "_int": "_int should be in specific range", "_float": "_float must be greater than 0.3"},
 		},
 		{map[string]interface{}{"_string": "1", "_int": "5.1", "_float": "1"}, false,
-			map[string]interface{}{"__json":"strconv.ParseInt: parsing \"5.1\": invalid syntax"},
+			map[string]interface{}{"__json": "strconv.ParseInt: parsing \"5.1\": invalid syntax"},
 		},
 		{map[string]interface{}{"_string": "1.2", "_int": "5", "_float": "0_1"}, false,
-			map[string]interface{}{"_string": "_string should be a number string", "_int":"_int should be in specific range"},
+			map[string]interface{}{"_string": "_string should be a number string", "_int": "_int should be in specific range"},
 		},
 		{map[string]interface{}{"_string": "abc", "_int": "0", "_float": "0"}, false,
 			map[string]interface{}{"_string": "_string should be a number string", "_float": "_float is a required field"},
@@ -354,11 +362,10 @@ func TestTranslateBindingError(t *testing.T) {
 	val, _ := GetValidatorEngine()
 	xvalidator.UseTagAsFieldName(val, "json")
 	trans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
-	sv := xvalidator.NewCustomStructValidator()
-	sv.SetMessageTagName("message")
-	sv.SetValidatorTagName("binding")
-	// xvalidator.UseTagAsFieldName(sv.ValidateEngine(), "json")
-	sv.SetFieldNameTag("json")
+	mv := xvalidator.NewMessagedValidator()
+	mv.SetValidateTagName("binding")
+	mv.SetMessageTagName("message")
+	mv.UseTagAsFieldName("json")
 
 	app := gin.New()
 	type testStruct struct {
@@ -384,7 +391,7 @@ func TestTranslateBindingError(t *testing.T) {
 		}
 		if c.Query("useCustom") == "true" {
 			originVal := binding.Validator
-			binding.Validator = sv
+			binding.Validator = mv
 			defer func() { binding.Validator = originVal }()
 		}
 		if err := c.ShouldBind(ptr); err != nil {
@@ -405,6 +412,7 @@ func TestTranslateBindingError(t *testing.T) {
 				err = NewRouterDecodeError("id", idStr, err, "")
 			}
 		} else if id <= 0 {
+			err = errors.New("id <= 0")
 			err = NewRouterDecodeError("id", idStr, err, "should be larger then zero")
 		}
 		if rErr, ok := err.(*RouterDecodeError); ok {
@@ -581,8 +589,8 @@ func TestTranslateBindingError(t *testing.T) {
 			func(validator.ValidationErrors, xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 				return nil, false
 			})}, nil, false},
-		{"ValidateFieldsError", &xvalidator.ValidateFieldsError{}, []TranslateOption{WithXvalidatorValidateFieldsError(
-			func(*xvalidator.ValidateFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
+		{"MultiFieldsError", &xvalidator.MultiFieldsError{}, []TranslateOption{WithXvalidatorMultiFieldsError(
+			func(*xvalidator.MultiFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 				return nil, false
 			})}, nil, false},
 		{"WithTranslatableError", translatableError("TODO"), []TranslateOption{}, map[string]string{"_": "TODO"}, true},

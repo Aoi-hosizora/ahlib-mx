@@ -28,7 +28,7 @@ func TestDumpRequest(t *testing.T) {
 	defer server.Shutdown(context.Background())
 
 	req := func(ep string) []string {
-		req, _ := http.NewRequest("GET", "http://127.0.0.1:12345/" + ep, nil)
+		req, _ := http.NewRequest("GET", "http://127.0.0.1:12345/"+ep, nil)
 		req.Header = http.Header{
 			"Host":            []string{"localhost:12345"},
 			"Accept-Encoding": []string{"gzip"},
@@ -66,16 +66,16 @@ func TestDumpRequest(t *testing.T) {
 		{"reqline_http", func(c *gin.Context) []string {
 			return DumpRequest(c, WithIgnoreRequestLine(true))
 		}, []string{"Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz", "X-Test: xxx"}},
-		{"retain1", func(c *gin.Context) []string { 
+		{"retain1", func(c *gin.Context) []string {
 			return DumpRequest(c, WithRetainHeaders("X-Test"))
 		}, []string{"GET /retain1 HTTP/1.1", "X-Test: xxx"}},
-		{"retain2", func(c *gin.Context) []string { 
+		{"retain2", func(c *gin.Context) []string {
 			return DumpRequest(c, WithRetainHeaders("X-TEST", "User-Agent"))
 		}, []string{"GET /retain2 HTTP/1.1", "User-Agent: Go-http-client/1.1", "X-Test: xxx"}},
-		{"retain3", func(c *gin.Context) []string { 
+		{"retain3", func(c *gin.Context) []string {
 			return DumpRequest(c, WithRetainHeaders("X-Multi", "X-XXX"), WithIgnoreHeaders("Host"))
 		}, []string{"GET /retain3 HTTP/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
-		{"ignore1", func(c *gin.Context) []string { 
+		{"ignore1", func(c *gin.Context) []string {
 			return DumpRequest(c, WithIgnoreHeaders("X-Test"))
 		}, []string{"GET /ignore1 HTTP/1.1", "Host: 127.0.0.1:12345", "Accept-Encoding: gzip", "User-Agent: Go-http-client/1.1", "X-Multi: yyy", "X-Multi: zzz"}},
 		{"ignore2", func(c *gin.Context) []string {
@@ -103,13 +103,57 @@ func TestDumpRequest(t *testing.T) {
 	}
 }
 
+func TestRedirectHandler(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
+	app := gin.New()
+	// app.Use(gin.Logger())
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
+
+	for _, tc := range []struct {
+		name            string
+		giveCode        int
+		giveAndWantData interface{}
+	}{
+		{"301", http.StatusMovedPermanently, "code_301"},
+		{"302", http.StatusFound, "code_302"},
+		{"303", http.StatusSeeOther, "code_303"},
+		// {"304", http.StatusNotModified, "code_304"}, => 304 is not used for redirect
+		{"307", http.StatusTemporaryRedirect, "code_307"},
+		{"308", http.StatusPermanentRedirect, "code_308"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := "/" + tc.name
+			index := root + "/index"
+			app.GET(root, RedirectHandler(tc.giveCode, index))
+			app.GET(index, func(c *gin.Context) {
+				c.JSON(200, gin.H{"data": tc.giveAndWantData})
+			})
+
+			req, err := http.NewRequest("GET", "http://localhost:12345"+root, nil) // root -> index
+			xtesting.Nil(t, err)
+			client := http.Client{}
+			resp, err := client.Do(req)
+			xtesting.Nil(t, err)
+			xtesting.Equal(t, resp.StatusCode, 200)
+			bs, err := ioutil.ReadAll(resp.Body)
+			xtesting.Nil(t, err)
+			resp.Body.Close()
+			data := map[string]interface{}{}
+			xtesting.Nil(t, json.Unmarshal(bs, &data))
+			xtesting.Equal(t, data["data"], tc.giveAndWantData)
+		})
+	}
+}
+
 func TestWrapPprof(t *testing.T) {
 	gin.SetMode(gin.DebugMode)
 
 	// 1.
 	log.Println("============ 1")
 	app := gin.New() // <<< with warning
-	WrapPprof(app) // <<< with [Gin-debug]
+	WrapPprof(app)   // <<< with [Gin-debug]
 	// [GIN-debug] GET    /debug/pprof/             --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func12 (1 handlers)
 	// [GIN-debug] GET    /debug/pprof/heap         --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func13 (1 handlers)
 	// [GIN-debug] GET    /debug/pprof/goroutine    --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func14 (1 handlers)
@@ -195,7 +239,7 @@ func TestRouterDecodeError(t *testing.T) {
 	xtesting.Equal(t, rerr.Error(), "parsing id \"0\": non-positive number")
 	xtesting.Equal(t, rerr.Unwrap(), err)
 
-	xtesting.Panic(t, func() { NewRouterDecodeError("", "", nil, "") })
+	xtesting.Panic(t, func() { _ = NewRouterDecodeError("", "", nil, "") })
 }
 
 func TestGetProxyEnv(t *testing.T) {

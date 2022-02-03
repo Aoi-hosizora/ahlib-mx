@@ -39,6 +39,7 @@
 + `func WithSecretPlaceholder(placeholder string) DumpRequestOption`
 + `func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string`
 + `func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string`
++ `func RedirectHandler(code int, location string) gin.HandlerFunc`
 + `func WrapPprof(engine *gin.Engine)`
 + `func HideDebugLogging() (restoreFn func())`
 + `func HideDebugPrintRoute() (restoreFn func())`

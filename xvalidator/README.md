@@ -14,9 +14,9 @@
 + `type UtTranslator = ut.Translator`
 + `type LocaleTranslator = locales.Translator`
 + `type TranslationRegisterHandler func`
-+ `type WrappedValidateFieldError struct`
-+ `type ValidateFieldsError struct`
-+ `type CustomStructValidator struct`
++ `type WrappedFieldError struct`
++ `type MultiFieldsError struct`
++ `type MessagedStructValidator struct`
 
 ### Variables
 
@@ -30,8 +30,9 @@
 
 + `func IsValidationError(err error) bool`
 + `func IsRequiredError(err error) bool`
-+ `func UseTagAsFieldName(v *validator.Validate, tagName string)`
++ `func UseTagAsFieldName(v *validator.Validate, tagName ...string)`
 + `func ApplyTranslator(validator *validator.Validate, locale LocaleTranslator, registerFn TranslationRegisterHandler) (UtTranslator, error)`
++ `func ApplyEnglishTranslator(validator *validator.Validate) (UtTranslator, error)`
 + `func DefaultRegistrationFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc`
 + `func DefaultTranslateFunc() validator.TranslationFunc`
 + `func EnLocaleTranslator() locales.Translator`
@@ -81,17 +82,17 @@
 
 ### Methods
 
-+ `func (v *WrappedValidateFieldError) Origin() validator.FieldError`
-+ `func (v *WrappedValidateFieldError) Message() string`
-+ `func (v *WrappedValidateFieldError) Error() string`
-+ `func (v *WrappedValidateFieldError) Unwrap() error`
-+ `func (v *ValidateFieldsError) Errors() []error`
-+ `func (v *ValidateFieldsError) Error() string `
-+ `func (v *ValidateFieldsError) Translate(translator UtTranslator, useNamespace bool) map[string]string`
-+ `func (v *ValidateFieldsError) FlatToMap(useNamespace bool) map[string]string`
-+ `func (v *CustomStructValidator) Engine() interface{}`
-+ `func (v *CustomStructValidator) ValidateEngine() *validator.Validate`
-+ `func (v *CustomStructValidator) SetValidatorTagName(name string)`
-+ `func (v *CustomStructValidator) SetMessageTagName(name string)`
-+ `func (v *CustomStructValidator) SetFieldNameTag(name string)`
-+ `func (v *CustomStructValidator) ValidateStruct(obj interface{}) error`
++ `func (w *WrappedFieldError) Origin() validator.FieldError`
++ `func (w *WrappedFieldError) Message() string`
++ `func (w *WrappedFieldError) Error() string`
++ `func (w *WrappedFieldError) Unwrap() error`
++ `func (m *MultiFieldsError) Errors() []error`
++ `func (m *MultiFieldsError) Error() string `
++ `func (m *MultiFieldsError) Translate(translator UtTranslator, useNamespace bool) map[string]string`
++ `func (m *MultiFieldsError) FlatToMap(useNamespace bool) map[string]string`
++ `func (m *MessagedValidator) Engine() interface{}`
++ `func (m *MessagedValidator) ValidateEngine() *validator.Validate`
++ `func (m *MessagedValidator) SetValidateTagName(name string)`
++ `func (m *MessagedValidator) SetMessageTagName(name string)`
++ `func (m *MessagedValidator) UseTagAsFieldName(name ...string)`
++ `func (m *MessagedValidator) ValidateStruct(obj interface{}) error`

@@ -5,8 +5,10 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/Aoi-hosizora/ahlib-web)](https://goreportcard.com/report/github.com/Aoi-hosizora/ahlib-web)
 [![License](http://img.shields.io/badge/license-mit-blue.svg)](./LICENSE)
 [![Release](https://img.shields.io/github/v/release/Aoi-hosizora/ahlib-web)](https://github.com/Aoi-hosizora/ahlib-web/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Aoi-hosizora/ahlib-web.svg)](https://pkg.go.dev/github.com/Aoi-hosizora/ahlib-web)
 
-+ A personal golang library for web development, including gin, validator/v10, telebot.v2, cron, require `Go >= 1.15`.
++ A personal golang library for web development, including: [gin](https://github.com/gin-gonic/gin), [validator (v10)](https://github.com/go-playground/validator),
+  [telebot (v2)](https://github.com/tucnak/telebot), [cron](https://github.com/robfig/cron), require `Go >= 1.15`.
 
 ### Related libraries
 

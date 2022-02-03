@@ -11,7 +11,7 @@ import (
 )
 
 func TestTranslateAndFlat(t *testing.T) {
-	// WrappedValidateFieldError
+	// WrappedFieldError
 	v := validator.New()
 	type s struct {
 		Str string `validate:"required,gt=2,lt=10" json:"str"`
@@ -25,27 +25,29 @@ func TestTranslateAndFlat(t *testing.T) {
 	err5 := v.Struct(&s{Str: "abc", Int: 3}).(validator.ValidationErrors)[0]
 	err6 := v.Struct(&s{Str: "abc", Int: 5}).(validator.ValidationErrors)[0]
 
-	err2_ := &WrappedValidateFieldError{err2.(validator.FieldError), "Int field must be set and can not be zero"}
-	err4_ := &WrappedValidateFieldError{err4.(validator.FieldError), "The length of String must less then 10"}
-	err6_ := &WrappedValidateFieldError{err6.(validator.FieldError), "The value of Int must less then 5"}
+	err2_ := &WrappedFieldError{err2.(validator.FieldError), "Int field must be set and can not be zero"}
+	err4_ := &WrappedFieldError{err4.(validator.FieldError), "The length of String must less then 10"}
+	err6_ := &WrappedFieldError{err6.(validator.FieldError), "The value of Int must less then 5"}
 	xtesting.Equal(t, err2_.Origin().Error(), err2.Error())
+	xtesting.Equal(t, err2_.Unwrap().Error(), err2.Error())
+	xtesting.Equal(t, errors.Is(err2_, err2), true)
 	xtesting.Equal(t, err4_.Origin().Error(), "Key: 's.str' Error:Field validation for 'str' failed on the 'lt' tag")
 	xtesting.Equal(t, err6_.Message(), "The value of Int must less then 5")
 	xtesting.Equal(t, err6_.Error(), "Key: 's.int' Error:The value of Int must less then 5")
 
-	// ValidateFieldsError
-	ve := &ValidateFieldsError{fields: []error{err1, err2_}}
+	// MultiFieldsError
+	ve := &MultiFieldsError{fields: []error{err1, err2_}}
 	xtesting.Equal(t, len(ve.Errors()), 2)
 	xtesting.Equal(t, ve.Errors()[0].Error(), err1.Error())
 	xtesting.Equal(t, ve.Errors()[1].Error(), "Key: 's.int' Error:Int field must be set and can not be zero")
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:Field validation for 'str' failed on the 'required' tag; Key: 's.int' Error:Int field must be set and can not be zero")
-	ve = &ValidateFieldsError{fields: []error{err3, err5}}
+	ve = &MultiFieldsError{fields: []error{err3, err5}}
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:Field validation for 'str' failed on the 'gt' tag; Key: 's.int' Error:Field validation for 'int' failed on the 'gte' tag")
-	ve = &ValidateFieldsError{fields: []error{err4_, err6_}}
+	ve = &MultiFieldsError{fields: []error{err4_, err6_}}
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:The length of String must less then 10; Key: 's.int' Error:The value of Int must less then 5")
 
 	// TranslateValidationErrors
-	tr, _ := ApplyTranslator(v, EnLocaleTranslator(), EnTranslationRegisterFunc())
+	tr, _ := ApplyEnglishTranslator(v)
 	fe := validator.ValidationErrors{err1, err2}
 	fe1 := TranslateValidationErrors(fe, tr, true) // => fe.Translate(tr)
 	fe2 := TranslateValidationErrors(fe, tr, false)
@@ -55,8 +57,8 @@ func TestTranslateAndFlat(t *testing.T) {
 	xtesting.Equal(t, fe2["str"], "str is a required field")
 	xtesting.Panic(t, func() { TranslateValidationErrors(fe, nil, false) })
 
-	// ValidateFieldsError.Translate
-	ve = &ValidateFieldsError{fields: []error{err1, err2_}}
+	// MultiFieldsError.Translate
+	ve = &MultiFieldsError{fields: []error{err1, err2_}}
 	ve1 := ve.Translate(tr, true)
 	ve2 := ve.Translate(tr, false)
 	xtesting.Equal(t, ve1["s.int"], "Int field must be set and can not be zero")
@@ -64,7 +66,7 @@ func TestTranslateAndFlat(t *testing.T) {
 	xtesting.Equal(t, ve2["int"], "Int field must be set and can not be zero")
 	xtesting.Equal(t, ve2["str"], "str is a required field")
 	xtesting.Panic(t, func() { ve.Translate(nil, false) })
-	err := &ValidateFieldsError{fields: []error{nil, errors.New("xxx")}}
+	err := &MultiFieldsError{fields: []error{nil, errors.New("xxx")}}
 	xtesting.Equal(t, len(err.Translate(tr, true)), 0)
 
 	// FlatValidationErrors
@@ -75,7 +77,7 @@ func TestTranslateAndFlat(t *testing.T) {
 	xtesting.Equal(t, fe4["int"], "Field validation for 'int' failed on the 'required' tag")
 	xtesting.Equal(t, fe4["str"], "Field validation for 'str' failed on the 'required' tag")
 
-	// ValidateFieldsError.FlatToMap
+	// MultiFieldsError.FlatToMap
 	ve3 := ve.FlatToMap(true)
 	ve4 := ve.FlatToMap(false)
 	xtesting.Equal(t, ve3["s.int"], "Int field must be set and can not be zero")
@@ -99,13 +101,13 @@ func TestTranslateAndFlat(t *testing.T) {
 	xtesting.Equal(t, ferr.Error(), "Int field must be set and can not be zero; Field validation for 'str' failed on the 'required' tag")
 }
 
-func TestCustomStructValidator(t *testing.T) {
-	v := NewCustomStructValidator()
-	v.SetValidatorTagName("binding")
-	v.SetMessageTagName("message")
-	v.SetFieldNameTag("json")
-	tr, _ := ApplyTranslator(v.ValidateEngine(), EnLocaleTranslator(), EnTranslationRegisterFunc())
-	xtesting.Equal(t, v.Engine(), v.ValidateEngine())
+func TestMessagedValidator(t *testing.T) {
+	mv := NewMessagedValidator()
+	mv.SetValidateTagName("binding")
+	mv.SetMessageTagName("message")
+	mv.UseTagAsFieldName("json", "yaml", "form")
+	tr, _ := ApplyEnglishTranslator(mv.ValidateEngine())
+	xtesting.Equal(t, mv.Engine(), mv.ValidateEngine())
 
 	type s struct {
 		Str   string  `binding:"required,gt=2,lt=10" json:"_str" message:"required|str must be set and can not be empty|gt|str length must be larger then 2|lt|str length must be less then 10"`
@@ -159,10 +161,10 @@ func TestCustomStructValidator(t *testing.T) {
 			map[string]string{"_str": "str must be set and can not be empty", "_int": "_int should not be equal to 5", "Float": "Float must be 0 or less"}},
 	} {
 		t.Run(fmt.Sprintf("%v", tc.giveObj), func(t *testing.T) {
-			err := v.ValidateStruct(tc.giveObj)
+			err := mv.ValidateStruct(tc.giveObj)
 			_, ok := err.(*validator.InvalidValidationError)
 			xtesting.Equal(t, ok, tc.wantInvalidErr)
-			ve, ok := err.(*ValidateFieldsError)
+			ve, ok := err.(*MultiFieldsError)
 			xtesting.Equal(t, ok, tc.wantValidateErr)
 			if ok && len(tc.wantFieldErrors) > 0 {
 				xtesting.Equal(t, ve.Error(), strings.Join(tc.wantFieldErrors, "; "))
@@ -175,7 +177,7 @@ func TestCustomStructValidator(t *testing.T) {
 }
 
 func TestApplyCustomMessage(t *testing.T) {
-	v := NewCustomStructValidator()
+	v := NewMessagedValidator()
 	type s struct {
 		F1 string `validate_message:"required|required_1|gt|gt\\|1|lt|\\|lt\\|\\|_\\|\\|1\\|\\|\\|"`
 		//                                                  ;gt  |1;lt;  |lt  |  |_  |  |1  |  |  |
