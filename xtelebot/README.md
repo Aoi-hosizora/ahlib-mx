@@ -52,6 +52,8 @@
 + `func RemoveReplyKeyboard() *telebot.ReplyMarkup`
 + `func CallbackShowAlert(text string, showAlert bool) *telebot.CallbackResponse`
 + `func LongPoller(second int) *telebot.LongPoller`
++ `func IsEntityParseError(err error) bool`
++ `func IsTelebotSupportedOption(option interface{}) bool`
 + `func NewStateHandlerSet() *StateHandlerSet`
 + `func NewBotData() *BotData`
 + `func NewBotWrapper(bot *telebot.Bot) *BotWrapper`
@@ -94,10 +96,15 @@
 + `func (b *BotWrapper) HandleReplyButton(button *telebot.ReplyButton, handler MessageHandler)`
 + `func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler CallbackHandler)`
 + `func (b *BotWrapper) RespondSend(source *telebot.Chat, what interface{}, options ...interface{}) (*telebot.Message, error)`
++ `func (b *BotWrapper) RespondSendCtx(ctx context.Context, source *telebot.Chat, what interface{}, options ...interface{}) (*telebot.Message, error)`
 + `func (b *BotWrapper) RespondReply(source *telebot.Message, explicit bool, what interface{}, options ...interface{}) (*telebot.Message, error)`
++ `func (b *BotWrapper) RespondReplyCtx(ctx context.Context, source *telebot.Message, explicit bool, what interface{}, options ...interface{}) (*telebot.Message, error)`
 + `func (b *BotWrapper) RespondEdit(source *telebot.Message, what interface{}, options ...interface{}) (*telebot.Message, error)`
++ `func (b *BotWrapper) RespondEditCtx(ctx context.Context, source *telebot.Message, what interface{}, options ...interface{}) (*telebot.Message, error)`
 + `func (b *BotWrapper) RespondDelete(source *telebot.Message) error`
++ `func (b *BotWrapper) RespondDeleteCtx(ctx context.Context, source *telebot.Message) error`
 + `func (b *BotWrapper) RespondCallback(source *telebot.Callback, answer *telebot.CallbackResponse) error`
++ `func (b *BotWrapper) RespondCallbackCtx(ctx context.Context, source *telebot.Callback, answer *telebot.CallbackResponse) error`
 + `func (b *BotWrapper) SetHandledCallback(f func(endpoint interface{}, formattedEndpoint string, handlerName string))`
 + `func (b *BotWrapper) SetReceivedCallback(cb func(endpoint interface{}, received *telebot.Message))`
 + `func (b *BotWrapper) SetRespondedCallback(cb func(typ RespondEventType, event *RespondEvent))`

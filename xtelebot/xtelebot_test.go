@@ -1,6 +1,7 @@
 package xtelebot
 
 import (
+	"errors"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"gopkg.in/tucnak/telebot.v2"
 	"sync"
@@ -47,6 +48,20 @@ func TestMarkups(t *testing.T) {
 		xtesting.Equal(t, RemoveInlineKeyboard(), &telebot.ReplyMarkup{InlineKeyboard: nil})
 		xtesting.Equal(t, RemoveReplyKeyboard(), &telebot.ReplyMarkup{ReplyKeyboardRemove: true})
 		xtesting.Equal(t, CallbackShowAlert("text", true), &telebot.CallbackResponse{Text: "text", ShowAlert: true})
+	})
+
+	t.Run("is_xxx", func(t *testing.T) {
+		xtesting.False(t, IsEntityParseError(nil))
+		xtesting.False(t, IsEntityParseError(errors.New("TODO")))
+		xtesting.True(t, IsEntityParseError(errors.New("can't parse entities: character must be escaped")))
+		xtesting.True(t, IsEntityParseError(errors.New("can't parse entities: Can't find end of the entity")))
+
+		xtesting.False(t, IsTelebotSupportedOption(nil))
+		xtesting.False(t, IsTelebotSupportedOption(true))
+		xtesting.True(t, IsTelebotSupportedOption(&telebot.SendOptions{}))
+		xtesting.True(t, IsTelebotSupportedOption(&telebot.ReplyMarkup{}))
+		xtesting.True(t, IsTelebotSupportedOption(telebot.NoPreview))
+		xtesting.True(t, IsTelebotSupportedOption(telebot.ModeMarkdown))
 	})
 }
 

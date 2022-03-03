@@ -29,8 +29,8 @@
 ### Methods
 
 + `func (c *CronTask) Cron() *cron.Cron`
-+ `func (c *CronTask) Jobs() []*FuncJob`
 + `func (c *CronTask) ScheduleParser() cron.ScheduleParser`
++ `func (c *CronTask) Jobs() []*FuncJob`
 + `func (c *CronTask) AddJobByCronSpec(title string, spec string, f func()) (cron.EntryID, error)`
 + `func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func()) cron.EntryID`
 + `func (c *CronTask) RemoveJob(id cron.EntryID)`

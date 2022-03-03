@@ -47,6 +47,7 @@ func TestCronTask(t *testing.T) {
 		xtesting.NotNil(t, err)
 		id2, err := task.AddJobByCronSpec("job2", "0/2 * * * * *", func() { return })
 		xtesting.Equal(t, id2, cron.EntryID(2))
+		sch2, _ := task.ScheduleParser().Parse("0/2 * * * * *")
 		// 3
 		sch3 := cron.Every(time.Second * 3)
 		id3 := task.AddJobBySchedule("job3", sch3, func() { return })
@@ -63,7 +64,7 @@ func TestCronTask(t *testing.T) {
 		xtesting.Equal(t, task.Jobs()[0].Title(), "job1")
 		xtesting.Equal(t, task.Jobs()[0].EntryID(), cron.EntryID(1))
 		xtesting.Equal(t, task.Jobs()[1].CronSpec(), "0/2 * * * * *")
-		xtesting.Equal(t, task.Jobs()[1].Schedule(), nil)
+		xtesting.Equal(t, task.Jobs()[1].Schedule(), sch2)
 		xtesting.Equal(t, task.Jobs()[2].Schedule(), sch4)
 		xtesting.Equal(t, task.Jobs()[2].CronSpec(), "")
 		xtesting.Equal(t, task.Jobs()[2].Entry().ID, cron.EntryID(4))

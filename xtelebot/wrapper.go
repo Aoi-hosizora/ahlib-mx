@@ -1,6 +1,7 @@
 package xtelebot
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -137,7 +138,9 @@ func (b *BotWrapper) HandleCommand(command string, handler MessageHandler) {
 	})
 
 	formatted, _ := formatEndpoint(command)
-	b.handledCallback(command, formatted, handlerFuncName(handler))
+	if b.handledCallback != nil {
+		b.handledCallback(command, formatted, handlerFuncName(handler))
+	}
 }
 
 // HandleReplyButton handles telebot.ReplyButton with MessageHandler to telebot.Bot, panics when using nil button, invalid button or
@@ -167,7 +170,9 @@ func (b *BotWrapper) HandleReplyButton(button *telebot.ReplyButton, handler Mess
 	})
 
 	formatted, _ := formatEndpoint(button)
-	b.handledCallback(button, formatted, handlerFuncName(handler))
+	if b.handledCallback != nil {
+		b.handledCallback(button, formatted, handlerFuncName(handler))
+	}
 }
 
 // HandleInlineButton handles telebot.InlineButton with CallbackHandler to telebot.Bot, panics when using nil button, invalid button or
@@ -197,7 +202,9 @@ func (b *BotWrapper) HandleInlineButton(button *telebot.InlineButton, handler Ca
 	})
 
 	formatted, _ := formatEndpoint(button)
-	b.handledCallback(button, formatted, handlerFuncName(handler))
+	if b.handledCallback != nil {
+		b.handledCallback(button, formatted, handlerFuncName(handler))
+	}
 }
 
 // ===================
@@ -248,7 +255,8 @@ type RespondEvent struct {
 	CallbackResult *telebot.CallbackResponse // fake
 
 	// ctx and error
-	ReturnedError error
+	RespondContext context.Context
+	ReturnedError  error
 }
 
 var (
@@ -258,8 +266,13 @@ var (
 	errNilWhat     = errors.New("xtelebot: nil respond value")
 )
 
-// RespondSend responds and sends message to given telebot.Chat, if error returned is not caused by arguments, it will also invoke responded callback.
+// RespondSend is a convenient form of RespondSendCtx without context.Context.
 func (b *BotWrapper) RespondSend(source *telebot.Chat, what interface{}, options ...interface{}) (*telebot.Message, error) {
+	return b.RespondSendCtx(context.Background(), source, what, options...)
+}
+
+// RespondSendCtx responds and sends message to given telebot.Chat, if error returned is not caused by arguments, it will also invoke responded callback.
+func (b *BotWrapper) RespondSendCtx(ctx context.Context, source *telebot.Chat, what interface{}, options ...interface{}) (*telebot.Message, error) {
 	if source == nil {
 		return nil, errNilChat
 	}
@@ -269,21 +282,26 @@ func (b *BotWrapper) RespondSend(source *telebot.Chat, what interface{}, options
 
 	msg, err := b.bot.Send(source, what, options...)
 	if err == telebot.ErrUnsupportedWhat {
-		return nil, err
+		return nil, err // no need to invoke respondedCallback
 	}
 
 	if b.respondedCallback != nil {
 		b.respondedCallback(RespondSendEvent, &RespondEvent{
 			SendSource: source, SendWhat: what, SendOptions: options,
-			SendResult: msg, ReturnedError: err,
+			SendResult: msg, RespondContext: ctx, ReturnedError: err,
 		})
 	}
 	return msg, err
 }
 
-// RespondReply responds and replies message to given telebot.Message explicitly or implicitly, if error returned is not caused by arguments, it will
-// also invoke responded callback.
+// RespondReply is a convenient form of RespondReplyCtx without context.Context.
 func (b *BotWrapper) RespondReply(source *telebot.Message, explicit bool, what interface{}, options ...interface{}) (*telebot.Message, error) {
+	return b.RespondReplyCtx(context.Background(), source, explicit, what, options...)
+}
+
+// RespondReplyCtx responds and replies message to given telebot.Message explicitly or implicitly, if error returned is not caused by arguments, it will
+// also invoke responded callback.
+func (b *BotWrapper) RespondReplyCtx(ctx context.Context, source *telebot.Message, explicit bool, what interface{}, options ...interface{}) (*telebot.Message, error) {
 	if source == nil {
 		return nil, errNilMessage
 	}
@@ -305,14 +323,19 @@ func (b *BotWrapper) RespondReply(source *telebot.Message, explicit bool, what i
 	if b.respondedCallback != nil {
 		b.respondedCallback(RespondReplyEvent, &RespondEvent{
 			ReplySource: source, ReplyExplicit: explicit, ReplyWhat: what, ReplyOptions: options,
-			ReplyResult: msg, ReturnedError: err,
+			ReplyResult: msg, RespondContext: ctx, ReturnedError: err,
 		})
 	}
 	return msg, err
 }
 
-// RespondEdit responds and edits given telebot.Message with value, if error returned is not caused by arguments, it will also invoke responded callback.
+// RespondEdit is a convenient form of RespondEditCtx without context.Context.
 func (b *BotWrapper) RespondEdit(source *telebot.Message, what interface{}, options ...interface{}) (*telebot.Message, error) {
+	return b.RespondEditCtx(context.Background(), source, what, options...)
+}
+
+// RespondEditCtx responds and edits given telebot.Message with value, if error returned is not caused by arguments, it will also invoke responded callback.
+func (b *BotWrapper) RespondEditCtx(ctx context.Context, source *telebot.Message, what interface{}, options ...interface{}) (*telebot.Message, error) {
 	if source == nil {
 		return nil, errNilMessage
 	}
@@ -328,34 +351,41 @@ func (b *BotWrapper) RespondEdit(source *telebot.Message, what interface{}, opti
 	if b.respondedCallback != nil {
 		b.respondedCallback(RespondEditEvent, &RespondEvent{
 			EditSource: source, EditWhat: what, EditOptions: options,
-			EditResult: msg, ReturnedError: err,
+			EditResult: msg, RespondContext: ctx, ReturnedError: err,
 		})
 	}
 	return msg, err
 }
 
-// RespondDelete responds and deletes given telebot.Message, if error returned is not caused by arguments, it will also invoke responded callback.
+// RespondDelete is a convenient form of RespondDeleteCtx without context.Context.
 func (b *BotWrapper) RespondDelete(source *telebot.Message) error {
+	return b.RespondDeleteCtx(context.Background(), source)
+}
+
+// RespondDeleteCtx responds and deletes given telebot.Message, if error returned is not caused by arguments, it will also invoke responded callback.
+func (b *BotWrapper) RespondDeleteCtx(ctx context.Context, source *telebot.Message) error {
 	if source == nil {
 		return errNilMessage
 	}
 
 	err := b.bot.Delete(source)
-	if err == telebot.ErrUnsupportedWhat {
-		return err
-	}
 
 	if b.respondedCallback != nil {
 		b.respondedCallback(RespondDeleteEvent, &RespondEvent{
 			DeleteSource: source,
-			DeleteResult: source /* for unifying only */, ReturnedError: err,
+			DeleteResult: source /* for unifying only */, RespondContext: ctx, ReturnedError: err,
 		})
 	}
 	return err
 }
 
-// RespondCallback responds and answers to given telebot.Callback, if error returned is not caused by arguments, it will also invoke responded callback.
+// RespondCallback is a convenient form of RespondCallbackCtx without context.Context.
 func (b *BotWrapper) RespondCallback(source *telebot.Callback, answer *telebot.CallbackResponse) error {
+	return b.RespondCallbackCtx(context.Background(), source, answer)
+}
+
+// RespondCallbackCtx responds and answers to given telebot.Callback, if error returned is not caused by arguments, it will also invoke responded callback.
+func (b *BotWrapper) RespondCallbackCtx(ctx context.Context, source *telebot.Callback, answer *telebot.CallbackResponse) error {
 	if source == nil {
 		return errNilCallback
 	}
@@ -370,7 +400,7 @@ func (b *BotWrapper) RespondCallback(source *telebot.Callback, answer *telebot.C
 	if b.respondedCallback != nil {
 		b.respondedCallback(RespondCallbackEvent, &RespondEvent{
 			CallbackSource: source, CallbackAnswer: answer,
-			CallbackResult: answer /* for unifying only */, ReturnedError: err,
+			CallbackResult: answer /* for unifying only */, RespondContext: ctx, ReturnedError: err,
 		})
 	}
 	return err

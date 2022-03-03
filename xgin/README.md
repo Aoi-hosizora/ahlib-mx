@@ -47,7 +47,6 @@
 + `func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
 + `func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
 + `func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError`
-+ `func GetProxyEnv() (httpProxy string, httpsProxy string, socksProxy string)`
 + `func GetValidatorEngine() (*validator.Validate, error)`
 + `func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvalidator.TranslationRegisterHandler) (xvalidator.UtTranslator, error)`
 + `func SetGlobalTranslator(translator xvalidator.UtTranslator)`

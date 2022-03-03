@@ -12,11 +12,11 @@ import (
 	"sync"
 )
 
-// CronTask represents a task, or a job collection, which is implemented by wrapping cron.Cron.
+// CronTask represents a job collection, or called a task, which is implemented by wrapping cron.Cron.
 type CronTask struct {
-	cron *cron.Cron
-	jobs []*FuncJob
-	mu   sync.RWMutex
+	cron  *cron.Cron
+	jobs  []*FuncJob
+	muJob sync.RWMutex
 
 	addedCallback     func(job *FuncJob)
 	removedCallback   func(job *FuncJob)
@@ -51,7 +51,9 @@ func NewCronTask(c *cron.Cron) *CronTask {
 		addedCallback:     DefaultAddedCallback,
 		removedCallback:   defaultJobRemovedCallback,
 		scheduledCallback: nil, // defaults to do nothing
-		panicHandler:      func(job *FuncJob, v interface{}) { log.Printf("Warning: Job %s panics with `%v`", job.title, v) },
+		panicHandler: func(job *FuncJob, v interface{}) {
+			log.Printf("xtask warning: Job \"%s\" panicked with `%v`", job.title, v)
+		},
 	}
 }
 
@@ -60,17 +62,17 @@ func (c *CronTask) Cron() *cron.Cron {
 	return c.cron
 }
 
-// Jobs returns FuncJob slice from CronTask.
-func (c *CronTask) Jobs() []*FuncJob {
-	c.mu.RLock()
-	out := c.jobs
-	c.mu.RUnlock()
-	return out
-}
-
 // ScheduleParser returns cron.ScheduleParser from cron.Cron in CronTask.
 func (c *CronTask) ScheduleParser() cron.ScheduleParser {
 	return xreflect.GetUnexportedField(xreflect.FieldValueOf(c.cron, "parser")).Interface().(cron.ScheduleParser)
+}
+
+// Jobs returns FuncJob slice from CronTask.
+func (c *CronTask) Jobs() []*FuncJob {
+	c.muJob.RLock()
+	out := c.jobs
+	c.muJob.RUnlock()
+	return out
 }
 
 const (
@@ -83,11 +85,11 @@ func (c *CronTask) AddJobByCronSpec(title string, spec string, f func()) (cron.E
 	if f == nil {
 		panic(panicNilFunction)
 	}
-	schedule, err := c.ScheduleParser().Parse(spec) // use cron.Schedule rather than cron.AddJob
+	schedule, err := c.ScheduleParser().Parse(spec) // use cron.Schedule() rather than cron.AddJob()
 	if err != nil {
 		return 0, err
 	}
-	return c.addJob(title, spec /* by spec */, schedule, f), nil
+	return c.addJob(title, spec, schedule, f), nil // by spec when spec is not empty
 }
 
 // AddJobBySchedule adds a FuncJob to cron.Cron and CronTask by given repeatable title, cron.Schedule and function.
@@ -98,20 +100,20 @@ func (c *CronTask) AddJobBySchedule(title string, schedule cron.Schedule, f func
 	if f == nil {
 		panic(panicNilFunction)
 	}
-	return c.addJob(title, "" /* by schedule */, schedule, f)
+	return c.addJob(title, "", schedule, f) // by schedule when spec is empty
 }
 
-// addJob adds given FuncJob's fields to cron.Cron using give given parsed cron.Schedule and returns the added cron.EntryID.
+// addJob adds given FuncJob's fields to cron.Cron using given parsed cron.Schedule and returns the added cron.EntryID.
 func (c *CronTask) addJob(title string, spec string, schedule cron.Schedule, f func()) cron.EntryID {
-	job := &FuncJob{parent: c, title: title, cronSpec: spec, schedule: schedule, function: f}
+	job := &FuncJob{parent: c, title: title, cronSpec: spec /* maybe empty */, schedule: schedule, function: f}
 
-	c.mu.Lock()
-	id := c.cron.Schedule(schedule, job) // <<<
+	c.muJob.Lock()
+	id := c.cron.Schedule(schedule, job) // always use schedule
 	entry := c.cron.Entry(id)
 	job.entry = &entry
 	job.entryID = entry.ID
 	c.jobs = append(c.jobs, job)
-	c.mu.Unlock()
+	c.muJob.Unlock()
 
 	if c.addedCallback != nil {
 		c.addedCallback(job)
@@ -121,7 +123,7 @@ func (c *CronTask) addJob(title string, spec string, schedule cron.Schedule, f f
 
 // RemoveJob removes a cron.Entry by given cron.EntryID from cron.Cron and CronTask.
 func (c *CronTask) RemoveJob(id cron.EntryID) {
-	c.mu.Lock()
+	c.muJob.Lock()
 	c.cron.Remove(id)
 	c.jobs = xslice.DeleteAllWithG(c.jobs, &FuncJob{entryID: id}, func(i, j interface{}) bool {
 		if i.(*FuncJob).entryID == j.(*FuncJob).entryID {
@@ -132,7 +134,7 @@ func (c *CronTask) RemoveJob(id cron.EntryID) {
 		}
 		return false
 	}).([]*FuncJob)
-	c.mu.Unlock()
+	c.muJob.Unlock()
 }
 
 // DefaultAddedCallback is the default CronTask's addedCallback, can be modified by CronTask.SetAddedCallback.
@@ -156,14 +158,13 @@ func DefaultAddedCallback(j *FuncJob) {
 // 	            |-------------------------------|   |----------------|
 // 	                        31 (blue)                      ...
 func DefaultColorizedAddedCallback(j *FuncJob) {
-	fmt.Printf("[Task-debug] %s --> %s (EntryID: %d)\n", xcolor.Blue.AlignedSprintf(-31, "%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
+	fmt.Printf("[Task-debug] %s --> %s (EntryID: %d)\n", xcolor.Blue.ASprintf(-31, "%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
 }
 
 // defaultJobRemovedCallback is the default removedCallback, can be modified by CronTask.SetRemovedCallback
 //
 // The default callback logs like:
 // 	[Task-debug] Remove job: job1, EntryID: 1
-// 	[Task-debug] Remove job: job2, EntryID: 2
 func defaultJobRemovedCallback(j *FuncJob) {
 	fmt.Printf("[Task-debug] Remove job: %s, EntryID: %d\n", j.Title(), j.EntryID())
 }
@@ -207,13 +208,13 @@ func (f *FuncJob) Schedule() cron.Schedule {
 	return f.schedule
 }
 
-// ScheduleExpr returns schedule expr from FuncJob, and this is generated by cron spec string and cron.Schedule.
+// ScheduleExpr returns schedule expr from FuncJob, is generated by cron spec string and cron.Schedule.
 func (f *FuncJob) ScheduleExpr() string {
 	if f.cronSpec != "" { // by spec
 		return f.cronSpec
 	}
 	if _, ok := f.schedule.(*cron.SpecSchedule); ok {
-		return "<parsed SpecSchedule>"
+		return "<parsed SpecSchedule>" // hide origin spec
 	}
 	if s, ok := f.schedule.(cron.ConstantDelaySchedule); ok {
 		return fmt.Sprintf("every %s", s.Delay.String())

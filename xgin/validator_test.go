@@ -25,6 +25,10 @@ type mockValidator struct{}
 func (f mockValidator) ValidateStruct(interface{}) error { return nil }
 func (f mockValidator) Engine() interface{}              { return nil } // fake
 
+
+
+
+
 func TestValidator(t *testing.T) {
 	val, err := GetValidatorEngine() // gin's default validator.Validator
 	xtesting.Nil(t, err)

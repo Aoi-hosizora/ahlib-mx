@@ -2,6 +2,7 @@ package xtelebot
 
 import (
 	"gopkg.in/tucnak/telebot.v2"
+	"strings"
 	"sync"
 	"time"
 )
@@ -109,6 +110,20 @@ func LongPoller(second int) *telebot.LongPoller {
 	return &telebot.LongPoller{Timeout: time.Duration(second) * time.Second} // the most small unit is second
 }
 
+// IsEntityParseError checks whether given error is "can't parse entities" error, such as "character must be escaped" or "Can't find end of the entity".
+func IsEntityParseError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "can't parse entities")
+}
+
+// IsTelebotSupportedOption checks whether given single option is supported by telebot.Bot.
+func IsTelebotSupportedOption(option interface{}) bool {
+	switch option.(type) {
+	case *telebot.SendOptions, *telebot.ReplyMarkup, telebot.Option, telebot.ParseMode:
+		return true
+	}
+	return false
+}
+
 // ==================
 // chat state related
 // ==================
@@ -196,7 +211,7 @@ func NewBotData() *BotData {
 // bot data state
 // ==============
 
-// GetStateChats returns all ids from chats which has been set state, the returned slice has no order.
+// GetStateChats returns all ids from chats which has been set state. Note that returned slice has no order.
 func (b *BotData) GetStateChats() []int64 {
 	b.muS.RLock()
 	ids := make([]int64, 0, len(b.states))
@@ -276,7 +291,7 @@ func (b *BotData) DeleteState(chatID int64) {
 // bot data cache
 // ==============
 
-// GetCacheChats returns all ids from chats which has been set cache, the returned slice has no order.
+// GetCacheChats returns all ids from chats which has been set cache. Note that returned slice has no order.
 func (b *BotData) GetCacheChats() []int64 {
 	b.muC.RLock()
 	ids := make([]int64, 0, len(b.caches))
