@@ -25,10 +25,6 @@ type mockValidator struct{}
 func (f mockValidator) ValidateStruct(interface{}) error { return nil }
 func (f mockValidator) Engine() interface{}              { return nil } // fake
 
-
-
-
-
 func TestValidator(t *testing.T) {
 	val, err := GetValidatorEngine() // gin's default validator.Validator
 	xtesting.Nil(t, err)
@@ -417,7 +413,7 @@ func TestTranslateBindingError(t *testing.T) {
 			}
 		} else if id <= 0 {
 			err = errors.New("id <= 0")
-			err = NewRouterDecodeError("id", idStr, err, "should be larger then zero")
+			err = NewRouterDecodeError("id", idStr, err, "should be larger than zero")
 		}
 		if rErr, ok := err.(*RouterDecodeError); ok {
 			_ = rErr.Error()
@@ -535,10 +531,10 @@ func TestTranslateBindingError(t *testing.T) {
 			map[string]interface{}{"id": "router parameter id is out of range"},
 		},
 		{"id/0", ``, "", 400,
-			map[string]interface{}{"id": "router parameter id should be larger then zero"},
+			map[string]interface{}{"id": "router parameter id should be larger than zero"},
 		},
 		{"id/0", ``, "ignoreField=true", 400,
-			map[string]interface{}{"router parameter": "router parameter should be larger then zero"},
+			map[string]interface{}{"router parameter": "router parameter should be larger than zero"},
 		},
 		{"id/0", ``, "ignoreMessage=true", 500, nil},
 		// ok

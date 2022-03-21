@@ -66,9 +66,9 @@ func (m *MultiFieldsError) Error() string {
 // translate & flat
 // ================
 
-// Translate translates all the field errors (include validator.FieldError and xvalidator.WrappedFieldError) using given UtTranslator to a field-message map.
-// Here errors in xvalidator.WrappedFieldError type will use wrapped message directly, also note that if you set useNamespace to true, keys from returned
-// map will be shown in "$struct.$field" format, otherwise in "$field" format.
+// Translate translates all the field errors (include validator.FieldError and xvalidator.WrappedFieldError) using given UtTranslator to a field-message map,
+// and here errors in xvalidator.WrappedFieldError type will use wrapped message directly. Note that if you set useNamespace to true, keys from returned map
+// will be shown in "$struct.$field" format, otherwise in "$field" format.
 //
 // Example:
 // 	type Struct struct {

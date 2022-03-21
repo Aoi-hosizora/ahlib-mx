@@ -121,8 +121,8 @@ func Not(fn validator.Func) validator.Func {
 func EqualValidator(p interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		eq, ok := eqHelper(i, p)
-		return ok && eq
+		eq, valid := eqHelper(i, p)
+		return valid && eq
 	}
 }
 
@@ -132,8 +132,8 @@ func EqualValidator(p interface{}) validator.Func {
 func NotEqualValidator(p interface{}) validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		i := fl.Field().Interface()
-		eq, ok := eqHelper(i, p)
-		return ok && !eq
+		eq, valid := eqHelper(i, p)
+		return valid && !eq
 	}
 }
 
@@ -248,28 +248,22 @@ func OneofValidator(ps ...interface{}) validator.Func {
 // eqHelper is a helper function for equality used for EqualValidator and NotEqualValidator.
 // For numbers & strings, it validates the value.
 // For slices, arrays, and maps, it validates the length.
-func eqHelper(i, p interface{}) (bool, bool) {
-	iv, ok1, irv := xreflect.SmpvalOf(i)
-	pv, ok2, _ := xreflect.SmpvalOf(p)
-	if ok1 && ok2 {
-		switch iv.Flag() {
-		case xreflect.Int:
-			return pv.Flag() == iv.Flag() && iv.Int() == pv.Int(), true
-		case xreflect.Uint:
-			return pv.Flag() == iv.Flag() && iv.Uint() == pv.Uint(), true
-		case xreflect.Float:
-			return pv.Flag() == iv.Flag() && iv.Float() == pv.Float(), true
-		case xreflect.Bool:
-			return pv.Flag() == iv.Flag() && iv.Bool() == pv.Bool(), true
-		case xreflect.Str:
-			return pv.Flag() == iv.Flag() && iv.Str() == pv.Str(), true
-		}
-	}
-	switch irv.Kind() {
-	case reflect.Slice, reflect.Array, reflect.Map:
-		if ok2 && pv.Flag() == xreflect.Int {
-			return int64(irv.Len()) == pv.Int(), true
-		}
+func eqHelper(i, p interface{}) (eq bool, valid bool) {
+	iv, pv := reflect.ValueOf(i), reflect.ValueOf(p)
+	ik, pk := iv.Kind(), pv.Kind()
+	switch {
+	case xreflect.IsIntKind(ik):
+		return xreflect.IsIntKind(pk) && iv.Int() == pv.Int(), true
+	case xreflect.IsUintKind(ik):
+		return xreflect.IsUintKind(pk) && iv.Uint() == pv.Uint(), true
+	case xreflect.IsFloatKind(ik):
+		return xreflect.IsFloatKind(pk) && iv.Float() == pv.Float(), true
+	case ik == reflect.Bool:
+		return pk == reflect.Bool && iv.Bool() == pv.Bool(), true
+	case ik == reflect.String:
+		return pk == reflect.String && iv.String() == pv.String(), true
+	case ik == reflect.Slice || ik == reflect.Array || ik == reflect.Map:
+		return pk == reflect.Int && int64(iv.Len()) == pv.Int(), true
 	}
 	return false, false
 }
@@ -279,25 +273,21 @@ func eqHelper(i, p interface{}) (bool, bool) {
 // For strings, it validates the length of string.
 // For slices, arrays, and maps, it validates the length.
 func lenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) bool, ff func(i, p float64) bool) bool {
-	iv, ok1, irv := xreflect.SmpvalOf(i)
-	pv, ok2, _ := xreflect.SmpvalOf(p)
-	if ok1 && ok2 {
-		switch iv.Flag() {
-		case xreflect.Int:
-			return pv.Flag() == iv.Flag() && fi(iv.Int(), pv.Int())
-		case xreflect.Uint:
-			return pv.Flag() == iv.Flag() && fu(iv.Uint(), pv.Uint())
-		case xreflect.Float:
-			return pv.Flag() == iv.Flag() && ff(iv.Float(), pv.Float())
-		case xreflect.Bool:
-			return pv.Flag() == iv.Flag() && fi(int64(xnumber.Bool(iv.Bool())), int64(xnumber.Bool(pv.Bool())))
-		}
-	}
-	switch irv.Kind() {
-	case reflect.String:
-		return pv.Flag() == xreflect.Int && fi(int64(len([]rune(irv.String()))), pv.Int())
-	case reflect.Slice, reflect.Array, reflect.Map:
-		return pv.Flag() == xreflect.Int && fi(int64(irv.Len()), pv.Int())
+	iv, pv := reflect.ValueOf(i), reflect.ValueOf(p)
+	ik, pk := iv.Kind(), pv.Kind()
+	switch {
+	case xreflect.IsIntKind(ik):
+		return xreflect.IsIntKind(pk) && fi(iv.Int(), pv.Int())
+	case xreflect.IsUintKind(ik):
+		return xreflect.IsUintKind(pk) && fu(iv.Uint(), pv.Uint())
+	case xreflect.IsFloatKind(ik):
+		return xreflect.IsFloatKind(pk) && ff(iv.Float(), pv.Float())
+	case ik == reflect.Bool:
+		return pk == reflect.Bool && fi(int64(xnumber.Bool(iv.Bool())), int64(xnumber.Bool(pv.Bool())))
+	case ik == reflect.String:
+		return pk == reflect.Int && fi(int64(len([]rune(iv.String()))), pv.Int())
+	case ik == reflect.Slice || ik == reflect.Array || ik == reflect.Map:
+		return pk == reflect.Int && fi(int64(iv.Len()), pv.Int())
 	}
 	return false
 }
@@ -305,50 +295,44 @@ func lenHelper(i, p interface{}, fi func(i, p int64) bool, fu func(i, p uint64) 
 // oneofHelper is a helper function for oneof used for OneofValidator.
 // For numbers & strings, it validates the value.
 func oneofHelper(i interface{}, ps []interface{}) bool {
-	iv, ok, _ := xreflect.SmpvalOf(i)
-	if ok {
-		switch iv.Flag() {
-		case xreflect.Int:
-			for _, p := range ps {
-				pv, ok, _ := xreflect.SmpvalOf(p)
-				if ok && pv.Flag() == xreflect.Int && iv.Int() == pv.Int() {
-					return true
-				}
+	iv := reflect.ValueOf(i)
+	ik := iv.Kind()
+	switch {
+	case xreflect.IsIntKind(ik):
+		for _, p := range ps {
+			if pv := reflect.ValueOf(p); xreflect.IsIntKind(pv.Kind()) && iv.Int() == pv.Int() {
+				return true
 			}
-			return false
-		case xreflect.Uint:
-			for _, p := range ps {
-				pv, ok, _ := xreflect.SmpvalOf(p)
-				if ok && pv.Flag() == xreflect.Uint && iv.Uint() == pv.Uint() {
-					return true
-				}
-			}
-			return false
-		case xreflect.Float:
-			for _, p := range ps {
-				pv, ok, _ := xreflect.SmpvalOf(p)
-				if ok && pv.Flag() == xreflect.Float && xnumber.EqualInAccuracy(iv.Float(), pv.Float()) {
-					return true
-				}
-			}
-			return false
-		case xreflect.Bool:
-			for _, p := range ps {
-				pv, ok, _ := xreflect.SmpvalOf(p)
-				if ok && pv.Flag() == xreflect.Bool && iv.Bool() == pv.Bool() {
-					return true
-				}
-			}
-			return false
-		case xreflect.Str:
-			for _, p := range ps {
-				pv, ok, _ := xreflect.SmpvalOf(p)
-				if ok && pv.Flag() == xreflect.Str && iv.Str() == pv.Str() {
-					return true
-				}
-			}
-			return false
 		}
+		return false
+	case xreflect.IsUintKind(ik):
+		for _, p := range ps {
+			if pv := reflect.ValueOf(p); xreflect.IsUintKind(pv.Kind()) && iv.Uint() == pv.Uint() {
+				return true
+			}
+		}
+		return false
+	case xreflect.IsFloatKind(ik):
+		for _, p := range ps {
+			if pv := reflect.ValueOf(p); xreflect.IsFloatKind(pv.Kind()) && xnumber.EqualInAccuracy(iv.Float(), pv.Float()) {
+				return true
+			}
+		}
+		return false
+	case ik == reflect.Bool:
+		for _, p := range ps {
+			if pv := reflect.ValueOf(p); pv.Kind() == reflect.Bool && iv.Bool() == pv.Bool() {
+				return true
+			}
+		}
+		return false
+	case ik == reflect.String:
+		for _, p := range ps {
+			if pv := reflect.ValueOf(p); pv.Kind() == reflect.Bool && iv.String() == pv.String() {
+				return true
+			}
+		}
+		return false
 	}
 
 	// other types

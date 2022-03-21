@@ -26,14 +26,14 @@ func TestTranslateAndFlat(t *testing.T) {
 	err6 := v.Struct(&s{Str: "abc", Int: 5}).(validator.ValidationErrors)[0]
 
 	err2_ := &WrappedFieldError{err2.(validator.FieldError), "Int field must be set and can not be zero"}
-	err4_ := &WrappedFieldError{err4.(validator.FieldError), "The length of String must less then 10"}
-	err6_ := &WrappedFieldError{err6.(validator.FieldError), "The value of Int must less then 5"}
+	err4_ := &WrappedFieldError{err4.(validator.FieldError), "The length of String must less than 10"}
+	err6_ := &WrappedFieldError{err6.(validator.FieldError), "The value of Int must less than 5"}
 	xtesting.Equal(t, err2_.Origin().Error(), err2.Error())
 	xtesting.Equal(t, err2_.Unwrap().Error(), err2.Error())
 	xtesting.Equal(t, errors.Is(err2_, err2), true)
 	xtesting.Equal(t, err4_.Origin().Error(), "Key: 's.str' Error:Field validation for 'str' failed on the 'lt' tag")
-	xtesting.Equal(t, err6_.Message(), "The value of Int must less then 5")
-	xtesting.Equal(t, err6_.Error(), "Key: 's.int' Error:The value of Int must less then 5")
+	xtesting.Equal(t, err6_.Message(), "The value of Int must less than 5")
+	xtesting.Equal(t, err6_.Error(), "Key: 's.int' Error:The value of Int must less than 5")
 
 	// MultiFieldsError
 	ve := &MultiFieldsError{fields: []error{err1, err2_}}
@@ -44,7 +44,7 @@ func TestTranslateAndFlat(t *testing.T) {
 	ve = &MultiFieldsError{fields: []error{err3, err5}}
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:Field validation for 'str' failed on the 'gt' tag; Key: 's.int' Error:Field validation for 'int' failed on the 'gte' tag")
 	ve = &MultiFieldsError{fields: []error{err4_, err6_}}
-	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:The length of String must less then 10; Key: 's.int' Error:The value of Int must less then 5")
+	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:The length of String must less than 10; Key: 's.int' Error:The value of Int must less than 5")
 
 	// TranslateValidationErrors
 	tr, _ := ApplyEnglishTranslator(v)
@@ -110,8 +110,8 @@ func TestMessagedValidator(t *testing.T) {
 	xtesting.Equal(t, mv.Engine(), mv.ValidateEngine())
 
 	type s struct {
-		Str   string  `binding:"required,gt=2,lt=10" json:"_str" message:"required|str must be set and can not be empty|gt|str length must be larger then 2|lt|str length must be less then 10"`
-		Int   int32   `binding:"required,gte=4,ne=5" json:"_int" message:"required|int must be set and can not be zero|gte|int value must be larger then or equal to 4"`
+		Str   string  `binding:"required,gt=2,lt=10" json:"_str" message:"required|str must be set and can not be empty|gt|str length must be larger than 2|lt|str length must be less than 10"`
+		Int   int32   `binding:"required,gte=4,ne=5" json:"_int" message:"required|int must be set and can not be zero|gte|int value must be larger than or equal to 4"`
 		Float float32 `binding:"required,lte=0"`
 	}
 	for _, tc := range []struct {
@@ -133,17 +133,17 @@ func TestMessagedValidator(t *testing.T) {
 			[]string{"Key: 's._str' Error:str must be set and can not be empty"},
 			map[string]string{"_str": "str must be set and can not be empty"}},
 		{&s{"22", 4, -0.5}, false, true,
-			[]string{"Key: 's._str' Error:str length must be larger then 2"},
-			map[string]string{"_str": "str length must be larger then 2"}},
+			[]string{"Key: 's._str' Error:str length must be larger than 2"},
+			map[string]string{"_str": "str length must be larger than 2"}},
 		{&s{"1010101010", 4, -0.5}, false, true,
-			[]string{"Key: 's._str' Error:str length must be less then 10"},
-			map[string]string{"_str": "str length must be less then 10"}},
+			[]string{"Key: 's._str' Error:str length must be less than 10"},
+			map[string]string{"_str": "str length must be less than 10"}},
 		{&s{"333", 0, -0.5}, false, true,
 			[]string{"Key: 's._int' Error:int must be set and can not be zero"},
 			map[string]string{"_int": "int must be set and can not be zero"}},
 		{&s{"333", 3, -0.5}, false, true,
-			[]string{"Key: 's._int' Error:int value must be larger then or equal to 4"},
-			map[string]string{"_int": "int value must be larger then or equal to 4"}},
+			[]string{"Key: 's._int' Error:int value must be larger than or equal to 4"},
+			map[string]string{"_int": "int value must be larger than or equal to 4"}},
 		{&s{"333", 5, -0.5}, false, true,
 			[]string{"Key: 's._int' Error:Field validation for '_int' failed on the 'ne' tag"},
 			map[string]string{"_int": "_int should not be equal to 5"}},
@@ -154,8 +154,8 @@ func TestMessagedValidator(t *testing.T) {
 			[]string{"Key: 's.Float' Error:Field validation for 'Float' failed on the 'lte' tag"},
 			map[string]string{"Float": "Float must be 0 or less"}},
 		{&s{"11111111111", -1, -0.5}, false, true,
-			[]string{"Key: 's._str' Error:str length must be less then 10", "Key: 's._int' Error:int value must be larger then or equal to 4"},
-			map[string]string{"_str": "str length must be less then 10", "_int": "int value must be larger then or equal to 4"}},
+			[]string{"Key: 's._str' Error:str length must be less than 10", "Key: 's._int' Error:int value must be larger than or equal to 4"},
+			map[string]string{"_str": "str length must be less than 10", "_int": "int value must be larger than or equal to 4"}},
 		{&s{"", 5, 11.5}, false, true,
 			[]string{"Key: 's._str' Error:str must be set and can not be empty", "Key: 's._int' Error:Field validation for '_int' failed on the 'ne' tag", "Key: 's.Float' Error:Field validation for 'Float' failed on the 'lte' tag"},
 			map[string]string{"_str": "str must be set and can not be empty", "_int": "_int should not be equal to 5", "Float": "Float must be 0 or less"}},
