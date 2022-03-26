@@ -14,21 +14,21 @@ type loggerOptions struct {
 // LoggerOption represents an option type for some logger functions' option, can be created by WithXXX functions.
 type LoggerOption func(*loggerOptions)
 
-// WithExtraText creates a LoggerOption to specific extra text logging in "...extra_text" style, notes that if you use this multiple times, only the last one will be retained.
+// WithExtraText creates a LoggerOption to specific extra text logging in "...extra_text" style. Note that if you use this multiple times, only the last one will be retained.
 func WithExtraText(text string) LoggerOption {
 	return func(extra *loggerOptions) {
 		extra.text = text // no trim
 	}
 }
 
-// WithExtraFields creates a LoggerOption to specific logging with extra fields, notes that if you use this multiple times, only the last one will be retained.
+// WithExtraFields creates a LoggerOption to specific logging with extra fields. Note that if you use this multiple times, only the last one will be retained.
 func WithExtraFields(fields map[string]interface{}) LoggerOption {
 	return func(extra *loggerOptions) {
 		extra.fields = fields
 	}
 }
 
-// WithExtraFieldsV creates a LoggerOption to specific logging with extra fields in variadic, notes that if you use this multiple times, only the last one will be retained.
+// WithExtraFieldsV creates a LoggerOption to specific logging with extra fields in variadic. Note that if you use this multiple times, only the last one will be retained.
 func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 	return func(extra *loggerOptions) {
 		extra.fields = xstring.SliceToStringMap(fields)

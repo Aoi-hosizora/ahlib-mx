@@ -272,7 +272,7 @@ func NewRouterDecodeError(field string, input string, err error, message string)
 	return &RouterDecodeError{Field: field, Input: input, Err: err, Message: message}
 }
 
-// Error returns the formatted error message from RouterDecodeError, note that returned value does not contain custom message.
+// Error returns the formatted error message from RouterDecodeError. Note that returned value does not contain custom message.
 func (r *RouterDecodeError) Error() string {
 	if r.Field == "" {
 		return fmt.Sprintf("parsing \"%s\": %v", r.Input, r.Err)

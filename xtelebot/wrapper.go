@@ -451,7 +451,7 @@ func (b *BotWrapper) SetRespondedCallback(cb func(typ RespondEventType, event *R
 	b.respondedCallback = cb
 }
 
-// SetPanicHandler sets panic handler to all handlers, notes that the `messageOrCallback` parameter means handler's parameter, that is telebot.Message
+// SetPanicHandler sets panic handler to all handlers. Note that the `messageOrCallback` parameter means handler's parameter, that is telebot.Message
 // for MessageHandler and telebot.Callback for CallbackHandler, defaults to print warning message with given panicked value.
 func (b *BotWrapper) SetPanicHandler(handler func(endpoint, messageOrCallback, value interface{})) {
 	b.panicHandler = handler

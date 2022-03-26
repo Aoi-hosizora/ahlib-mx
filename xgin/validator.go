@@ -297,7 +297,7 @@ var (
 	}
 )
 
-// TranslateBindingError translates given error and TranslateOption-s to a field-message map. Note that the returned boolean value means whether given error
+// TranslateBindingError translates given error and TranslateOption-s to a field-message map. Note that returned boolean value means whether given error
 // can be regarded as an HTTP 4xx status code, means a user induced error.
 func TranslateBindingError(err error, options ...TranslateOption) (result map[string]string, need4xx bool) {
 	if err == nil {
