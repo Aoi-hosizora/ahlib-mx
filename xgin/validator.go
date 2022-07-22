@@ -121,7 +121,7 @@ func EnableRFC3339DateTimeBindingTranslator(translator xvalidator.UtTranslator) 
 // binding translate
 // =================
 
-// TranslatableError is an interface contains Translate method used in TranslateBindingError, can be used to specific the translation result of your error type.
+// TranslatableError is an interface contains Translate method used in TranslateBindingError, can be used to specify the translation result of your error type.
 type TranslatableError interface {
 	Error() string
 	Translate() (result map[string]string, need4xx bool)
@@ -147,84 +147,84 @@ type translateOptions struct {
 // TranslateOption represents an option for TranslateBindingError's options, can be created by WithXXX functions.
 type TranslateOption func(*translateOptions)
 
-// WithUtTranslator creates a TranslateOption to specific xvalidator.UtTranslator as the translation of validator.ValidationErrors and xvalidator.MultiFieldsError.
+// WithUtTranslator creates a TranslateOption to specify xvalidator.UtTranslator as the translation of validator.ValidationErrors and xvalidator.MultiFieldsError.
 func WithUtTranslator(translator xvalidator.UtTranslator) TranslateOption {
 	return func(o *translateOptions) {
 		o.utTranslator = translator
 	}
 }
 
-// WithJsonInvalidUnmarshalError creates a TranslateOption to specific translation function for json.InvalidUnmarshalError.
+// WithJsonInvalidUnmarshalError creates a TranslateOption to specify translation function for json.InvalidUnmarshalError.
 func WithJsonInvalidUnmarshalError(fn func(*json.InvalidUnmarshalError) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.jsonInvalidUnmarshalErrorFn = fn
 	}
 }
 
-// WithJsonUnmarshalTypeError creates a TranslateOption to specific translation function for json.UnmarshalTypeError.
+// WithJsonUnmarshalTypeError creates a TranslateOption to specify translation function for json.UnmarshalTypeError.
 func WithJsonUnmarshalTypeError(fn func(*json.UnmarshalTypeError) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.jsonUnmarshalTypeErrorFn = fn
 	}
 }
 
-// WithJsonSyntaxError creates a TranslateOption to specific translation function for json.SyntaxError.
+// WithJsonSyntaxError creates a TranslateOption to specify translation function for json.SyntaxError.
 func WithJsonSyntaxError(fn func(*json.SyntaxError) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.jsonSyntaxErrorFn = fn
 	}
 }
 
-// WithIoEOFError creates a TranslateOption to specific translation function for io.EOF and io.ErrUnexpectedEOF.
+// WithIoEOFError creates a TranslateOption to specify translation function for io.EOF and io.ErrUnexpectedEOF.
 func WithIoEOFError(fn func(error) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.ioEOFErrorFn = fn
 	}
 }
 
-// WithStrconvNumErrorError creates a TranslateOption to specific translation function for strconv.NumError.
+// WithStrconvNumErrorError creates a TranslateOption to specify translation function for strconv.NumError.
 func WithStrconvNumErrorError(fn func(*strconv.NumError) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.strconvNumErrorFn = fn
 	}
 }
 
-// WithXginRouterDecodeError creates a TranslateOption to specific translation function for xgin.RouterDecodeError.
+// WithXginRouterDecodeError creates a TranslateOption to specify translation function for xgin.RouterDecodeError.
 func WithXginRouterDecodeError(fn func(*RouterDecodeError) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.xginRouterDecodeErrorFn = fn
 	}
 }
 
-// WithValidatorInvalidTypeError creates a TranslateOption to specific translation function for validator.InvalidValidationError.
+// WithValidatorInvalidTypeError creates a TranslateOption to specify translation function for validator.InvalidValidationError.
 func WithValidatorInvalidTypeError(fn func(*validator.InvalidValidationError) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.validatorInvalidTypeErrorFn = fn
 	}
 }
 
-// WithValidatorFieldsError creates a TranslateOption to specific translation function for validator.ValidationErrors.
+// WithValidatorFieldsError creates a TranslateOption to specify translation function for validator.ValidationErrors.
 func WithValidatorFieldsError(fn func(validator.ValidationErrors, xvalidator.UtTranslator) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.validatorFieldsErrorFn = fn
 	}
 }
 
-// WithXvalidatorMultiFieldsError creates a TranslateOption to specific translation function for xvalidator.MultiFieldsError.
+// WithXvalidatorMultiFieldsError creates a TranslateOption to specify translation function for xvalidator.MultiFieldsError.
 func WithXvalidatorMultiFieldsError(fn func(*xvalidator.MultiFieldsError, xvalidator.UtTranslator) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.xvalidatorMultiFieldsErrorFn = fn
 	}
 }
 
-// WithTranslatableError creates a TranslateOption to specific translation function for errors that implement xgin.TranslatableError interface.
+// WithTranslatableError creates a TranslateOption to specify translation function for errors that implement xgin.TranslatableError interface.
 func WithTranslatableError(fn func(TranslatableError) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.translatableErrorFn = fn
 	}
 }
 
-// WithExtraErrorsTranslate creates a TranslateOption to specific translation function for other errors.
+// WithExtraErrorsTranslate creates a TranslateOption to specify translation function for other errors.
 func WithExtraErrorsTranslate(fn func(error) (result map[string]string, need4xx bool)) TranslateOption {
 	return func(o *translateOptions) {
 		o.extraErrorsTranslateFn = fn

@@ -56,7 +56,7 @@ func WithSecretHeaders(headers ...string) DumpRequestOption {
 	}
 }
 
-// WithSecretPlaceholder creates a DumpRequestOption to specific a secret placeholder for secret headers set by WithSecretHeaders, defaults to "*".
+// WithSecretPlaceholder creates a DumpRequestOption to specify a secret placeholder for secret headers set by WithSecretHeaders, defaults to "*".
 func WithSecretPlaceholder(placeholder string) DumpRequestOption {
 	return func(o *dumpRequestOptions) {
 		o.secretPlaceholder = placeholder

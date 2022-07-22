@@ -13,17 +13,17 @@ import (
 // LoggerOption represents an option type for some logger functions' option, can be created by WithXXX functions.
 type LoggerOption = internal.LoggerOption
 
-// WithExtraText creates a LoggerOption to specific extra text logging in "...extra_text" style. Note that if you use this multiple times, only the last one will be retained.
+// WithExtraText creates a LoggerOption to specify extra text logging in "...extra_text" style. Note that if you use this multiple times, only the last one will be retained.
 func WithExtraText(text string) LoggerOption {
 	return internal.WithExtraText(text)
 }
 
-// WithExtraFields creates a LoggerOption to specific logging with extra fields. Note that if you use this multiple times, only the last one will be retained.
+// WithExtraFields creates a LoggerOption to specify logging with extra fields. Note that if you use this multiple times, only the last one will be retained.
 func WithExtraFields(fields map[string]interface{}) LoggerOption {
 	return internal.WithExtraFields(fields)
 }
 
-// WithExtraFieldsV creates a LoggerOption to specific logging with extra fields in variadic. Note that if you use this multiple times, only the last one will be retained.
+// WithExtraFieldsV creates a LoggerOption to specify logging with extra fields in variadic. Note that if you use this multiple times, only the last one will be retained.
 func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 	return internal.WithExtraFieldsV(fields...)
 }
