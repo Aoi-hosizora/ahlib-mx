@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestTranslateAndFlat(t *testing.T) {
@@ -108,6 +109,9 @@ func TestMessagedValidator(t *testing.T) {
 	mv.UseTagAsFieldName("json", "yaml", "form")
 	tr, _ := ApplyEnglishTranslator(mv.ValidateEngine())
 	xtesting.Equal(t, mv.Engine(), mv.ValidateEngine())
+
+	err := mv.ValidateStruct(time.Time{}) // validator.InvalidValidationError
+	xtesting.NotNil(t, err)
 
 	type s struct {
 		Str   string  `binding:"required,gt=2,lt=10" json:"_str" message:"required|str must be set and can not be empty|gt|str length must be larger than 2|lt|str length must be less than 10"`

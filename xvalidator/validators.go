@@ -328,7 +328,7 @@ func oneofHelper(i interface{}, ps []interface{}) bool {
 		return false
 	case ik == reflect.String:
 		for _, p := range ps {
-			if pv := reflect.ValueOf(p); pv.Kind() == reflect.Bool && iv.String() == pv.String() {
+			if pv := reflect.ValueOf(p); pv.Kind() == reflect.String && iv.String() == pv.String() {
 				return true
 			}
 		}

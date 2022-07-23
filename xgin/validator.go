@@ -29,9 +29,6 @@ func GetValidatorEngine() (*validator.Validate, error) {
 	return val, nil
 }
 
-// Also check xvalidator.MessagedValidator's implemented methods in compile-time.
-var _ binding.StructValidator = (*xvalidator.MessagedValidator)(nil)
-
 // GetValidatorTranslator applies and returns xvalidator.UtTranslator for validator.Validate using given parameters. Also see xvalidator.ApplyTranslator.
 //
 // Example:
@@ -43,6 +40,12 @@ func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvali
 		return nil, err // errValidatorNotSupported
 	}
 	return xvalidator.ApplyTranslator(val, locale, registerFn) // create translator with locale, register translator to validator
+}
+
+// GetValidatorEnglishTranslator applies and returns English xvalidator.UtTranslator for validator.Validate using given parameters, this is a simplified usage of
+// GetValidatorTranslator(validator, xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc()). Also see xvalidator.ApplyTranslator.
+func GetValidatorEnglishTranslator() (xvalidator.UtTranslator, error) {
+	return GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
 }
 
 // _globalTranslator is a global xvalidator.UtTranslator set by SetGlobalTranslator and can be got by GetGlobalTranslator.

@@ -66,7 +66,7 @@ func TestValidator(t *testing.T) {
 func TestTranslator(t *testing.T) {
 	val, err := GetValidatorEngine()
 	xtesting.Nil(t, err)
-	ut, err := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
+	ut, err := GetValidatorEnglishTranslator()
 	xtesting.Nil(t, err)
 
 	// global

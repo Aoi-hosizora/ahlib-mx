@@ -152,34 +152,41 @@ func TestWrapPprof(t *testing.T) {
 	// 1.
 	log.Println("============ 1")
 	app := gin.New() // <<< with warning
-	WrapPprof(app)   // <<< with [Gin-debug]
-	// [GIN-debug] GET    /debug/pprof/             --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func12 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/heap         --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func13 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/goroutine    --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func14 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/allocs       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func15 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/block        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func16 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/threadcreate --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func17 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/cmdline      --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func18 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/profile      --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func19 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/symbol       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func20 (1 handlers)
-	// [GIN-debug] POST   /debug/pprof/symbol       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func20 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/trace        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func21 (1 handlers)
-	// [GIN-debug] GET    /debug/pprof/mutex        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func22 (1 handlers)
+	WrapPprof(app)   // <<< with [Gin]
+	// [GIN] GET    /debug/pprof/             --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func12 (1 handlers)
+	// [GIN] GET    /debug/pprof/heap         --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func13 (1 handlers)
+	// [GIN] GET    /debug/pprof/goroutine    --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func14 (1 handlers)
+	// [GIN] GET    /debug/pprof/allocs       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func15 (1 handlers)
+	// [GIN] GET    /debug/pprof/block        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func16 (1 handlers)
+	// [GIN] GET    /debug/pprof/threadcreate --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func17 (1 handlers)
+	// [GIN] GET    /debug/pprof/cmdline      --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func18 (1 handlers)
+	// [GIN] GET    /debug/pprof/profile      --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func19 (1 handlers)
+	// [GIN] GET    /debug/pprof/symbol       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func20 (1 handlers)
+	// [GIN] POST   /debug/pprof/symbol       --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func20 (1 handlers)
+	// [GIN] GET    /debug/pprof/trace        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func21 (1 handlers)
+	// [GIN] GET    /debug/pprof/mutex        --> github.com/Aoi-hosizora/ahlib-web/xgin.glob..func22 (1 handlers)
 
 	// 2.
 	log.Println("============ 2")
 	app = gin.New() // <<< with warning
-	SetPrintRouteFunc(DefaultColorizedPrintRouteFunc)
-	WrapPprof(app) // <<< with colorized [Gin-debug]
+	gin.DebugPrintRouteFunc = DefaultColorizedPrintRouteFunc
+	WrapPprof(app) // <<< with colorized [Gin]
 
 	// 3.
 	log.Println("============ 3")
+	app = NewWithoutLogging()    // <<< no warning
+	WrapPprofWithoutLogging(app) // <<< no [Gin]
+
+	// 4.
+	log.Println("============ 4")
 	restore := HideDebugLogging()
 	app = gin.New() // <<< no warning
 	restore()
 	restore = HideDebugPrintRoute()
-	WrapPprof(app) // <<< no [Gin-debug]
+	WrapPprof(app) // <<< no [Gin]
 	restore()
+
+	// ...
 	server := &http.Server{Addr: ":12345", Handler: app}
 	go server.ListenAndServe()
 	defer server.Shutdown(context.Background())

@@ -150,6 +150,14 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 // route & pprof
 // =============
 
+// NewWithoutLogging creates a new blank Engine instance without printing debug logging.
+func NewWithoutLogging() *gin.Engine {
+	restore := HideDebugLogging()
+	engine := gin.New()
+	restore()
+	return engine
+}
+
 // RedirectHandler creates a gin.HandlerFunc that behaviors a redirection with given code (such as http.StatusMovedPermanently or http.StatusTemporaryRedirect)
 // and redirect target location.
 func RedirectHandler(code int, location string) gin.HandlerFunc {
@@ -158,19 +166,7 @@ func RedirectHandler(code int, location string) gin.HandlerFunc {
 	}
 }
 
-func pprofIndexHandler(c *gin.Context)     { pprof.Index(c.Writer, c.Request) }                             // GET
-func pprofCmdlineHandler(c *gin.Context)   { pprof.Cmdline(c.Writer, c.Request) }                           // GET
-func pprofProfileHandler(c *gin.Context)   { pprof.Profile(c.Writer, c.Request) }                           // GET
-func pprofSymbolHandler(c *gin.Context)    { pprof.Symbol(c.Writer, c.Request) }                            // GET / POST
-func pprofTraceHandler(c *gin.Context)     { pprof.Trace(c.Writer, c.Request) }                             // GET
-func pprofAllocsHandler(c *gin.Context)    { pprof.Handler("allocs").ServeHTTP(c.Writer, c.Request) }       // GET
-func pprofBlockHandler(c *gin.Context)     { pprof.Handler("block").ServeHTTP(c.Writer, c.Request) }        // GET
-func pprofGoroutineHandler(c *gin.Context) { pprof.Handler("goroutine").ServeHTTP(c.Writer, c.Request) }    // GET
-func pprofHeapHandler(c *gin.Context)      { pprof.Handler("heap").ServeHTTP(c.Writer, c.Request) }         // GET
-func pprofMutexHandler(c *gin.Context)     { pprof.Handler("mutex").ServeHTTP(c.Writer, c.Request) }        // GET
-func pprofThreadHandler(c *gin.Context)    { pprof.Handler("threadcreate").ServeHTTP(c.Writer, c.Request) } // GET
-
-// WrapPprof registers several routes from package `net/http/pprof` to gin.Engine. For more, please visit https://github.com/DeanThompson/ginpprof.
+// WrapPprof registers several pprof routes from package `net/http/pprof` to gin.Engine. For more, please visit https://github.com/DeanThompson/ginpprof.
 func WrapPprof(engine *gin.Engine) {
 	for _, r := range []struct {
 		method  string
@@ -194,16 +190,37 @@ func WrapPprof(engine *gin.Engine) {
 	}
 }
 
+// WrapPprofWithoutLogging registers several pprof routes from package `net/http/pprof` to gin.Engine without printing debug logging.
+func WrapPprofWithoutLogging(engine *gin.Engine) {
+	restore := HideDebugPrintRoute()
+	WrapPprof(engine)
+	restore()
+}
+
+func pprofIndexHandler(c *gin.Context)     { pprof.Index(c.Writer, c.Request) }                             // GET
+func pprofCmdlineHandler(c *gin.Context)   { pprof.Cmdline(c.Writer, c.Request) }                           // GET
+func pprofProfileHandler(c *gin.Context)   { pprof.Profile(c.Writer, c.Request) }                           // GET
+func pprofSymbolHandler(c *gin.Context)    { pprof.Symbol(c.Writer, c.Request) }                            // GET / POST
+func pprofTraceHandler(c *gin.Context)     { pprof.Trace(c.Writer, c.Request) }                             // GET
+func pprofAllocsHandler(c *gin.Context)    { pprof.Handler("allocs").ServeHTTP(c.Writer, c.Request) }       // GET
+func pprofBlockHandler(c *gin.Context)     { pprof.Handler("block").ServeHTTP(c.Writer, c.Request) }        // GET
+func pprofGoroutineHandler(c *gin.Context) { pprof.Handler("goroutine").ServeHTTP(c.Writer, c.Request) }    // GET
+func pprofHeapHandler(c *gin.Context)      { pprof.Handler("heap").ServeHTTP(c.Writer, c.Request) }         // GET
+func pprofMutexHandler(c *gin.Context)     { pprof.Handler("mutex").ServeHTTP(c.Writer, c.Request) }        // GET
+func pprofThreadHandler(c *gin.Context)    { pprof.Handler("threadcreate").ServeHTTP(c.Writer, c.Request) } // GET
+
 // ========================
 // mass functions and types
 // ========================
 
-// HideDebugLogging hides gin's all loggings and returns a function to restore this behavior.
+// HideDebugLogging hides gin's all logging and returns a function to restore this behavior.
 func HideDebugLogging() (restoreFn func()) {
 	originWriter := gin.DefaultWriter
 	gin.DefaultWriter = io.Discard
+	gin.DefaultErrorWriter = io.Discard
 	return func() {
 		gin.DefaultWriter = originWriter
+		gin.DefaultErrorWriter = originWriter
 	}
 }
 
@@ -216,39 +233,34 @@ func HideDebugPrintRoute() (restoreFn func()) {
 	}
 }
 
-// SetPrintRouteFunc sets gin.Engine's debug print route func by modifying gin.DebugPrintRouteFunc directly, defaults to DefaultPrintRouteFunc.
-func SetPrintRouteFunc(f func(httpMethod, absolutePath, handlerName string, numHandlers int)) {
-	gin.DebugPrintRouteFunc = f
-}
-
 func init() {
 	// set gin's mode to gin.DebugMode, and set debugPrintRouteFunc to DefaultPrintRouteFunc in default
 	gin.SetMode(gin.DebugMode)
-	SetPrintRouteFunc(DefaultPrintRouteFunc)
+	gin.DebugPrintRouteFunc = DefaultPrintRouteFunc
 }
 
-// DefaultPrintRouteFunc is the default gin.DebugPrintRouteFunc, can be modified by SetPrintRouteFunc.
+// DefaultPrintRouteFunc is the default gin.DebugPrintRouteFunc, can be modified by overwriting value to gin.DebugPrintRouteFunc.
 //
-// The default format logs like (just like gin.DebugPrintRouteFunc):
-// 	[Gin-debug] GET    /debug/pprof/             --> ... (1 handlers)
-// 	[Gin-debug] GET    /debug/pprof/threadcreate --> ... (1 handlers)
-// 	[Gin-debug] POST   /debug/pprof/symbol       --> ... (1 handlers)
-// 	           |------|-------------------------|   |---|
-// 	              6               25                 ...
+// The default format logs like (just like gin.DebugPrintRouteFunc except [Gin] prefix):
+// 	[Gin] GET    /debug/pprof/             --> ... (1 handlers)
+// 	[Gin] GET    /debug/pprof/threadcreate --> ... (1 handlers)
+// 	[Gin] POST   /debug/pprof/symbol       --> ... (1 handlers)
+// 	     |------|-------------------------|   |---|
+// 	        6               25                 ...
 func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int) {
-	fmt.Printf("[Gin-debug] %-6s %-25s --> %s (%d handlers)\n", httpMethod, absolutePath, handlerName, numHandlers)
+	fmt.Printf("[Gin] %-6s %-25s --> %s (%d handlers)\n", httpMethod, absolutePath, handlerName, numHandlers)
 }
 
 // DefaultColorizedPrintRouteFunc is the DefaultPrintRouteFunc in color.
 //
-// The default format logs like (just like gin.DebugPrintRouteFunc):
-// 	[Gin-debug] GET    /debug/pprof/             --> ... (1 handlers)
-// 	[Gin-debug] GET    /debug/pprof/threadcreate --> ... (1 handlers)
-// 	[Gin-debug] POST   /debug/pprof/symbol       --> ... (1 handlers)
-// 	           |------|-------------------------|   |---|
-// 	           6 (blue)       25 (blue)              ...
+// The default format logs like (just like gin.DebugPrintRouteFunc except [Gin] prefix):
+// 	[Gin] GET    /debug/pprof/             --> ... (1 handlers)
+// 	[Gin] GET    /debug/pprof/threadcreate --> ... (1 handlers)
+// 	[Gin] POST   /debug/pprof/symbol       --> ... (1 handlers)
+// 	     |------|-------------------------|   |---|
+// 	     6 (blue)       25 (blue)              ...
 func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int) {
-	fmt.Printf("[Gin-debug] %s --> %s (%d handlers)\n", xcolor.Blue.Sprintf("%-6s %-25s", httpMethod, absolutePath), handlerName, numHandlers)
+	fmt.Printf("[Gin] %s --> %s (%d handlers)\n", xcolor.Blue.Sprintf("%-6s %-25s", httpMethod, absolutePath), handlerName, numHandlers)
 }
 
 const (

@@ -140,33 +140,33 @@ func (c *CronTask) RemoveJob(id cron.EntryID) {
 // DefaultAddedCallback is the default CronTask's addedCallback, can be modified by CronTask.SetAddedCallback.
 //
 // The default callback logs like (just like gin.DebugPrintRouteFunc):
-// 	[Task-debug] job1, 0/1 * * * * *             --> ... (EntryID: 1)
-// 	[Task-debug] job3, every 3s                  --> ... (EntryID: 3)
-// 	[Task-debug] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
-// 	            |-------------------------------|   |----------------|
-// 	                           31                          ...
+// 	[Task] job1, 0/1 * * * * *             --> ... (EntryID: 1)
+// 	[Task] job3, every 3s                  --> ... (EntryID: 3)
+// 	[Task] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
+// 	      |-------------------------------|   |----------------|
+// 	                     31                          ...
 func DefaultAddedCallback(j *FuncJob) {
-	fmt.Printf("[Task-debug] %-31s --> %s (EntryID: %d)\n", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
+	fmt.Printf("[Task] %-31s --> %s (EntryID: %d)\n", fmt.Sprintf("%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
 }
 
 // DefaultColorizedAddedCallback is the DefaultAddedCallback (CronTask's addedCallback) in color.
 //
 // The default callback logs like (just like gin.DebugPrintRouteFunc):
-// 	[Task-debug] job1, 0/1 * * * * *             --> ... (EntryID: 1)
-// 	[Task-debug] job3, every 3s                  --> ... (EntryID: 3)
-// 	[Task-debug] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
-// 	            |-------------------------------|   |----------------|
-// 	                        31 (blue)                      ...
+// 	[Task] job1, 0/1 * * * * *             --> ... (EntryID: 1)
+// 	[Task] job3, every 3s                  --> ... (EntryID: 3)
+// 	[Task] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
+// 	      |-------------------------------|   |----------------|
+// 	                  31 (blue)                      ...
 func DefaultColorizedAddedCallback(j *FuncJob) {
-	fmt.Printf("[Task-debug] %s --> %s (EntryID: %d)\n", xcolor.Blue.ASprintf(-31, "%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
+	fmt.Printf("[Task] %s --> %s (EntryID: %d)\n", xcolor.Blue.ASprintf(-31, "%s, %s", j.Title(), j.ScheduleExpr()), j.Funcname(), j.EntryID())
 }
 
 // defaultJobRemovedCallback is the default removedCallback, can be modified by CronTask.SetRemovedCallback
 //
 // The default callback logs like:
-// 	[Task-debug] Remove job: job1, EntryID: 1
+// 	[Task] Remove job: job1, EntryID: 1
 func defaultJobRemovedCallback(j *FuncJob) {
-	fmt.Printf("[Task-debug] Remove job: %s, EntryID: %d\n", j.Title(), j.EntryID())
+	fmt.Printf("[Task] Remove job: %s, EntryID: %d\n", j.Title(), j.EntryID())
 }
 
 // SetAddedCallback sets job added callback, this will be invoked after FuncJob added, defaults to DefaultAddedCallback.

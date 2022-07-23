@@ -39,16 +39,18 @@
 + `func WithSecretPlaceholder(placeholder string) DumpRequestOption`
 + `func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string`
 + `func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string`
++ `func NewWithoutLogging() *gin.Engine`
 + `func RedirectHandler(code int, location string) gin.HandlerFunc`
 + `func WrapPprof(engine *gin.Engine)`
++ `func WrapPprofWithoutLogging(engine *gin.Engine)`
 + `func HideDebugLogging() (restoreFn func())`
 + `func HideDebugPrintRoute() (restoreFn func())`
-+ `func SetPrintRouteFunc(f func(httpMethod, absolutePath, handlerName string, numHandlers int))`
 + `func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
 + `func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
-+ `func NewRouterDecodeError(routerField string, input string, err error, message string) *RouterDecodeError`
++ `func NewRouterDecodeError(field string, input string, err error, message string) *RouterDecodeError`
 + `func GetValidatorEngine() (*validator.Validate, error)`
 + `func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvalidator.TranslationRegisterHandler) (xvalidator.UtTranslator, error)`
++ `func GetValidatorEnglishTranslator() (xvalidator.UtTranslator, error)`
 + `func SetGlobalTranslator(translator xvalidator.UtTranslator)`
 + `func GetGlobalTranslator() xvalidator.UtTranslator`
 + `func AddBinding(tag string, fn validator.Func) error`

@@ -61,32 +61,32 @@
 ---------------|--------------|------------|-----------------|
 
 
-*****************************************
-*****************************************
-*****************************************
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
 
 
 --- gin handled (xgin.DefaultPrintRouteFunc)
 
-*********************************************-->
-[Gin-debug] GET    /debug/pprof/             --> ... (1 handlers)
-[Gin-debug] GET    /debug/pprof/threadcreate --> ... (1 handlers)
-[Gin-debug] POST   /debug/pprof/symbol       --> ... (1 handlers)
-*********************************************-->
+----------------------------------------->
+[Gin] GET    /debug/pprof/             --> ... (1 handlers)
+[Gin] GET    /debug/pprof/threadcreate --> ... (1 handlers)
+[Gin] POST   /debug/pprof/symbol       --> ... (1 handlers)
+----------------------------------------->
 
 --- telebot handled (xtelebot.DefaultHandledCallback)
 
-*********************************************-->
-[Bot-debug] /test-endpoint                   --> ...
-[Bot-debug] $on_text                         --> ...
-[Bot-debug] $rep_btn:button_text             --> ...
-[Bot-debug] $inl_btn:button_unique           --> ...
-*********************************************-->
+----------------------------------------->
+[Telebot] /test-endpoint               --> ...
+[Telebot] $on_text                     --> ...
+[Telebot] $rep_btn:button_text         --> ...
+[Telebot] $inl_btn:button_unique       --> ...
+----------------------------------------->
 
 --- task added (xtask.DefaultAddedCallback)
 
-*********************************************-->
-[Task-debug] job1, 0/1 * * * * *             --> ... (EntryID: 1)
-[Task-debug] job3, every 3s                  --> ... (EntryID: 3)
-[Task-debug] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
-*********************************************-->
+----------------------------------------->
+[Task] job1, 0/1 * * * * *             --> ... (EntryID: 1)
+[Task] job3, every 3s                  --> ... (EntryID: 3)
+[Task] job4, <parsed SpecSchedule>     --> ... (EntryID: 4)
+----------------------------------------->
