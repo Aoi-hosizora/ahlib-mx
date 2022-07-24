@@ -37,13 +37,16 @@ func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 
 // BuildLoggerOptions creates a loggerOptions with given LoggerOption-s.
 func BuildLoggerOptions(options []LoggerOption) *loggerOptions {
-	out := &loggerOptions{text: "", fields: make(map[string]interface{})}
-	for _, op := range options {
-		if op != nil {
-			op(out)
+	opt := &loggerOptions{}
+	for _, o := range options {
+		if o != nil {
+			o(opt)
 		}
 	}
-	return out
+	if opt.fields == nil {
+		opt.fields = make(map[string]interface{})
+	}
+	return opt
 }
 
 // ApplyToMessage adds extra string to given message.

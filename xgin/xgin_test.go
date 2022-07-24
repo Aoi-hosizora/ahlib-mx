@@ -244,6 +244,7 @@ func TestRouterDecodeError(t *testing.T) {
 	xtesting.Equal(t, rerr.Message, "must be a positive number")
 	xtesting.Equal(t, rerr.Error(), "parsing id \"0\": non-positive number")
 	xtesting.Equal(t, rerr.Unwrap(), err)
+	xtesting.True(t, errors.Is(rerr, err))
 
 	xtesting.Panic(t, func() { _ = NewRouterDecodeError("", "", nil, "") })
 }

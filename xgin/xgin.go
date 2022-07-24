@@ -84,19 +84,19 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 		return nil
 	}
 	opt := &dumpRequestOptions{}
-	for _, op := range options {
-		if op != nil {
-			op(opt)
+	for _, o := range options {
+		if o != nil {
+			o(opt)
 		}
 	}
 	if opt.secretPlaceholder == "" {
 		opt.secretPlaceholder = "*"
 	}
 
-	bs, err := httputil.DumpRequest(req, false)
-	if err != nil {
-		return nil // unreachable
-	}
+	bs, _ := httputil.DumpRequest(req, false)
+	// unreachable error, because body is false, and bytes.Buffer's
+	// WriteString method will never return error
+
 	lines := strings.Split(xstring.FastBtos(bs), "\r\n") // split by \r\n
 	result := make([]string, 0, len(lines))
 	for i, line := range lines {
@@ -146,9 +146,9 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 	return result
 }
 
-// =============
-// route & pprof
-// =============
+// ========================
+// engine & handler & pprof
+// ========================
 
 // NewWithoutLogging creates a new blank Engine instance without printing debug logging.
 func NewWithoutLogging() *gin.Engine {
@@ -213,7 +213,7 @@ func pprofThreadHandler(c *gin.Context)    { pprof.Handler("threadcreate").Serve
 // mass functions and types
 // ========================
 
-// HideDebugLogging hides gin's all logging and returns a function to restore this behavior.
+// HideDebugLogging hides gin's all logging (gin.DefaultWriter and gin.DefaultErrorWriter) and returns a function to restore this behavior.
 func HideDebugLogging() (restoreFn func()) {
 	originWriter := gin.DefaultWriter
 	gin.DefaultWriter = io.Discard
@@ -234,8 +234,11 @@ func HideDebugPrintRoute() (restoreFn func()) {
 }
 
 func init() {
-	// set gin's mode to gin.DebugMode, and set debugPrintRouteFunc to DefaultPrintRouteFunc in default
+	// actually debug mode will have no influence to the server's behavior, except:
+	// debug logging, template rendering, and internal recovery handler
 	gin.SetMode(gin.DebugMode)
+
+	// use xgin.DefaultPrintRouteFunc as default DebugPrintRouteFunc
 	gin.DebugPrintRouteFunc = DefaultPrintRouteFunc
 }
 

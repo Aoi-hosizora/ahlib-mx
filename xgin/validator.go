@@ -319,9 +319,9 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 		translatableErrorFn:          _translatableErrorFn,
 		extraErrorsTranslateFn:       _extraErrorsTranslateFn,
 	}
-	for _, op := range options {
-		if op != nil {
-			op(opt)
+	for _, o := range options {
+		if o != nil {
+			o(opt)
 		}
 	}
 	if opt.extraErrorsTranslateFn == nil {
