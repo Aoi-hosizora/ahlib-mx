@@ -12,6 +12,8 @@ import (
 	"sync"
 )
 
+// TODO move to ahlib-more
+
 // CronTask represents a job collection, or called a task, which is implemented by wrapping cron.Cron.
 type CronTask struct {
 	cron  *cron.Cron

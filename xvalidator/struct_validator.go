@@ -3,7 +3,6 @@ package xvalidator
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"reflect"
 	"sort"
@@ -239,8 +238,6 @@ type MessagedValidator struct {
 
 	once sync.Once
 }
-
-var _ binding.StructValidator = (*MessagedValidator)(nil)
 
 // NewMessagedValidator creates a new NewMessagedValidator, with `validate` validator tag name and `validate_message` message tag name.
 func NewMessagedValidator() *MessagedValidator {
