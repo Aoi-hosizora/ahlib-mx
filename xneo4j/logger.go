@@ -248,9 +248,9 @@ func extractLoggerParam(result neo4j.Result, err error, source string, options *
 // formatLoggerParam formats given LoggerParam to string for LogrusLogger and StdLogger.
 //
 // The default format logs like:
-// 	[Neo4j] err: Connection error: dial tcp [::1]:7687: connectex: No connection could be made because the target machine actively refused it. | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
-// 	[Neo4j] err: Server error: [Neo.ClientError.Statement.SyntaxError] Invalid input 'n' (line 1, column 26 (offset: 25)) | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
-// 	[Neo4j]     -1 |        999ms | MATCH (n {uid: 8}) RETURN n LIMIT 1 | F:/Projects/ahlib-db/xneo4j/xneo4j_test.go:97
+// 	[Neo4j] err: Connection error: dial tcp [::1]:7687: connectex: No connection could be made because the target machine actively refused it. | F:/Projects/ahlib-mx/xneo4j/xneo4j_test.go:97
+// 	[Neo4j] err: Server error: [Neo.ClientError.Statement.SyntaxError] Invalid input 'n' (line 1, column 26 (offset: 25)) | F:/Projects/ahlib-mx/xneo4j/xneo4j_test.go:97
+// 	[Neo4j]     -1 |        999ms | MATCH (n {uid: 8}) RETURN n LIMIT 1 | F:/Projects/ahlib-mx/xneo4j/xneo4j_test.go:97
 // 	       |------| |------------| |-----------------------------------| |---------------------------------------------|
 // 	          6           12                        ...                                          ...
 func formatLoggerParam(p *LoggerParam) string {

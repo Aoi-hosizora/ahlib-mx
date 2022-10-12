@@ -237,9 +237,9 @@ func extractLoggerParam(v []interface{}, options *loggerOptions) *LoggerParam {
 // formatLoggerParam formats given LoggerParam to string for LogrusLogger and StdLogger.
 //
 // The default format logs like:
-// 	[Gorm] [info] registering callback `new_deleted_at_before_query_callback` from F:/Projects/ahlib-db/xgorm/hook.go:36
+// 	[Gorm] [info] registering callback `new_deleted_at_before_query_callback` from F:/Projects/ahlib-mx/xgorm/hook.go:36
 // 	[Gorm] [log] Error 1062: Duplicate entry '1' for key 'PRIMARY'
-// 	[Gorm]       1 |     1.9957ms | SELECT * FROM `tbl_test`   ORDER BY `tbl_test`.`id` ASC LIMIT 1 | F:/Projects/ahlib-db/xgorm/xgorm_test.go:48
+// 	[Gorm]       1 |     1.9957ms | SELECT * FROM `tbl_test`   ORDER BY `tbl_test`.`id` ASC LIMIT 1 | F:/Projects/ahlib-mx/xgorm/xgorm_test.go:48
 // 	      |-------| |------------| |---------------------------------------------------------------| |-------------------------------------------|
 // 	          7           12                                      ...                                                       ...
 func formatLoggerParam(p *LoggerParam) string {

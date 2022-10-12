@@ -1,0 +1,11 @@
+$0 -- the most basic packages, which only depend on third-party libraries [·]
+xdbutils            (x) [x]
+xredis              (x) [ahlib, github.com/go-redis/redis/v8, github.com/sirupsen/logrus]
+xtelebot            (x) [ahlib, gopkg.in/tucnak/telebot.v2, github.com/sirupsen/logrus]
+xvalidator          (x) [ahlib, github.com/go-playground/validator/v10, github.com/go-playground/locales, github.com/go-playground/universal-translator]
+
+$1 -- packages that depend on $0 libraries (·) and third-party libraries [·]
+xgin                (xvalidator) [ahlib, github.com/gin-gonic/gin, github.com/go-playground/validator/v10, github.com/sirupsen/logrus]
+xgorm               (xdbutils)   [ahlib, github.com/jinzhu/gorm, github.com/sirupsen/logrus, ...]
+xgormv2             (xdbutils)   [ahlib, gorm.io/gorm, github.com/sirupsen/logrus, ...]
+xneo4j              (xdbutils)   [ahlib, github.com/neo4j/neo4j-go-driver, github.com/sirupsen/logrus]

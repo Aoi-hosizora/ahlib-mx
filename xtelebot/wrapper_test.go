@@ -20,6 +20,8 @@ import (
 	"time"
 )
 
+// TODO remove gin
+
 func mockTelebotApi() (bot *telebot.Bot, shutdown func()) {
 	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()

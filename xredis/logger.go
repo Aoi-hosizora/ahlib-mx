@@ -274,12 +274,12 @@ func extractLoggerParam(cmd redis.Cmder, duration time.Duration, source string, 
 // formatLoggerParam formats given LoggerParam to string for LogrusLogger and StdLogger.
 //
 // The default format logs like:
-// 	[Redis] err: ERR invalid password | SET test_a test_aaa | F:/Projects/ahlib-db/xredis/redis_test.go:41
-// 	[Redis]    Nil |   305.9909ms | GET test | F:/Projects/ahlib-db/xredis/redis_test.go:126
-// 	[Redis]      3 |      995.5µs | KEYS tes* | F:/Projects/ahlib-db/xredis/redis_test.go:146
-// 	[Redis]     2i |      997.8µs | DEL test_ test_c | F:/Projects/ahlib-db/xredis/helper.go:21
-// 	[Redis]      F |      997.3µs | HEXISTS test xxx | F:/Projects/ahlib-db/xredis/redis_test.go:141
-// 	[Redis]     OK |    25.9306ms | SET 'test num' 1 | F:/Projects/ahlib-db/xredis/redis_test.go:59
+// 	[Redis] err: ERR invalid password | SET test_a test_aaa | F:/Projects/ahlib-mx/xredis/redis_test.go:41
+// 	[Redis]    Nil |   305.9909ms | GET test | F:/Projects/ahlib-mx/xredis/redis_test.go:126
+// 	[Redis]      3 |      995.5µs | KEYS tes* | F:/Projects/ahlib-mx/xredis/redis_test.go:146
+// 	[Redis]     2i |      997.8µs | DEL test_ test_c | F:/Projects/ahlib-mx/xredis/helper.go:21
+// 	[Redis]      F |      997.3µs | HEXISTS test xxx | F:/Projects/ahlib-mx/xredis/redis_test.go:141
+// 	[Redis]     OK |    25.9306ms | SET 'test num' 1 | F:/Projects/ahlib-mx/xredis/redis_test.go:59
 // 	       |------| |------------| |----------------| |--------------------------------------------|
 // 	          6           12               ...                               ...
 func formatLoggerParam(p *LoggerParam) string {
