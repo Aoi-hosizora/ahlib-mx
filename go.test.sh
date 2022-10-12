@@ -9,6 +9,14 @@ function test_module {
 }
 
 rm -f coverage.txt
-coverage=coverage.txt
-profile=profile.out
-test_module
+coverage=../coverage.txt
+profile=../profile.out
+
+cd xgin       && test_module && cd ..
+cd xtelebot   && test_module && cd ..
+cd xvalidator && test_module && cd ..
+
+cd xgorm   && test_module && cd ..
+cd xgormv2 && test_module && cd ..
+cd xneo4j  && test_module && cd ..
+cd xredis  && test_module && cd ..

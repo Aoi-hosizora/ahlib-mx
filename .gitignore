@@ -11,3 +11,6 @@ profile.out
 
 ### Project ###
 _generate/
+*.sql
+*.sql-journal
+*.cypher

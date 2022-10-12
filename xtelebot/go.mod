@@ -1,4 +1,4 @@
-module github.com/Aoi-hosizora/ahlib-web/xtelebot
+module github.com/Aoi-hosizora/ahlib-mx/xtelebot
 
 go 1.15
 

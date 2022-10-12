@@ -8,7 +8,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/Aoi-hosizora/ahlib-web.svg)](https://pkg.go.dev/github.com/Aoi-hosizora/ahlib-web)
 
 + A personal golang library for web development, including: [gin](https://github.com/gin-gonic/gin), [validator (v10)](https://github.com/go-playground/validator),
-  [telebot (v2)](https://github.com/tucnak/telebot), [cron](https://github.com/robfig/cron), requires `Go >= 1.15`.
+  [telebot (v2)](https://github.com/tucnak/telebot), requires `Go >= 1.15`.
 
 ### Related libraries
 
@@ -21,7 +21,6 @@
 
 + xgin
 + xgin/headers
-+ xtask
 + xtelebot
 + xvalidator
 + xvalidator/regexps
@@ -35,5 +34,4 @@
 + `github.com/go-playground/locales v0.13.0`
 + `github.com/go-playground/universal-translator v0.17.0`
 + `gopkg.in/tucnak/telebot.v2 v2.5.0`
-+ `github.com/robfig/cron/v3 v3.0.1`
 + `github.com/sirupsen/logrus v1.8.1`

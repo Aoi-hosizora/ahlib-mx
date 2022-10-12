@@ -1,9 +1,9 @@
 package xgin
 
 const (
-	// NAME represents ahlib-web package's name.
-	NAME = "ahlib-web/xgin"
+	// NAME represents ahlib-mx package's name.
+	NAME = "ahlib-mx/xgin"
 
-	// VERSION represents ahlib-web package's current version.
+	// VERSION represents ahlib-mx package's current version.
 	VERSION = "1.6.0"
 )

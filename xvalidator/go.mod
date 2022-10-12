@@ -1,4 +1,4 @@
-module github.com/Aoi-hosizora/ahlib-web/xvalidator
+module github.com/Aoi-hosizora/ahlib-mx/xvalidator
 
 go 1.15
 

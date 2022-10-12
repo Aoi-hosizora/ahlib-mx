@@ -1,9 +1,9 @@
 package xvalidator
 
 const (
-	// NAME represents ahlib-web package's name.
-	NAME = "ahlib-web/xvalidator"
+	// NAME represents ahlib-mx package's name.
+	NAME = "ahlib-mx/xvalidator"
 
-	// VERSION represents ahlib-web package's current version.
+	// VERSION represents ahlib-mx package's current version.
 	VERSION = "1.6.0"
 )

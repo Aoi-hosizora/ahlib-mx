@@ -1,10 +1,10 @@
-module github.com/Aoi-hosizora/ahlib-web/xgin
+module github.com/Aoi-hosizora/ahlib-mx/xgin
 
 go 1.15
 
 require (
 	github.com/Aoi-hosizora/ahlib v0.0.0-00010101000000-000000000000
-	github.com/Aoi-hosizora/ahlib-web/xvalidator v0.0.0-00010101000000-000000000000
+	github.com/Aoi-hosizora/ahlib-mx/xvalidator v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-playground/validator/v10 v10.4.1
 	github.com/sirupsen/logrus v1.8.1
@@ -12,5 +12,5 @@ require (
 
 replace (
 	github.com/Aoi-hosizora/ahlib => ../../ahlib
-	github.com/Aoi-hosizora/ahlib-web/xvalidator => ../xvalidator
+	github.com/Aoi-hosizora/ahlib-mx/xvalidator => ../xvalidator
 )

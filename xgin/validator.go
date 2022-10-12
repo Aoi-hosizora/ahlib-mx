@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Aoi-hosizora/ahlib-web/xvalidator"
+	"github.com/Aoi-hosizora/ahlib-mx/xvalidator"
 	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
