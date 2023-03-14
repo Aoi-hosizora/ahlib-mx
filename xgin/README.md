@@ -32,6 +32,28 @@
 
 ### Functions
 
++ `func WithMode(mode string) NewEngineOption`
++ `func WithDebugPrintRouteFunc(debugPrintRouteFunc DebugPrintRouteFuncType) NewEngineOption`
++ `func WithDefaultWriter(defaultWriter io.Writer) NewEngineOption`
++ `func WithErrorDefaultWriter(defaultErrorWriter io.Writer) NewEngineOption`
++ `func WithRedirectTrailingSlash(redirectTrailingSlash bool) NewEngineOption`
++ `func WithRedirectFixedPath(redirectFixedPath bool) NewEngineOption`
++ `func WithHandleMethodNotAllowed(handleMethodNotAllowed bool) NewEngineOption`
++ `func WithForwardedByClientIP(forwardedByClientIP bool) NewEngineOption`
++ `func WithUseRawPath(useRawPath bool) NewEngineOption`
++ `func WithUnescapePathValues(unescapePathValues bool) NewEngineOption`
++ `func WithRemoveExtraSlash(removeExtraSlash bool) NewEngineOption`
++ `func WithRemoteIPHeaders(remoteIPHeaders []string) NewEngineOption`
++ `func WithTrustedPlatform(trustedPlatform string) NewEngineOption`
++ `func WithMaxMultipartMemory(maxMultipartMemory int64) NewEngineOption`
++ `func WithUseH2C(useH2C bool) NewEngineOption`
++ `func WithContextWithFallback(contextWithFallback bool) NewEngineOption`
++ `func WithSecureJSONPrefix(secureJSONPrefix string) NewEngineOption`
++ `func WithNoRoute(noRoute gin.HandlersChain) NewEngineOption`
++ `func WithNoMethod(noMethod gin.HandlersChain) NewEngineOption`
++ `func WithTrustedProxies(trustedProxies []string) NewEngineOption`
++ `func NewEngine(options ...NewEngineOption) *gin.Engine`
++ `func NewEngineSilently(options ...NewEngineOption) *gin.Engine`
 + `func WithIgnoreRequestLine(ignore bool) DumpRequestOption`
 + `func WithRetainHeaders(headers ...string) DumpRequestOption`
 + `func WithIgnoreHeaders(headers ...string) DumpRequestOption`
@@ -39,12 +61,12 @@
 + `func WithSecretPlaceholder(placeholder string) DumpRequestOption`
 + `func DumpRequest(c *gin.Context, options ...DumpRequestOption) []string`
 + `func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string`
-+ `func NewWithoutLogging() *gin.Engine`
 + `func RedirectHandler(code int, location string) gin.HandlerFunc`
-+ `func WrapPprof(engine *gin.Engine)`
-+ `func WrapPprofWithoutLogging(engine *gin.Engine)`
++ `func WrapPprof(router gin.IRouter)`
++ `func WrapPprofSilently(router gin.IRouter)`
 + `func HideDebugLogging() (restoreFn func())`
 + `func HideDebugPrintRoute() (restoreFn func())`
++ `func SilentPrintRouteFunc(_, _, _ string, _ int)`
 + `func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
 + `func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
 + `func NewRouterDecodeError(field string, input string, err error, message string) *RouterDecodeError`

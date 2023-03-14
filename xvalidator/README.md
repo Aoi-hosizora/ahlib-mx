@@ -39,24 +39,28 @@
 + `func EsLocaleTranslator() locales.Translator`
 + `func FrLocaleTranslator() locales.Translator`
 + `func IdLocaleTranslator() locales.Translator`
++ `func ItLocaleTranslator() LocaleTranslator`
 + `func JaLocaleTranslator() locales.Translator`
 + `func NlLocaleTranslator() locales.Translator`
 + `func PtLocaleTranslator() locales.Translator`
 + `func PtBrLocaleTranslator() locales.Translator`
 + `func RuLocaleTranslator() locales.Translator`
 + `func TrLocaleTranslator() locales.Translator`
++ `func ViLocaleTranslator() LocaleTranslator`
 + `func ZhLocaleTranslator() locales.Translator`
 + `func ZhHantLocaleTranslator() locales.Translator`
 + `func EnTranslationRegisterFunc() TranslationRegisterHandler`
 + `func EsTranslationRegisterFunc() TranslationRegisterHandler`
 + `func FrTranslationRegisterFunc() TranslationRegisterHandler`
 + `func IdTranslationRegisterFunc() TranslationRegisterHandler`
++ `ItTranslationRegisterFunc`
 + `func JaTranslationRegisterFunc() TranslationRegisterHandler`
 + `func NlTranslationRegisterFunc() TranslationRegisterHandler`
 + `func PtTranslationRegisterFunc() TranslationRegisterHandler`
 + `func PtBrTranslationRegisterFunc() TranslationRegisterHandler`
 + `func RuTranslationRegisterFunc() TranslationRegisterHandler`
 + `func TrTranslationRegisterFunc() TranslationRegisterHandler`
++ `func ViTranslationRegisterFunc() TranslationRegisterHandler`
 + `func ZhTranslationRegisterFunc() TranslationRegisterHandler`
 + `func ZhHantTranslationRegisterFunc() TranslationRegisterHandler`
 + `func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string`
@@ -87,7 +91,9 @@
 + `func (w *WrappedFieldError) Error() string`
 + `func (w *WrappedFieldError) Unwrap() error`
 + `func (m *MultiFieldsError) Errors() []error`
-+ `func (m *MultiFieldsError) Error() string `
++ `func (m *MultiFieldsError) Error() string`
++ `func (m *MultiFieldsError) Is(target error) bool`
++ `func (m *MultiFieldsError) As(target interface{}) bool`
 + `func (m *MultiFieldsError) Translate(translator UtTranslator, useNamespace bool) map[string]string`
 + `func (m *MultiFieldsError) FlatToMap(useNamespace bool) map[string]string`
 + `func (m *MessagedValidator) Engine() interface{}`

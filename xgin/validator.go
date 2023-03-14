@@ -120,6 +120,7 @@ func EnableRFC3339DateTimeBindingTranslator(translator xvalidator.UtTranslator) 
 	return AddTranslation(translator, "datetime", "{0} should be an RFC3339 datetime", true)
 }
 
+// This make sure that xvalidator.MessagedValidator implements binding.StructValidator interface.
 var _ binding.StructValidator = (*xvalidator.MessagedValidator)(nil)
 
 // =================

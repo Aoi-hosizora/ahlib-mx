@@ -155,6 +155,7 @@ func TestAddBindingAndAddTranslator(t *testing.T) {
 	}
 
 	gin.SetMode(gin.ReleaseMode)
+	defer func() { gin.SetMode(gin.DebugMode) }()
 	app := gin.New()
 	app.GET("", func(ctx *gin.Context) {
 		test := &testStruct{}
@@ -270,6 +271,7 @@ func TestCustomStructValidator(t *testing.T) {
 	}
 
 	gin.SetMode(gin.ReleaseMode)
+	defer func() { gin.SetMode(gin.DebugMode) }()
 	app := gin.New()
 	app.GET("", func(ctx *gin.Context) {
 		s := &testStruct{}
@@ -359,6 +361,7 @@ func (t translatableError) Translate() (map[string]string, bool) {
 
 func TestTranslateBindingError(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
+	defer func() { gin.SetMode(gin.DebugMode) }()
 	val, _ := GetValidatorEngine()
 	xvalidator.UseTagAsFieldName(val, "json")
 	trans, _ := GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())

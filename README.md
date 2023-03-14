@@ -7,7 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/Aoi-hosizora/ahlib-mx)](https://github.com/Aoi-hosizora/ahlib-mx/releases)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Aoi-hosizora/ahlib-mx.svg)](https://pkg.go.dev/github.com/Aoi-hosizora/ahlib-mx)
 
-+ A personal golang library for web and db development, which depends on more heavy and complicated third-party libraries, requires `Go >= 1.15`.
++ A personal golang library for web and db development, which depends on more heavy and complex third-party libraries, requires `Go >= 1.15` or `Go >= 1.18`.
 + This package includes following utilities:
     + [gin](https://github.com/gin-gonic/gin)
     + [validator (v10)](https://github.com/go-playground/validator)

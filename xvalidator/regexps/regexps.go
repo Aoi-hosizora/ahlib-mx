@@ -4,7 +4,7 @@ import (
 	"regexp"
 )
 
-// Regexps are referred from https://github.com/go-playground/validator/blob/8fe074c546/regexes.go.
+// Regexps are referred from https://github.com/go-playground/validator/blob/v10.11.1/regexes.go.
 
 const (
 	alphaRegexString                 = "^[a-zA-Z]+$"
@@ -34,6 +34,16 @@ const (
 	uUID5RFC4122RegexString          = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-5[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
 	uUIDRFC4122RegexString           = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 	uLIDRegexString                  = "^[A-HJKMNP-TV-Z0-9]{26}$"
+	md4RegexString                   = "^[0-9a-f]{32}$"
+	md5RegexString                   = "^[0-9a-f]{32}$"
+	sha256RegexString                = "^[0-9a-f]{64}$"
+	sha384RegexString                = "^[0-9a-f]{96}$"
+	sha512RegexString                = "^[0-9a-f]{128}$"
+	ripemd128RegexString             = "^[0-9a-f]{32}$"
+	ripemd160RegexString             = "^[0-9a-f]{40}$"
+	tiger128RegexString              = "^[0-9a-f]{32}$"
+	tiger160RegexString              = "^[0-9a-f]{40}$"
+	tiger192RegexString              = "^[0-9a-f]{48}$"
 	aSCIIRegexString                 = "^[\x00-\x7F]*$"
 	printableASCIIRegexString        = "^[\x20-\x7E]*$"
 	multibyteRegexString             = "[^\x00-\x7F]"
@@ -41,12 +51,12 @@ const (
 	latitudeRegexString              = "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?)$"
 	longitudeRegexString             = "^[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
 	sSNRegexString                   = `^[0-9]{3}[ -]?(0[1-9]|[1-9][0-9])[ -]?([1-9][0-9]{3}|[0-9][1-9][0-9]{2}|[0-9]{2}[1-9][0-9]|[0-9]{3}[1-9])$`
-	hostnameRegexStringRFC952        = `^[a-zA-Z]([a-zA-Z0-9\-]+[\.]?)*[a-zA-Z0-9]$`                                                                      // https://tools.ietf.org/html/rfc952
-	hostnameRegexStringRFC1123       = `^([a-zA-Z0-9]{1}[a-zA-Z0-9_-]{0,62}){1}(\.[a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62})*?$`                                 // accepts hostname starting with a digit https://tools.ietf.org/html/rfc1123
-	fqdnRegexStringRFC1123           = `^([a-zA-Z0-9]{1}[a-zA-Z0-9_-]{0,62})(\.[a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62})*?(\.[a-zA-Z]{1}[a-zA-Z0-9]{0,62})\.?$` // same as hostnameRegexStringRFC1123 but must contain a non numerical TLD (possibly ending with '.')
-	btcAddressRegexString            = `^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$`                                                                                // bitcoin address
-	btcAddressUpperRegexStringBech32 = `^BC1[02-9AC-HJ-NP-Z]{7,76}$`                                                                                      // bitcoin bech32 address https://en.bitcoin.it/wiki/Bech32
-	btcAddressLowerRegexStringBech32 = `^bc1[02-9ac-hj-np-z]{7,76}$`                                                                                      // bitcoin bech32 address https://en.bitcoin.it/wiki/Bech32
+	hostnameRegexStringRFC952        = `^[a-zA-Z]([a-zA-Z0-9\-]+[\.]?)*[a-zA-Z0-9]$`                                                                   // https://tools.ietf.org/html/rfc952
+	hostnameRegexStringRFC1123       = `^([a-zA-Z0-9]{1}[a-zA-Z0-9-]{0,62}){1}(\.[a-zA-Z0-9]{1}[a-zA-Z0-9-]{0,62})*?$`                                 // accepts hostname starting with a digit https://tools.ietf.org/html/rfc1123
+	fqdnRegexStringRFC1123           = `^([a-zA-Z0-9]{1}[a-zA-Z0-9-]{0,62})(\.[a-zA-Z0-9]{1}[a-zA-Z0-9-]{0,62})*?(\.[a-zA-Z]{1}[a-zA-Z0-9]{0,62})\.?$` // same as hostnameRegexStringRFC1123 but must contain a non numerical TLD (possibly ending with '.')
+	btcAddressRegexString            = `^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$`                                                                             // bitcoin address
+	btcAddressUpperRegexStringBech32 = `^BC1[02-9AC-HJ-NP-Z]{7,76}$`                                                                                   // bitcoin bech32 address https://en.bitcoin.it/wiki/Bech32
+	btcAddressLowerRegexStringBech32 = `^bc1[02-9ac-hj-np-z]{7,76}$`                                                                                   // bitcoin bech32 address https://en.bitcoin.it/wiki/Bech32
 	ethAddressRegexString            = `^0x[0-9a-fA-F]{40}$`
 	ethAddressUpperRegexString       = `^0x[0-9A-F]{40}$`
 	ethAddressLowerRegexString       = `^0x[0-9a-f]{40}$`
@@ -88,6 +98,16 @@ var (
 	UUID5RFC4122Regex          = regexp.MustCompile(uUID5RFC4122RegexString)
 	UUIDRFC4122Regex           = regexp.MustCompile(uUIDRFC4122RegexString)
 	ULIDRegex                  = regexp.MustCompile(uLIDRegexString)
+	Md4Regex                   = regexp.MustCompile(md4RegexString)
+	Md5Regex                   = regexp.MustCompile(md5RegexString)
+	Sha256Regex                = regexp.MustCompile(sha256RegexString)
+	Sha384Regex                = regexp.MustCompile(sha384RegexString)
+	Sha512Regex                = regexp.MustCompile(sha512RegexString)
+	Ripemd128Regex             = regexp.MustCompile(ripemd128RegexString)
+	Ripemd160Regex             = regexp.MustCompile(ripemd160RegexString)
+	Tiger128Regex              = regexp.MustCompile(tiger128RegexString)
+	Tiger160Regex              = regexp.MustCompile(tiger160RegexString)
+	Tiger192Regex              = regexp.MustCompile(tiger192RegexString)
 	ASCIIRegex                 = regexp.MustCompile(aSCIIRegexString)
 	PrintableASCIIRegex        = regexp.MustCompile(printableASCIIRegexString)
 	MultibyteRegex             = regexp.MustCompile(multibyteRegexString)

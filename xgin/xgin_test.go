@@ -1,26 +1,138 @@
 package xgin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xnumber"
+	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"testing"
 	"time"
 )
 
+func TestNewEngine(t *testing.T) {
+	// 1. empty option
+	engine := NewEngineSilently() // no output
+	xtesting.Equal(t, gin.Mode(), gin.DebugMode)
+	xtesting.SameFunction(t, gin.DebugPrintRouteFunc, DefaultPrintRouteFunc)
+	xtesting.Equal(t, gin.DefaultWriter, io.Writer(os.Stdout))
+	xtesting.Equal(t, gin.DefaultErrorWriter, io.Writer(os.Stderr))
+	xtesting.Equal(t, engine.RedirectTrailingSlash, true)
+	xtesting.Equal(t, engine.RedirectFixedPath, false)
+	xtesting.Equal(t, engine.HandleMethodNotAllowed, false)
+	xtesting.Equal(t, engine.ForwardedByClientIP, true)
+	xtesting.Equal(t, engine.UseRawPath, false)
+	xtesting.Equal(t, engine.UnescapePathValues, true)
+	xtesting.Equal(t, engine.RemoveExtraSlash, false)
+	xtesting.Equal(t, engine.RemoteIPHeaders, []string{"X-Forwarded-For", "X-Real-IP"})
+	xtesting.Equal(t, engine.TrustedPlatform, "")
+	xtesting.Equal(t, engine.MaxMultipartMemory, int64(32<<20))
+	xtesting.Equal(t, engine.UseH2C, false)
+	xtesting.Equal(t, engine.ContextWithFallback, false)
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "secureJSONPrefix")).Interface().(string), "while(1);")
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noRoute")).Interface().(gin.HandlersChain), gin.HandlersChain(nil))
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noMethod")).Interface().(gin.HandlersChain), gin.HandlersChain(nil))
+	xtesting.Equal(t, GetTrustedProxies(engine), []string{"0.0.0.0/0", "::/0"})
+
+	// 2. invert option
+	buf := &bytes.Buffer{}
+	printer := func(httpMethod, absolutePath, handlerName string, numHandlers int) {
+		buf.WriteString(fmt.Sprintf("%s-%s-%s-%d", httpMethod, absolutePath, handlerName, numHandlers))
+	}
+	engine = NewEngine(
+		WithMode(gin.DebugMode),
+		WithDebugPrintRouteFunc(printer),
+		WithDefaultWriter(buf),
+		WithDefaultErrorWriter(buf),
+		WithRedirectTrailingSlash(false),
+		WithRedirectFixedPath(true),
+		WithHandleMethodNotAllowed(true),
+		WithForwardedByClientIP(false),
+		WithUseRawPath(true),
+		WithUnescapePathValues(false),
+		WithRemoveExtraSlash(true),
+		WithRemoteIPHeaders([]string{}),
+		WithTrustedPlatform(gin.PlatformCloudflare),
+		WithMaxMultipartMemory(0),
+		WithUseH2C(true),
+		WithContextWithFallback(true),
+		WithSecureJSONPrefix(""),
+		WithNoRoute(gin.HandlersChain{}),
+		WithNoMethod(gin.HandlersChain{}),
+		WithTrustedProxies([]string{}),
+	) // have output
+	xtesting.Equal(t, gin.Mode(), gin.DebugMode)
+	xtesting.SameFunction(t, gin.DebugPrintRouteFunc, printer)
+	xtesting.Equal(t, gin.DefaultWriter, buf)
+	xtesting.Equal(t, gin.DefaultErrorWriter, buf)
+	xtesting.Equal(t, engine.RedirectTrailingSlash, false)
+	xtesting.Equal(t, engine.RedirectFixedPath, true)
+	xtesting.Equal(t, engine.HandleMethodNotAllowed, true)
+	xtesting.Equal(t, engine.ForwardedByClientIP, false)
+	xtesting.Equal(t, engine.UseRawPath, true)
+	xtesting.Equal(t, engine.UnescapePathValues, false)
+	xtesting.Equal(t, engine.RemoveExtraSlash, true)
+	xtesting.Equal(t, engine.RemoteIPHeaders, []string{})
+	xtesting.Equal(t, engine.TrustedPlatform, gin.PlatformCloudflare)
+	xtesting.Equal(t, engine.MaxMultipartMemory, int64(0))
+	xtesting.Equal(t, engine.UseH2C, true)
+	xtesting.Equal(t, engine.ContextWithFallback, true)
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "secureJSONPrefix")).Interface().(string), "")
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noRoute")).Interface().(gin.HandlersChain), gin.HandlersChain{})
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noMethod")).Interface().(gin.HandlersChain), gin.HandlersChain{})
+	xtesting.Equal(t, GetTrustedProxies(engine), []string{})
+	engine.GET("", func(c *gin.Context) {})
+	xtesting.NotEmptyCollection(t, buf.String())
+
+	// 3. cover
+	log.Println(3)
+	buf.Reset()
+	engine = NewEngine(
+		WithMode(gin.ReleaseMode),
+		WithDebugPrintRouteFunc(DefaultPrintRouteFunc),
+		WithDefaultWriter(buf),
+		WithDefaultErrorWriter(buf),
+		WithRemoteIPHeaders(nil),
+		WithNoRoute(nil),
+		WithNoMethod(nil),
+		WithTrustedProxies(nil),
+	)
+	xtesting.Equal(t, gin.Mode(), gin.ReleaseMode)
+	xtesting.SameFunction(t, gin.DebugPrintRouteFunc, DefaultPrintRouteFunc)
+	xtesting.Equal(t, gin.DefaultWriter, buf)
+	xtesting.Equal(t, gin.DefaultErrorWriter, buf)
+	xtesting.Equal(t, engine.RemoteIPHeaders, []string{"X-Forwarded-For", "X-Real-IP"})
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noRoute")).Interface().(gin.HandlersChain), gin.HandlersChain(nil))
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noMethod")).Interface().(gin.HandlersChain), gin.HandlersChain(nil))
+	xtesting.Equal(t, GetTrustedProxies(engine), []string{"0.0.0.0/0", "::/0"})
+	engine.GET("", func(c *gin.Context) {})
+	xtesting.EmptyCollection(t, buf.String())
+
+	// 4. restore
+	engine = NewEngineSilently(
+		WithMode(gin.DebugMode),
+		WithDebugPrintRouteFunc(DefaultPrintRouteFunc),
+		WithDefaultWriter(os.Stdout),
+		WithDefaultErrorWriter(os.Stderr),
+	) // still have output
+}
+
 func TestDumpRequest(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
+	defer func() { gin.SetMode(gin.DebugMode) }()
 	app := gin.New()
 	server := &http.Server{Addr: ":12345", Handler: app}
 	go server.ListenAndServe()
@@ -104,6 +216,7 @@ func TestDumpRequest(t *testing.T) {
 
 func TestRedirectHandler(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
+	defer func() { gin.SetMode(gin.DebugMode) }()
 	app := gin.New()
 	// app.Use(gin.Logger())
 	server := &http.Server{Addr: ":12345", Handler: app}
@@ -174,8 +287,9 @@ func TestWrapPprof(t *testing.T) {
 
 	// 3.
 	log.Println("============ 3")
-	app = NewWithoutLogging()    // <<< no warning
-	WrapPprofWithoutLogging(app) // <<< no [Gin]
+	app = NewEngineSilently()               // <<< no warning
+	WrapPprofSilently(app)                  // <<< no [Gin]
+	xtesting.Nil(t, GetTrustedProxies(nil)) // <<< extra test
 
 	// 4.
 	log.Println("============ 4")
@@ -297,6 +411,7 @@ func TestLoggerOptions(t *testing.T) {
 
 func TestResponseLogger(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
+	defer func() { gin.SetMode(gin.DebugMode) }()
 	rand.Seed(time.Now().UnixNano())
 
 	l1 := logrus.New()

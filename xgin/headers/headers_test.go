@@ -17,8 +17,8 @@ func TestHeaders(t *testing.T) {
 		Upgrade, UserAgent, Vary, Via, WWWAuthenticate, Warning, XFrameOptions,
 
 		// Common non-standard header fields
-		ContentSecurityPolicy, DNT, ExpectCT, FrontEndHttps, NEL, PermissionsPolicy, ProxyConnection, Refresh, ReportTo, SaveData, Status, TimingAllowOrigin,
-		UpgradeInsecureRequests, XATTDeviceId, XContentDuration, XContentSecurityPolicy, XContentTypeOptions, XCorrelationID, XCsrfToken, XForwardedFor,
+		ContentSecurityPolicy, CorrelationID, DNT, ExpectCT, FrontEndHttps, NEL, PermissionsPolicy, ProxyConnection, Refresh, ReportTo, SaveData, SecGPC, Status,
+		TimingAllowOrigin, UpgradeInsecureRequests, XATTDeviceId, XContentDuration, XContentSecurityPolicy, XContentTypeOptions, XCorrelationID, XCsrfToken, XForwardedFor,
 		XForwardedHost, XForwardedProto, XHttpMethodOverride, XPoweredBy, XRateLimitLimit, XRateLimitRemaining, XRateLimitReset, XRealIP, XRedirectBy, XRequestID,
 		XRequestedWith, XUACompatible, XUIDH, XWapProfile, XWebKitCSP, XXSSProtection,
 	} {

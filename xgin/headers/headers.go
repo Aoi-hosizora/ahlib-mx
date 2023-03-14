@@ -85,6 +85,7 @@ const (
 // Common non-standard header fields.
 const (
 	ContentSecurityPolicy   = "Content-Security-Policy"   // Used in responses
+	CorrelationID           = "Correlation-ID"            // Used in requests
 	DNT                     = "DNT"                       // Used in requests
 	ExpectCT                = "Expect-CT"                 // Used in responses
 	FrontEndHttps           = "Front-End-Https"           // Used in requests
@@ -94,6 +95,7 @@ const (
 	Refresh                 = "Refresh"                   // Used in responses
 	ReportTo                = "Report-To"                 // Used in responses
 	SaveData                = "Save-Data"                 // Used in requests
+	SecGPC                  = "Sec-GPC"                   // Used in requests
 	Status                  = "Status"                    // Used in responses
 	TimingAllowOrigin       = "Timing-Allow-Origin"       // Used in responses
 	UpgradeInsecureRequests = "Upgrade-Insecure-Requests" // Used in requests

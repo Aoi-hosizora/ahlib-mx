@@ -6,6 +6,7 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/go-playground/validator/v10"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -42,10 +43,18 @@ func TestTranslateAndFlat(t *testing.T) {
 	xtesting.Equal(t, ve.Errors()[0].Error(), err1.Error())
 	xtesting.Equal(t, ve.Errors()[1].Error(), "Key: 's.int' Error:Int field must be set and can not be zero")
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:Field validation for 'str' failed on the 'required' tag; Key: 's.int' Error:Int field must be set and can not be zero")
+	xtesting.Equal(t, ve.Is(err1) && ve.Is(err2_), true)
+	xtesting.Equal(t, ve.Is(errors.New("x")), false)
+
 	ve = &MultiFieldsError{fields: []error{err3, err5}}
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:Field validation for 'str' failed on the 'gt' tag; Key: 's.int' Error:Field validation for 'int' failed on the 'gte' tag")
 	ve = &MultiFieldsError{fields: []error{err4_, err6_}}
 	xtesting.Equal(t, ve.Error(), "Key: 's.str' Error:The length of String must less than 10; Key: 's.int' Error:The value of Int must less than 5")
+	as1 := &WrappedFieldError{}
+	xtesting.Equal(t, errors.As(ve, &as1), true)
+	xtesting.Equal(t, as1.message, "The length of String must less than 10")
+	as2 := &strconv.NumError{}
+	xtesting.Equal(t, errors.As(ve, &as2), false)
 
 	// TranslateValidationErrors
 	tr, _ := ApplyEnglishTranslator(v)
