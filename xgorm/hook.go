@@ -29,7 +29,7 @@ type GormTime2 struct {
 	UpdatedAt time.Time
 }
 
-// Gorm's callback names. See gorm.Callback or visit https://github.com/jinzhu/gorm/blob/master/callback.go for more details.
+// Gorm's callback names. See gorm.Callback or visit https://github.com/jinzhu/gorm/blob/5c235b72a4/callback.go for more details.
 const (
 	CreateCallbackName   = "gorm:create"
 	UpdateCallbackName   = "gorm:update"
@@ -78,8 +78,8 @@ func hookedCallback(defaultTimestamp string) func(scope *gorm.Scope) {
 
 // hookedDeleteCallback is a callback for gorm:delete used in HookDeletedAt.
 func hookedDeleteCallback(defaultTimestamp string) func(scope *gorm.Scope) {
-	// https://github.com/jinzhu/gorm/blob/master/callback_delete.go#L29
-	// https://github.com/jinzhu/gorm/blob/master/scope.go#L718
+	// https://github.com/jinzhu/gorm/blob/5c235b72a4/callback_delete.go#L29
+	// https://github.com/jinzhu/gorm/blob/5c235b72a4/scope.go#L718
 	return func(scope *gorm.Scope) {
 		if !scope.HasError() {
 			var extraOption string

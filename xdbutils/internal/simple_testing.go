@@ -20,8 +20,8 @@ func failTest(t testing.TB, failureMessage string) bool {
 	return false
 }
 
-// TestEqual asserts that two objects are deep equal.
-func TestEqual(t testing.TB, give, want interface{}) bool {
+// XtestingEqual asserts that two objects are deep equal.
+func XtestingEqual(t testing.TB, give, want interface{}) bool {
 	if give != nil && want != nil && (reflect.TypeOf(give).Kind() == reflect.Func || reflect.TypeOf(want).Kind() == reflect.Func) {
 		return failTest(t, fmt.Sprintf("Equal: invalid operation `%#v` == `%#v` (cannot take func type as argument)", give, want))
 	}
@@ -31,8 +31,8 @@ func TestEqual(t testing.TB, give, want interface{}) bool {
 	return true
 }
 
-// TestPanic asserts that the code inside the specified function panics, and that the recovered panic value equals the wanted panic value.
-func TestPanic(t *testing.T, want bool, f func(), v ...interface{}) bool {
+// XtestingPanic asserts that the code inside the specified function panics, and that the recovered panic value equals the wanted panic value.
+func XtestingPanic(t *testing.T, want bool, f func(), v ...interface{}) bool {
 	didPanic, value := false, interface{}(nil)
 	func() { didPanic = true; defer func() { value = recover() }(); f(); didPanic = false }()
 	if want && !didPanic {

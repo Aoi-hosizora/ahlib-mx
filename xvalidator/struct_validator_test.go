@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func TestTranslateAndFlat(t *testing.T) {
+func TestTranslateAndFlatten(t *testing.T) {
 	// WrappedFieldError
 	v := validator.New()
 	type s struct {
@@ -79,35 +79,35 @@ func TestTranslateAndFlat(t *testing.T) {
 	err := &MultiFieldsError{fields: []error{nil, errors.New("xxx")}}
 	xtesting.Equal(t, len(err.Translate(tr, true)), 0)
 
-	// FlatValidationErrors
-	fe3 := FlatValidationErrors(fe, true)
-	fe4 := FlatValidationErrors(fe, false)
+	// FlattenValidationErrors
+	fe3 := FlattenValidationErrors(fe, true)
+	fe4 := FlattenValidationErrors(fe, false)
 	xtesting.Equal(t, fe3["s.int"], "Field validation for 'int' failed on the 'required' tag")
 	xtesting.Equal(t, fe3["s.str"], "Field validation for 'str' failed on the 'required' tag")
 	xtesting.Equal(t, fe4["int"], "Field validation for 'int' failed on the 'required' tag")
 	xtesting.Equal(t, fe4["str"], "Field validation for 'str' failed on the 'required' tag")
 
-	// MultiFieldsError.FlatToMap
-	ve3 := ve.FlatToMap(true)
-	ve4 := ve.FlatToMap(false)
+	// MultiFieldsError.Flatten
+	ve3 := ve.Flatten(true)
+	ve4 := ve.Flatten(false)
 	xtesting.Equal(t, ve3["s.int"], "Int field must be set and can not be zero")
 	xtesting.Equal(t, ve3["s.str"], "Field validation for 'str' failed on the 'required' tag")
 	xtesting.Equal(t, ve4["int"], "Int field must be set and can not be zero")
 	xtesting.Equal(t, ve4["str"], "Field validation for 'str' failed on the 'required' tag")
-	xtesting.Equal(t, len(err.FlatToMap(true)), 0)
+	xtesting.Equal(t, len(err.Flatten(true)), 0)
 
-	// MapToError
-	ferr := MapToError(nil)
+	// MergeMapToError
+	ferr := MergeMapToError(nil)
 	xtesting.Nil(t, ferr)
-	ferr = MapToError(map[string]string{})
+	ferr = MergeMapToError(map[string]string{})
 	xtesting.Nil(t, ferr)
-	ferr = MapToError(fe2)
+	ferr = MergeMapToError(fe2)
 	xtesting.Equal(t, ferr.Error(), "int is a required field; str is a required field")
-	ferr = MapToError(ve2)
+	ferr = MergeMapToError(ve2)
 	xtesting.Equal(t, ferr.Error(), "Int field must be set and can not be zero; str is a required field")
-	ferr = MapToError(fe4)
+	ferr = MergeMapToError(fe4)
 	xtesting.Equal(t, ferr.Error(), "Field validation for 'int' failed on the 'required' tag; Field validation for 'str' failed on the 'required' tag")
-	ferr = MapToError(ve4)
+	ferr = MergeMapToError(ve4)
 	xtesting.Equal(t, ferr.Error(), "Int field must be set and can not be zero; Field validation for 'str' failed on the 'required' tag")
 }
 

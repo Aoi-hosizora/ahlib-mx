@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"io"
 	"strconv"
+	"sync"
 )
 
 // ======================
@@ -48,17 +49,27 @@ func GetValidatorEnglishTranslator() (xvalidator.UtTranslator, error) {
 	return GetValidatorTranslator(xvalidator.EnLocaleTranslator(), xvalidator.EnTranslationRegisterFunc())
 }
 
-// _globalTranslator is a global xvalidator.UtTranslator set by SetGlobalTranslator and can be got by GetGlobalTranslator.
-var _globalTranslator xvalidator.UtTranslator
+var (
+	// _globalTranslator is a global xvalidator.UtTranslator set by SetGlobalTranslator and can be got by GetGlobalTranslator.
+	_globalTranslator xvalidator.UtTranslator
+
+	// _globalTranslatorMu is the rw mutex for _globalTranslator.
+	_globalTranslatorMu sync.RWMutex
+)
 
 // SetGlobalTranslator stores given xvalidator.UtTranslator to global, it can be got by using GetGlobalTranslator.
 func SetGlobalTranslator(translator xvalidator.UtTranslator) {
+	_globalTranslatorMu.Lock()
 	_globalTranslator = translator
+	_globalTranslatorMu.Unlock()
 }
 
 // GetGlobalTranslator gets the stored translator by SetGlobalTranslator, it will return nil if this function is called before SetGlobalTranslator.
 func GetGlobalTranslator() xvalidator.UtTranslator {
-	return _globalTranslator
+	_globalTranslatorMu.RLock()
+	tr := _globalTranslator
+	defer _globalTranslatorMu.RUnlock()
+	return tr
 }
 
 // AddBinding registers custom validation function to gin's validator engine. You can use your custom validator.Func or functions from xvalidator package
@@ -240,7 +251,7 @@ func WithExtraErrorsTranslate(fn func(error) (result map[string]string, need4xx 
 // Default translation functions, used in TranslateBindingError.
 var (
 	_jsonInvalidUnmarshalErrorFn = func(e *json.InvalidUnmarshalError) (result map[string]string, need4xx bool) {
-		return nil, false
+		return nil, false // ignore this error
 	}
 	_jsonUnmarshalTypeErrorFn = func(e *json.UnmarshalTypeError) (result map[string]string, need4xx bool) {
 		return map[string]string{"__decode": fmt.Sprintf("type of '%s' in '%s' mismatches with required '%s'", e.Value, e.Field, e.Type.String())}, true
@@ -259,7 +270,7 @@ var (
 			reason = "is out of range"
 		}
 		if reason == "" {
-			return nil, false // <<<
+			return nil, false // ignore this error
 		}
 		return map[string]string{"router parameter": fmt.Sprintf("router parameter %s", reason)}, true
 	}
@@ -273,25 +284,25 @@ var (
 			}
 		}
 		if reason == "" {
-			return nil, false // <<<
+			return nil, false // ignore this error
 		}
 		if e.Field == "" {
 			return map[string]string{"router parameter": fmt.Sprintf("router parameter %s", reason)}, true
 		}
-		return map[string]string{e.Field: fmt.Sprintf("router parameter %s %s", e.Field, reason)}, true
+		return map[string]string{e.Field: fmt.Sprintf("router parameter '%s' %s", e.Field, reason)}, true
 	}
 	_validatorInvalidTypeErrorFn = func(e *validator.InvalidValidationError) (result map[string]string, need4xx bool) {
-		return nil, false
+		return nil, false // ignore this error
 	}
 	_validatorFieldsErrorFn = func(e validator.ValidationErrors, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 		if translator == nil {
-			return xvalidator.FlatValidationErrors(e, false), true
+			return xvalidator.FlattenValidationErrors(e, false), true
 		}
 		return xvalidator.TranslateValidationErrors(e, translator, false), true
 	}
 	_xvalidatorMultiFieldsErrorFn = func(e *xvalidator.MultiFieldsError, translator xvalidator.UtTranslator) (result map[string]string, need4xx bool) {
 		if translator == nil {
-			return e.FlatToMap(false), true
+			return e.Flatten(false), true
 		}
 		return e.Translate(translator, false), true
 	}
@@ -299,7 +310,7 @@ var (
 		return e.Translate()
 	}
 	_extraErrorsTranslateFn = func(err error) (result map[string]string, need4xx bool) {
-		return nil, false // cannot be nil
+		return nil, false // ignore this error
 	}
 )
 
@@ -328,7 +339,7 @@ func TranslateBindingError(err error, options ...TranslateOption) (result map[st
 		}
 	}
 	if opt.extraErrorsTranslateFn == nil {
-		opt.extraErrorsTranslateFn = _extraErrorsTranslateFn
+		opt.extraErrorsTranslateFn = _extraErrorsTranslateFn // cannot be nil
 	}
 
 	// 1. body

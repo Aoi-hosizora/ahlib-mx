@@ -14,7 +14,7 @@ import (
 // =================
 
 // ParamRegexpValidator represents parameterized regexp validator, just like `regexp: xxx`. For more regexps, see xvalidator.regexps package and
-// https://github.com/go-playground/validator/blob/master/regexes.go.
+// https://github.com/go-playground/validator/blob/v10.11.1/regexes.go.
 func ParamRegexpValidator() validator.Func {
 	return func(fl validator.FieldLevel) bool {
 		regexpParam := fl.Param() // param
@@ -56,7 +56,7 @@ func DateTimeValidator(layout string) validator.Func {
 	}
 }
 
-// The following validators are referenced from https://github.com/go-playground/validator/blob/master/baked_in.go.
+// The following validators are referenced from https://github.com/go-playground/validator/blob/v10.11.1/baked_in.go.
 
 // ==============
 // and & or & not

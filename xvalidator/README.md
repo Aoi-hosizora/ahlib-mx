@@ -64,8 +64,8 @@
 + `func ZhTranslationRegisterFunc() TranslationRegisterHandler`
 + `func ZhHantTranslationRegisterFunc() TranslationRegisterHandler`
 + `func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string`
-+ `func FlatValidationErrors(err validator.ValidationErrors, useNamespace bool) map[string]string`
-+ `func MapToError(result map[string]string) error`
++ `func FlattenValidationErrors(err validator.ValidationErrors, useNamespace bool) map[string]string`
++ `func MergeMapToError(result map[string]string) error`
 + `func NewCustomStructValidator() *CustomStructValidator`
 + `func ParamRegexpValidator() validator.Func`
 + `func RegexpValidator(re *regexp.Regexp) validator.Func`
@@ -95,7 +95,7 @@
 + `func (m *MultiFieldsError) Is(target error) bool`
 + `func (m *MultiFieldsError) As(target interface{}) bool`
 + `func (m *MultiFieldsError) Translate(translator UtTranslator, useNamespace bool) map[string]string`
-+ `func (m *MultiFieldsError) FlatToMap(useNamespace bool) map[string]string`
++ `func (m *MultiFieldsError) Flatten(useNamespace bool) map[string]string`
 + `func (m *MessagedValidator) Engine() interface{}`
 + `func (m *MessagedValidator) ValidateEngine() *validator.Validate`
 + `func (m *MessagedValidator) SetValidateTagName(name string)`

@@ -4,12 +4,13 @@ import (
 	"reflect"
 )
 
-// CheckSQLiteErrorExtendedCodeByReflect checks whether given err can be regarded as SQLite error (github.com/mattn/go-sqlite3), and whether its extended code is given code.
+// CheckSQLiteErrorExtendedCodeByReflect checks whether given err can be regarded as SQLite error (github.com/mattn/go-sqlite3), and whether
+// its extended code is given code or not.
 func CheckSQLiteErrorExtendedCodeByReflect(err error, code int) bool {
-	val := reflect.ValueOf(err)
-	if !val.IsValid() {
-		return false // nil error
+	if err == nil {
+		return false
 	}
+	val := reflect.ValueOf(err)
 	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return false // nil pointer
@@ -29,7 +30,7 @@ func CheckSQLiteErrorExtendedCodeByReflect(err error, code int) bool {
 	return false
 }
 
-// The following code are almost referred from https://github.com/mattn/go-sqlite3/blob/master/error.go.
+// The following code are almost referred from https://github.com/mattn/go-sqlite3/blob/85a15a7254/error.go.
 
 // ErrNo represents sqlite3.Error's Error field, which inherits errno.
 type ErrNo int

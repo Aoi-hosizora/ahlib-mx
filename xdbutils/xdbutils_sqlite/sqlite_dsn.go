@@ -6,8 +6,13 @@ import (
 	"strconv"
 )
 
-// SQLiteConfig is a configuration for SQLite, can be used to generate DSN by FormatDSN method. Please visit
-// https://github.com/mattn/go-sqlite3#connection-string and https://www.sqlite.org/c3ref/open.html for more information.
+// TODO add unit test
+
+// SQLiteConfig is a configuration for SQLite, can be used to generate DSN by FormatDSN method.
+//
+// Please visit the follow links for more information:
+// - https://github.com/mattn/go-sqlite3#connection-string
+// - https://www.sqlite.org/c3ref/open.html
 type SQLiteConfig struct {
 	// SQLite specified parameters
 	Filename  string // Database filename (<filepath>, ":memory:", empty string)
@@ -47,6 +52,27 @@ type SQLiteConfig struct {
 func (s *SQLiteConfig) FormatDSN() string {
 	values := url.Values{}
 
+	// 1. SQLite specified parameters
+	if s.VFS != "" {
+		values.Set("vfs", s.VFS)
+	}
+	if s.Mode != "" {
+		values.Set("mode", s.Mode)
+	}
+	if s.Cache != "" {
+		values.Set("cache", s.Cache)
+	}
+	if s.Psow != nil {
+		values.Set("psow", boolString(*s.Psow))
+	}
+	if s.NoLock != nil {
+		values.Set("nolock", boolString(*s.NoLock))
+	}
+	if s.Immutable != nil {
+		values.Set("immutable", boolString(*s.Immutable))
+	}
+
+	// 2. go-sqlite3 package parameters
 	if s.Auth {
 		values.Set("_auth", "")
 	}
@@ -114,24 +140,11 @@ func (s *SQLiteConfig) FormatDSN() string {
 		values.Set("_busy_timeout", strconv.Itoa(*s.CacheSize))
 	}
 
-	if s.VFS != "" {
-		values.Set("vfs", s.VFS)
-	}
-	if s.Mode != "" {
-		values.Set("mode", s.Mode)
-	}
-	if s.Cache != "" {
-		values.Set("cache", s.Cache)
-	}
-	if s.Psow != nil {
-		values.Set("psow", boolString(*s.Psow))
-	}
-	if s.NoLock != nil {
-		values.Set("nolock", boolString(*s.NoLock))
-	}
-	if s.Immutable != nil {
-		values.Set("immutable", boolString(*s.Immutable))
-	}
+	// 3. Encode values and format DSN
+
+	// Following documentation is referred from:
+	// - https://www.sqlite.org/c3ref/open.html#:~:text=If%20the%20filename%20is%20%22%3Amemory%3A%22
+	// - https://www.sqlite.org/c3ref/open.html#:~:text=connection%20is%20closed.-,URI%20Filenames,-If%20URI%20filename
 
 	query := values.Encode()
 	if query == "" {

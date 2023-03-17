@@ -98,7 +98,6 @@ func TestNewEngine(t *testing.T) {
 	xtesting.NotEmptyCollection(t, buf.String())
 
 	// 3. cover
-	log.Println(3)
 	buf.Reset()
 	engine = NewEngine(
 		WithMode(gin.ReleaseMode),
@@ -118,16 +117,18 @@ func TestNewEngine(t *testing.T) {
 	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noRoute")).Interface().(gin.HandlersChain), gin.HandlersChain(nil))
 	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "noMethod")).Interface().(gin.HandlersChain), gin.HandlersChain(nil))
 	xtesting.Equal(t, GetTrustedProxies(engine), []string{"0.0.0.0/0", "::/0"})
+	xtesting.Equal(t, GetTrustedProxies(&gin.Engine{}), []string(nil))
 	engine.GET("", func(c *gin.Context) {})
 	xtesting.EmptyCollection(t, buf.String())
 
-	// 4. restore
+	// 4. restore to default settings
 	engine = NewEngineSilently(
 		WithMode(gin.DebugMode),
 		WithDebugPrintRouteFunc(DefaultPrintRouteFunc),
 		WithDefaultWriter(os.Stdout),
 		WithDefaultErrorWriter(os.Stderr),
-	) // still have output
+	)
+	engine.GET("", func(c *gin.Context) {}) // still have output
 }
 
 func TestDumpRequest(t *testing.T) {

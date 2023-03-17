@@ -290,6 +290,21 @@ func NewEngineSilently(options ...NewEngineOption) *gin.Engine {
 	restore := HideDebugLogging()
 	engine := NewEngine(options...)
 	restore()
+
+	// keep writer consistent when using WithDefaultWriter and WithDefaultErrorWriter
+	opt := &newEngineOptions{}
+	for _, o := range options {
+		if o != nil {
+			o(opt)
+		}
+	}
+	if opt.defaultWriter != nil {
+		gin.DefaultWriter = opt.defaultWriter
+	}
+	if opt.defaultErrorWriter != nil {
+		gin.DefaultErrorWriter = opt.defaultErrorWriter
+	}
+
 	return engine
 }
 
@@ -487,7 +502,11 @@ func GetTrustedProxies(engine *gin.Engine) []string {
 	if engine == nil {
 		return nil
 	}
-	return xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "trustedProxies")).Interface().([]string)
+	var val = xreflect.GetUnexportedField(xreflect.FieldValueOf(engine, "trustedProxies"))
+	if val.IsNil() {
+		return nil
+	}
+	return val.Interface().([]string)
 }
 
 // HideDebugLogging hides gin's all logging (gin.DefaultWriter and gin.DefaultErrorWriter) and returns a function to restore this behavior.

@@ -14,7 +14,7 @@ func TestOptions(t *testing.T) {
 		WithSourceSeparator("|"),
 		WithTargetSeparator(","),
 	)
-	internal.TestEqual(t, generated1, "aa DESC,bb1 ASC,bb2 ASC")
+	internal.XtestingEqual(t, generated1, "aa DESC,bb1 ASC,bb2 ASC")
 
 	generated2 := GenerateOrderByExpr(
 		"a desc, b", dict,
@@ -23,14 +23,14 @@ func TestOptions(t *testing.T) {
 		WithSourceProcessor(func(source string) (field string, asc bool) { return "b", false }),
 		WithTargetProcessor(func(destination string, asc bool) (target string) { return destination }),
 	)
-	internal.TestEqual(t, generated2, "bb1, bb2, bb1, bb2")
+	internal.XtestingEqual(t, generated2, "bb1, bb2, bb1, bb2")
 
 	generated3 := GenerateOrderByExpr(
 		"a desc, b desc", dict,
 		WithSourceProcessor(nil),
 		WithTargetProcessor(nil),
 	)
-	internal.TestEqual(t, generated3, "aa ASC, bb1 DESC, bb2 DESC")
+	internal.XtestingEqual(t, generated3, "aa ASC, bb1 DESC, bb2 DESC")
 
 	generated4 := GenerateOrderByExpr(
 		"a+|b-", dict,
@@ -48,7 +48,7 @@ func TestOptions(t *testing.T) {
 			return destination + " DESCENDING"
 		}),
 	)
-	internal.TestEqual(t, generated4, "aa DESCENDING,,bb1 DESCENDING,,bb2 DESCENDING")
+	internal.XtestingEqual(t, generated4, "aa DESCENDING,,bb1 DESCENDING,,bb2 DESCENDING")
 }
 
 func TestGenerateOrderByExpr(t *testing.T) {
@@ -66,8 +66,8 @@ func TestGenerateOrderByExpr(t *testing.T) {
 		{"username", false, []string{"firstname", "lastname"}},
 		{"age", true, []string{"birthday"}},
 	} {
-		internal.TestEqual(t, dict[tc.giveKey].Reverse(), tc.wantReverse)
-		internal.TestEqual(t, dict[tc.giveKey].Destinations(), tc.wantDestinations)
+		internal.XtestingEqual(t, dict[tc.giveKey].Reverse(), tc.wantReverse)
+		internal.XtestingEqual(t, dict[tc.giveKey].Destinations(), tc.wantDestinations)
 	}
 
 	for _, tc := range []struct {
@@ -97,6 +97,6 @@ func TestGenerateOrderByExpr(t *testing.T) {
 		{"username desc, age", dict, "firstname DESC, lastname DESC, birthday DESC"},
 		{"username, age desc", dict, "firstname ASC, lastname ASC, birthday ASC"},
 	} {
-		internal.TestEqual(t, GenerateOrderByExpr(tc.giveSource, tc.giveDict), tc.want)
+		internal.XtestingEqual(t, GenerateOrderByExpr(tc.giveSource, tc.giveDict), tc.want)
 	}
 }

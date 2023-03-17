@@ -6,6 +6,10 @@ import (
 	"testing"
 )
 
+func TestSQLiteConfig(t *testing.T) {
+	// TODO SQLiteConfig
+}
+
 type stringError string
 type structError struct{ msg string }
 type fakeSQLiteError struct{ ExtendedCode ErrNoExtended }
@@ -33,11 +37,21 @@ func TestCheckSQLiteErrorExtendedCodeByReflect(t *testing.T) {
 		{fakeSQLiteError{ErrConstraintUnique}, int(ErrConstraintUnique), true},
 		{&fakeSQLiteError{ErrConstraintUnique}, int(ErrConstraintUnique), true},
 	} {
-		internal.TestEqual(t, CheckSQLiteErrorExtendedCodeByReflect(tc.giveError, tc.giveCode), tc.want)
+		internal.XtestingEqual(t, CheckSQLiteErrorExtendedCodeByReflect(tc.giveError, tc.giveCode), tc.want)
 	}
 }
 
 func TestErrNo(t *testing.T) {
+	// https://github.com/mattn/go-sqlite3/blob/85a15a7254/error.go#L37
+	errnos := []ErrNo{
+		ErrError, ErrInternal, ErrPerm, ErrAbort, ErrBusy, ErrLocked, ErrNomem, ErrReadonly, ErrInterrupt, ErrIoErr, ErrCorrupt, ErrNotFound, ErrFull, ErrCantOpen,
+		ErrProtocol, ErrEmpty, ErrSchema, ErrTooBig, ErrConstraint, ErrMismatch, ErrMisuse, ErrNoLFS, ErrAuth, ErrFormat, ErrRange, ErrNotADB, ErrNotice, ErrWarning,
+	}
+	for i := 1; i <= 28; i++ {
+		internal.XtestingEqual(t, errnos[i-1], ErrNo(i))
+	}
+
+	// https://github.com/mattn/go-sqlite3/blob/85a15a7254/error.go#L97
 	for _, tc := range []struct {
 		giveExtend ErrNoExtended
 		wantErrNo  ErrNo
@@ -71,6 +85,31 @@ func TestErrNo(t *testing.T) {
 		{ErrIoErrGetTempPath, ErrIoErr, 25},
 		{ErrIoErrConvPath, ErrIoErr, 26},
 
+		// ErrLocked = ErrNo(6)
+		{ErrLockedSharedCache, ErrLocked, 1},
+
+		// ErrBusy = ErrNo(5)
+		{ErrBusyRecovery, ErrBusy, 1},
+		{ErrBusySnapshot, ErrBusy, 2},
+
+		// ErrCantOpen = ErrNo(14)
+		{ErrCantOpenNoTempDir, ErrCantOpen, 1},
+		{ErrCantOpenIsDir, ErrCantOpen, 2},
+		{ErrCantOpenFullPath, ErrCantOpen, 3},
+		{ErrCantOpenConvPath, ErrCantOpen, 4},
+
+		// ErrCorrupt = ErrNo(11)
+		{ErrCorruptVTab, ErrCorrupt, 1},
+
+		// ErrReadonly = ErrNo(8)
+		{ErrReadonlyRecovery, ErrReadonly, 1},
+		{ErrReadonlyCantLock, ErrReadonly, 2},
+		{ErrReadonlyRollback, ErrReadonly, 3},
+		{ErrReadonlyDbMoved, ErrReadonly, 4},
+
+		// ErrAbort = ErrNo(4)
+		{ErrAbortRollback, ErrAbort, 2},
+
 		// ErrConstraint = ErrNo(19)
 		{ErrConstraintCheck, ErrConstraint, 1},
 		{ErrConstraintCommitHook, ErrConstraint, 2},
@@ -82,7 +121,14 @@ func TestErrNo(t *testing.T) {
 		{ErrConstraintUnique, ErrConstraint, 8},
 		{ErrConstraintVTab, ErrConstraint, 9},
 		{ErrConstraintRowID, ErrConstraint, 10},
+
+		// ErrNotice = ErrNo(27)
+		{ErrNoticeRecoverWAL, ErrNotice, 1},
+		{ErrNoticeRecoverRollback, ErrNotice, 2},
+
+		// ErrWarning = ErrNo(28)
+		{ErrWarningAutoIndex, ErrWarning, 1},
 	} {
-		internal.TestEqual(t, int(tc.giveExtend), int(tc.wantErrNo.Extend(tc.wantBy)))
+		internal.XtestingEqual(t, int(tc.giveExtend), int(tc.wantErrNo.Extend(tc.wantBy)))
 	}
 }

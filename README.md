@@ -42,24 +42,24 @@
 + See [go.mod](./xgin/go.mod) and [go.sum](./xgin/go.sum)
 + `github.com/Aoi-hosizora/ahlib v1.6.0`
 + `github.com/Aoi-hosizora/ahlib-mx/xvalidator v1.6.0`
-+ `github.com/gin-gonic/gin v1.7.7`
-+ `github.com/go-playground/validator/v10 v10.4.1`
-+ `github.com/sirupsen/logrus v1.8.1`
++ `github.com/gin-gonic/gin v1.8.2`
++ `github.com/go-playground/validator/v10 v10.11.1`
++ `github.com/sirupsen/logrus v1.9.0`
 
 #### xtelebot
 
 + See [go.mod](./xtelebot/go.mod) and [go.sum](./xtelebot/go.sum)
 + `gopkg.in/tucnak/telebot.v2 v2.5.0`
-+ `github.com/gin-gonic/gin v1.7.7`
-+ `github.com/sirupsen/logrus v1.8.1`
++ `github.com/gin-gonic/gin v1.8.2`
++ `github.com/sirupsen/logrus v1.9.0`
 
 #### xvalidator
 
 + See [go.mod](./xvalidator/go.mod) and [go.sum](./xvalidator/go.sum)
 + `github.com/Aoi-hosizora/ahlib v1.6.0`
-+ `github.com/go-playground/validator/v10 v10.4.1`
-+ `github.com/go-playground/locales v0.13.0`
-+ `github.com/go-playground/universal-translator v0.17.0`
++ `github.com/go-playground/validator/v10 v10.11.1`
++ `github.com/go-playground/locales v0.14.0`
++ `github.com/go-playground/universal-translator v0.18.0`
 
 ### Dependencies (for database development)
 
@@ -73,7 +73,7 @@
 + `github.com/VividCortex/mysqlerr v1.0.0`
 + `github.com/mattn/go-sqlite3 v1.14.0`
 + `github.com/lib/pq v1.1.1`
-+ `github.com/sirupsen/logrus v1.8.1`
++ `github.com/sirupsen/logrus v1.9.0`
 
 #### xgormv2
 
@@ -86,7 +86,7 @@
 + `github.com/go-sql-driver/mysql v1.6.0`
 + `github.com/VividCortex/mysqlerr v1.0.0`
 + `github.com/mattn/go-sqlite3 v1.14.9`
-+ `github.com/sirupsen/logrus v1.8.1`
++ `github.com/sirupsen/logrus v1.9.0`
 
 #### xneo4j
 
@@ -94,11 +94,11 @@
 + `github.com/Aoi-hosizora/ahlib v1.6.0`
 + `github.com/Aoi-hosizora/ahlib-mx/xdbutils v1.6.0`
 + `github.com/neo4j/neo4j-go-driver v1.8.3`
-+ `github.com/sirupsen/logrus v1.8.1`
++ `github.com/sirupsen/logrus v1.9.0`
 
 #### xredis
 
 + See [go.mod](./xredis/go.mod) and [go.sum](./xredis/go.sum)
 + `github.com/Aoi-hosizora/ahlib v1.6.0`
 + `github.com/go-redis/redis/v8 v8.4.11`
-+ `github.com/sirupsen/logrus v1.8.1`
++ `github.com/sirupsen/logrus v1.9.0`

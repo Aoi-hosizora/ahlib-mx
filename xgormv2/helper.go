@@ -46,7 +46,7 @@ func IsPostgreSQL(db *gorm.DB) bool {
 // MySQLConfig is a configuration for MySQL, can be used to generate DSN by FormatDSN method.
 type MySQLConfig = mysql.Config
 
-// MySQLExtraConfig is an extra configuration for MySQL, can be used to extend Param by ExtendParam method.
+// MySQLExtraConfig is an extra configuration for MySQL, can be used to generate extends given param by ExtendParam method.
 type MySQLExtraConfig = xdbutils_mysql.MySQLExtraConfig
 
 // SQLiteConfig is a configuration for SQLite, can be used to generate DSN by FormatDSN method.
@@ -55,35 +55,44 @@ type SQLiteConfig = xdbutils_sqlite.SQLiteConfig
 // PostgreSQLConfig is a configuration for PostgreSQL, can be used to generate DSN by FormatDSN method.
 type PostgreSQLConfig = xdbutils_postgres.PostgreSQLConfig
 
-// MySQLDefaultDsn returns the MySQL dsn from given parameters with "utf8mb4" charset and "local" location. For more information, please visit
-// https://github.com/go-sql-driver/mysql#dsn-data-source-name and https://dev.mysql.com/doc/refman/8.0/en/connecting-using-uri-or-key-value-pairs.html.
+// MySQLDefaultDsn returns the MySQL dsn from given parameters with "utf8mb4" charset and "local" location.
+//
+// Please visit the follow links for more information:
+// - https://github.com/go-sql-driver/mysql#dsn-data-source-name
+// - https://dev.mysql.com/doc/refman/8.0/en/connecting-using-uri-or-key-value-pairs.html
 func MySQLDefaultDsn(username, password, address, database string) string {
 	return fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", username, password, address, database)
 }
 
-// SQLiteDefaultDsn returns the SQLite dsn from given parameter (database filename or ":memory:" or empty string). For more information, please visit
-// https://github.com/mattn/go-sqlite3#connection-string and https://www.sqlite.org/c3ref/open.html.
+// SQLiteDefaultDsn returns the SQLite dsn from given parameter (database filename or ":memory:" or empty string).
+//
+// Please visit the follow links for more information:
+// - https://github.com/mattn/go-sqlite3#connection-string
+// - https://www.sqlite.org/c3ref/open.html
 func SQLiteDefaultDsn(file string) string {
 	return file
 }
 
-// PostgreSQLDefaultDsn returns the PostgreSQL dsn from given parameters. For more information, please visit
-// https://pkg.go.dev/github.com/lib/pq#hdr-Connection_String_Parameters, https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
-// and https://www.postgresql.org/docs/current/runtime-config-client.html.
+// PostgreSQLDefaultDsn returns the PostgreSQL dsn from given parameters.
+//
+// Please visit the follow links for more information:
+// - https://pkg.go.dev/github.com/lib/pq#hdr-Connection_String_Parameters
+// - https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
+// - https://www.postgresql.org/docs/current/runtime-config-client.html
 func PostgreSQLDefaultDsn(username, password, host string, port int, database string) string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s", host, port, username, password, database)
 }
 
 const (
-	// MySQLDuplicateEntryErrno is MySQL's DUP_ENTRY errno, referred from https://github.com/VividCortex/mysqlerr/blob/master/mysqlerr.go and
+	// MySQLDuplicateEntryErrno is MySQL's DUP_ENTRY errno, referred from https://github.com/VividCortex/mysqlerr/blob/69f897f9a2/mysqlerr.go and
 	// https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.htm.
 	MySQLDuplicateEntryErrno = uint16(mysqlerr.ER_DUP_ENTRY) // 1062, DUP_ENTRY
 
-	// SQLiteUniqueConstraintErrno is SQLite's CONSTRAINT_UNIQUE extended errno, referred from https://github.com/mattn/go-sqlite3/blob/master/error.go
+	// SQLiteUniqueConstraintErrno is SQLite's CONSTRAINT_UNIQUE extended errno, referred from https://github.com/mattn/go-sqlite3/blob/85a15a7254/error.go
 	// and http://www.sqlite.org/c3ref/c_abort_rollback.html.
 	SQLiteUniqueConstraintErrno = int(xdbutils_sqlite.ErrConstraintUnique) // 19 | 8<<8, sqlite3.ErrConstraintUnique
 
-	// PostgreSQLUniqueViolationErrno is PostgreSQL's unique_violation errno, referred from https://github.com/lib/pq/blob/master/error.go and
+	// PostgreSQLUniqueViolationErrno is PostgreSQL's unique_violation errno, referred from https://github.com/lib/pq/blob/89fee89644/error.go and
 	// https://www.postgresql.org/docs/10/errcodes-appendix.html
 	PostgreSQLUniqueViolationErrno = "23505" // pq.errorCodeNames unique_violation
 )
@@ -96,8 +105,7 @@ func IsMySQLDuplicateEntryError(err error) bool {
 
 // IsPostgreSQLUniqueViolationError is a variable that used to check whether err is PostgreSQL's unique_violation error, whose error code is PostgreSQLUniqueViolationErrno.
 //
-// Example:
-// 	import "github.com/jackc/pgconn"
+// You have to import "github.com/jackc/pgconn" and set this variable manually in order to make it be usable in CreateErr and UpdateErr.
 // 	xgormv2.IsPostgreSQLUniqueViolationError = func(err error) bool {
 // 		perr, ok := err.(*pgconn.PgError)
 // 		return ok && perr.Code == xgormv2.PostgreSQLUniqueViolationErrno

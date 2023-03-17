@@ -3,7 +3,7 @@
 ## Dependencies
 
 + github.com/Aoi-hosizora/ahlib
-+ github.com/gin-gonic/gin
++ github.com/gin-gonic/gin (Note: DO NOT update to v1.9.0)
 + github.com/go-playground/validator/v10
 + github.com/sirupsen/logrus
 

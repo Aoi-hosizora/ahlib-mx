@@ -61,7 +61,7 @@ func TestTestEqual(t *testing.T) {
 		{func() {}, func() {}, abnormal},
 		{func() int { return 23 }, func() int { return 42 }, abnormal},
 	} {
-		pos := TestEqual(mockT, tc.giveG, tc.giveW)
+		pos := XtestingEqual(mockT, tc.giveG, tc.giveW)
 		if (tc.want == positive && !pos) || (tc.want != positive && pos) {
 			fail(t)
 		}
@@ -83,11 +83,11 @@ func TestTestPanic(t *testing.T) {
 		// expect to NotPanic
 		{func() {}, negative},
 	} {
-		pos := TestPanic(mockT, true, tc.give)
+		pos := XtestingPanic(mockT, true, tc.give)
 		if (tc.want == positive && !pos) || (tc.want != positive && pos) {
 			fail(t)
 		}
-		neg := TestPanic(mockT, false, tc.give)
+		neg := XtestingPanic(mockT, false, tc.give)
 		if (tc.want == negative && !neg) || (tc.want != negative && neg) {
 			fail(t)
 		}
@@ -110,7 +110,7 @@ func TestTestPanic(t *testing.T) {
 		{func() { panic(uint8(0)) }, 0, negative},
 		{func() { panic(errors.New("panic")) }, "panic", negative},
 	} {
-		pos := TestPanic(mockT, true, tc.giveF, tc.giveW)
+		pos := XtestingPanic(mockT, true, tc.giveF, tc.giveW)
 		if (tc.want == positive && !pos) || (tc.want != positive && pos) {
 			fail(t)
 		}

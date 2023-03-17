@@ -6,7 +6,7 @@ require (
 	github.com/Aoi-hosizora/ahlib v0.0.0-00010101000000-000000000000
 	github.com/Aoi-hosizora/ahlib-mx/xdbutils v0.0.0-00010101000000-000000000000
 	github.com/neo4j/neo4j-go-driver v1.8.3
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 )
 
 replace (

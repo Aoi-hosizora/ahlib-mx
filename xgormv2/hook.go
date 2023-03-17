@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// TODO consider testing https://github.com/go-gorm/gorm/commit/cfbcedbf036931d134a030b5ccc2de7f48f1a7c3 ???
+
 const (
 	// DefaultDeletedAtTimestamp represents the default value in `gorm` tag of GormTime.DeletedAt.
 	DefaultDeletedAtTimestamp = "1970-01-01 00:00:01"
@@ -29,7 +31,7 @@ type GormTime2 struct {
 	UpdatedAt time.Time
 }
 
-// Gorm's callback names. See gorm.Callback or visit https://github.com/jinzhu/gorm/blob/master/callback.go for more details.
+// Gorm's callback names. See gorm.Callback or visit https://github.com/jinzhu/gorm/blob/5c235b72a4/callback.go for more details.
 const (
 	CreateCallbackName   = "gorm:create"
 	UpdateCallbackName   = "gorm:update"
@@ -38,7 +40,7 @@ const (
 	RowQueryCallbackName = "gorm:row"
 )
 
-// HookDeletedAt hooks gorm.DB's callbacks to make soft deleting to use the new deletedAt timestamp, such as DefaultDeletedAtTimestamp.
+// HookDeletedAt hooks gorm.DB's callbacks to make soft deleting to use the new default deletedAt timestamp, such as DefaultDeletedAtTimestamp.
 func HookDeletedAt(db *gorm.DB, defaultTimestamp string) {
 	// query
 	_ = db.Callback().Query().
@@ -63,7 +65,7 @@ func HookDeletedAt(db *gorm.DB, defaultTimestamp string) {
 
 // hookedCallback is a callback for gorm:query, gorm:row and gorm:update, used in HookDeletedAt.
 func hookedCallback(defaultTimestamp string, name string) func(db *gorm.DB) {
-	// https://github.com/go-gorm/gorm/blob/master/soft_delete.go#L65
+	// https://github.com/go-gorm/gorm/blob/v1.22.4/soft_delete.go#L65
 	return func(db *gorm.DB) {
 		stmt := db.Statement
 		if db.Error == nil && stmt.Schema != nil && !stmt.Unscoped {
@@ -93,8 +95,8 @@ func hookedCallback(defaultTimestamp string, name string) func(db *gorm.DB) {
 
 // hookedDeleteCallback is a callback for gorm:delete used in HookDeletedAt.
 func hookedDeleteCallback(defaultTimestamp string) func(db *gorm.DB) {
-	// https://github.com/go-gorm/gorm/blob/master/callbacks/delete.go#L113
-	// https://github.com/go-gorm/gorm/blob/master/soft_delete.go#L131
+	// https://github.com/go-gorm/gorm/blob/v1.22.4/callbacks/delete.go#L113
+	// https://github.com/go-gorm/gorm/blob/v1.22.4/soft_delete.go#L131
 	return func(db *gorm.DB) {
 		stmt := db.Statement
 		if db.Error == nil && stmt.Schema != nil && !stmt.Unscoped {
