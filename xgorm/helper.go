@@ -46,7 +46,7 @@ func IsPostgreSQL(db *gorm.DB) bool {
 // MySQLConfig is a configuration for MySQL, can be used to generate DSN by FormatDSN method.
 type MySQLConfig = mysql.Config
 
-// MySQLExtraConfig is an extra configuration for MySQL, can be used to generate extends given param by ExtendParam method.
+// MySQLExtraConfig is an extra configuration for MySQL, can be used to generate extends given param by ToParams method.
 type MySQLExtraConfig = xdbutils_mysql.MySQLExtraConfig
 
 // SQLiteConfig is a configuration for SQLite, can be used to generate DSN by FormatDSN method.

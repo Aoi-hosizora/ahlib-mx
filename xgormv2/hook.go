@@ -9,6 +9,8 @@ import (
 )
 
 // TODO consider testing https://github.com/go-gorm/gorm/commit/cfbcedbf036931d134a030b5ccc2de7f48f1a7c3 ???
+// https://github.com/go-gorm/soft_delete
+// https://gorm.io/docs/delete.html#Delete-Flag
 
 const (
 	// DefaultDeletedAtTimestamp represents the default value in `gorm` tag of GormTime.DeletedAt.

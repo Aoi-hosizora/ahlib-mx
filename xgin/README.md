@@ -64,6 +64,7 @@
 + `func RedirectHandler(code int, location string) gin.HandlerFunc`
 + `func WrapPprof(router gin.IRouter)`
 + `func WrapPprofSilently(router gin.IRouter)`
++ `func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte)`
 + `func HideDebugLogging() (restoreFn func())`
 + `func HideDebugPrintRoute() (restoreFn func())`
 + `func SilentPrintRouteFunc(_, _, _ string, _ int)`

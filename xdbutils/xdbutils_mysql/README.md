@@ -9,7 +9,6 @@
 ### Types
 
 + `type DSNFormatter interface`
-+ `type ParamExtender interface`
 + `type MySQLExtraConfig struct`
 
 ### Variables
@@ -26,4 +25,4 @@
 
 ### Methods
 
-+ `func (m *MySQLExtraConfig) ExtendParam(others map[string]string) map[string]string`
++ `func (m MySQLExtraConfig) ToParams() map[string]string`

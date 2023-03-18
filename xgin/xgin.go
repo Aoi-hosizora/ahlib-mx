@@ -1,7 +1,9 @@
 package xgin
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib-mx/xgin/swaggerDist"
 	"github.com/Aoi-hosizora/ahlib/xcolor"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/Aoi-hosizora/ahlib/xstring"
@@ -496,6 +498,77 @@ func pprofGoroutineHandler(c *gin.Context) { pprof.Handler("goroutine").ServeHTT
 func pprofHeapHandler(c *gin.Context)      { pprof.Handler("heap").ServeHTTP(c.Writer, c.Request) }         // GET
 func pprofMutexHandler(c *gin.Context)     { pprof.Handler("mutex").ServeHTTP(c.Writer, c.Request) }        // GET
 func pprofThreadHandler(c *gin.Context)    { pprof.Handler("threadcreate").ServeHTTP(c.Writer, c.Request) } // GET
+
+// WrapSwagger registers swagger related routes to gin router, the documentation page will be served in `index.html` or the root of given router.
+//
+// Example:
+// 	func ReadSwaggerDoc() []byte {
+// 		bs, _ := os.ReadFile("./api/spec.json")
+// 		return bs
+// 	}
+// 	xgin.WrapSwagger(engine.Group("/v1/swagger"), ReadSwaggerDoc) // => /v1/swagger/index.html
+func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte) {
+	contentTypeMap := map[string]string{
+		".json": "application/json",
+		".png":  "image/png",
+		".html": "text/html; charset=utf-8",
+		".css":  "text/css; charset=utf-8",
+		".js":   "application/javascript",
+	}
+
+	router.GET("", func(c *gin.Context) {
+		indexUrl := c.FullPath() + "/index.html" // => ".../swagger/index.html"
+		c.Redirect(http.StatusMovedPermanently, indexUrl)
+	})
+
+	router.GET("*file", func(c *gin.Context) {
+		var data []byte
+		var contentType string
+		realUrl := c.Request.URL.String()
+		for k, v := range contentTypeMap {
+			if strings.HasSuffix(realUrl, k) {
+				contentType = v
+			}
+		}
+
+		pureUrl := strings.Replace(c.FullPath(), "/*file", "", 1)
+		file := strings.TrimSpace(strings.TrimPrefix(c.Param("file"), "/"))
+		if file == "" {
+			indexUrl := pureUrl + "/index.html" // => ".../swagger/index.html"
+			c.Redirect(http.StatusMovedPermanently, indexUrl)
+			return
+		}
+
+		switch file {
+		case "doc.json": // <<<
+			data = swaggerDocGetter()
+		case "index.html": // <<<
+			docUrl := pureUrl + "/doc.json" // => ".../swagger/doc.json"
+			data = bytes.Replace(swaggerDist.Index_html, []byte("$$URL"), []byte(docUrl), 1)
+
+		case "favicon-16x16.png":
+			data = swaggerDist.Favicon_16x16_png
+		case "favicon-32x32.png":
+			data = swaggerDist.Favicon_32x32_png
+		case "oauth2-redirect.html":
+			data = swaggerDist.Oauth2_redirect_html
+		case "swagger-ui.css":
+			data = swaggerDist.Swagger_ui_css
+		case "swagger-ui.js":
+			data = swaggerDist.Swagger_ui_js
+		case "swagger-ui-bundle.js":
+			data = swaggerDist.Swagger_ui_bundle_js
+		case "swagger-ui-standalone-preset.js":
+			data = swaggerDist.Swagger_ui_standalone_preset_js
+		}
+
+		if data == nil {
+			c.Data(404, "text/plain; charset=utf-8", []byte("404 page not found"))
+		} else {
+			c.Data(200, contentType, data)
+		}
+	})
+}
 
 // GetTrustedProxies returns trusted proxies string slice from given gin.Engine, returns nil if given nil engine.
 func GetTrustedProxies(engine *gin.Engine) []string {

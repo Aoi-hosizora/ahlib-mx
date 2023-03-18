@@ -8,12 +8,7 @@ type DSNFormatter interface {
 	FormatDSN() string
 }
 
-// ParamExtender is an interface for types which implement ExtendParam method, such as xdbutils_mysql.MySQLExtraConfig.
-type ParamExtender interface {
-	ExtendParam(others map[string]string) map[string]string
-}
-
-// MySQLExtraConfig is an extra configuration for MySQL, can be used to generate extends given param by ExtendParam method.
+// MySQLExtraConfig is an extra configuration for MySQL, can be used to generate mysql.Config.Params by ToParams method.
 //
 // Please visit the follow links for more information:
 // - https://github.com/go-sql-driver/mysql#dsn-data-source-name
@@ -26,10 +21,17 @@ type MySQLExtraConfig struct {
 	TransactionIsolation     string // such as: REPEATABLE-READ, https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_transaction_isolation
 	SQLMode                  string // such as: TRADITIONAL, https://dev.mysql.com/doc/refman/5.7/en/sql-mode.html.
 	SysVar                   string // such as: esc@ped
+
+	OtherParams map[string]string // more custom params
 }
 
-// ExtendParam extends given param from MySQLExtraConfig.
-func (m MySQLExtraConfig) ExtendParam(others map[string]string) map[string]string {
+// ToParams generates a parameter map for mysql.Config.Params from MySQLExtraConfig.
+func (m MySQLExtraConfig) ToParams() map[string]string {
+	// NOTE: DO NOT set the type of receiver `m` to `*MySQLExtraConfig`, because
+	// expression `MySQLExtraConfig{}.ToParams()` is excepted to be used, but if
+	// `m` is a pointer value, this expression will have a syntax error (Cannot
+	// call a pointer method on '&MySQLExtraConfig{...}').
+
 	result := make(map[string]string)
 
 	if m.AllowFallbackToPlaintext != nil {
@@ -54,7 +56,7 @@ func (m MySQLExtraConfig) ExtendParam(others map[string]string) map[string]strin
 		result["sys_var"] = m.SysVar
 	}
 
-	for k, v := range others {
+	for k, v := range m.OtherParams {
 		result[k] = v
 	}
 	return result

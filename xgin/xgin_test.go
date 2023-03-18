@@ -340,6 +340,79 @@ func TestWrapPprof(t *testing.T) {
 	}
 }
 
+func TestWrapSwagger(t *testing.T) {
+	app := NewEngineSilently()
+	app.HandleMethodNotAllowed = true
+	app.NoMethod(func(c *gin.Context) {
+		c.Data(405, "text/html", []byte("<h1>Method not allowed</h1>"))
+	})
+	WrapSwagger(app.Group("/swagger"), func() []byte {
+		return []byte(`{"swagger": "2.0"}`)
+	})
+	// [Gin] GET    /swagger                  --> github.com/Aoi-hosizora/ahlib-mx/xgin.WrapSwagger.func1 (1 handlers)
+	// [Gin] GET    /swagger/*file            --> github.com/Aoi-hosizora/ahlib-mx/xgin.WrapSwagger.func2 (1 handlers)
+
+	server := &http.Server{Addr: ":12345", Handler: app}
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
+
+	correct301Location := "/swagger/index.html"
+	for _, tc := range []struct {
+		giveMethod      string
+		giveUrl         string
+		wantStatusCode  int
+		wantContentType string
+	}{
+		{"GET", "swagger", 301, "text/html; charset=utf-8"},
+		{"GET", "swagger/", 301, "text/html; charset=utf-8"},
+		{"GET", "swagger/index.html", 200, "text/html; charset=utf-8"},
+		{"GET", "swagger/doc.json", 200, "application/json"},
+		{"GET", "swagger/favicon-16x16.png", 200, "image/png"},
+		{"GET", "swagger/favicon-32x32.png", 200, "image/png"},
+		{"GET", "swagger/oauth2-redirect.html", 200, "text/html; charset=utf-8"},
+		{"GET", "swagger/swagger-ui.css", 200, "text/css; charset=utf-8"},
+		{"GET", "swagger/swagger-ui.js", 200, "application/javascript"},
+		{"GET", "swagger/swagger-ui-bundle.js", 200, "application/javascript"},
+		{"GET", "swagger/swagger-ui-standalone-preset.js", 200, "application/javascript"},
+
+		{"GET", "swagger/index.htm", 404, "text/plain; charset=utf-8"},
+		{"GET", "swagger/docs.json", 404, "text/plain; charset=utf-8"},
+		{"POST", "swagger", 405, "text/html"},
+		{"POST", "swagger/index.html", 405, "text/html"},
+		{"HEAD", "swagger/", 405, "text/html"},
+		{"HEAD", "swagger/doc.json", 405, "text/html"},
+	} {
+		t.Run(tc.giveUrl, func(t *testing.T) {
+			req, _ := http.NewRequest(tc.giveMethod, "http://localhost:12345/"+tc.giveUrl, nil)
+			if tc.giveMethod == "POST" {
+				req.Header.Set("Content-Type", "application/json")
+			}
+			client := &http.Client{
+				CheckRedirect: func(*http.Request, []*http.Request) error {
+					return http.ErrUseLastResponse
+				},
+			}
+			resp, err := client.Do(req)
+			xtesting.Nil(t, err)
+
+			bs, err := ioutil.ReadAll(resp.Body)
+			xtesting.Nil(t, err)
+			defer resp.Body.Close()
+			if tc.giveMethod != "HEAD" {
+				xtesting.Equal(t, len(bs) > 0, true)
+			} else {
+				xtesting.Equal(t, len(bs), 0)
+			}
+			xtesting.Equal(t, resp.StatusCode, tc.wantStatusCode)
+			xtesting.Equal(t, resp.Header.Get("Content-Type"), tc.wantContentType)
+
+			if tc.wantStatusCode == 301 {
+				xtesting.Equal(t, resp.Header.Get("Location"), correct301Location)
+			}
+		})
+	}
+}
+
 func TestRouterDecodeError(t *testing.T) {
 	_, err := strconv.Atoi("1a")
 	rerr := NewRouterDecodeError("", "1a", err, "")
