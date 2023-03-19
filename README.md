@@ -26,14 +26,12 @@
 
 + xdbutils/*
 + xgin
-+ xgin/headers
 + xgorm
 + xgormv2
 + xneo4j
 + xredis
 + xtelebot
 + xvalidator
-+ xvalidator/regexps
 
 ### Dependencies (for web development)
 
