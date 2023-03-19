@@ -341,7 +341,20 @@ func TestWrapPprof(t *testing.T) {
 }
 
 func TestWrapSwagger(t *testing.T) {
+	bs := &bytes.Buffer{}
+	gin.DefaultWriter = bs
+	gin.DefaultErrorWriter = bs
 	app := NewEngineSilently()
+	xtesting.PanicWithValue(t, panicWrapSwaggerToEngine, func() { WrapSwaggerSilently(app, func() []byte { return nil }) })
+	xtesting.Panic(t, func() { WrapSwaggerSilently(app.Group(""), func() []byte { return nil }) })
+	xtesting.PanicWithValue(t, panicNilSwaggerDocGetter, func() { WrapSwaggerSilently(app.Group("swagger"), nil) })
+	xtesting.NotPanic(t, func() { WrapSwaggerSilently(app.Group("swagger"), func() []byte { return nil }) })
+	xtesting.BlankString(t, bs.String()) // no output
+
+	app = NewEngineSilently(
+		WithDefaultWriter(os.Stdout),
+		WithDefaultErrorWriter(os.Stderr),
+	) // restore writer
 	app.HandleMethodNotAllowed = true
 	app.NoMethod(func(c *gin.Context) {
 		c.Data(405, "text/html", []byte("<h1>Method not allowed</h1>"))

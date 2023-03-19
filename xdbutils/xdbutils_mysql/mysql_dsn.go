@@ -26,12 +26,7 @@ type MySQLExtraConfig struct {
 }
 
 // ToParams generates a parameter map for mysql.Config.Params from MySQLExtraConfig.
-func (m MySQLExtraConfig) ToParams() map[string]string {
-	// NOTE: DO NOT set the type of receiver `m` to `*MySQLExtraConfig`, because
-	// expression `MySQLExtraConfig{}.ToParams()` is excepted to be used, but if
-	// `m` is a pointer value, this expression will have a syntax error (Cannot
-	// call a pointer method on '&MySQLExtraConfig{...}').
-
+func (m *MySQLExtraConfig) ToParams() map[string]string {
 	result := make(map[string]string)
 
 	if m.AllowFallbackToPlaintext != nil {

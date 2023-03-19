@@ -88,7 +88,7 @@ func mockTelebotApi() (bot *telebot.Bot, shutdown func()) {
 		// Poller:  &telebot.LongPoller{Timeout: time.Millisecond * 200},
 	})
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 	return mockedBot, func() {
 		server.Shutdown(context.Background())
