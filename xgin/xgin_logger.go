@@ -28,10 +28,28 @@ func WithExtraText(text string) LoggerOption {
 	}
 }
 
+// WithMoreExtraText creates a LoggerOption to specify extra text logging in "...extra_text" style. Note that if you use this multiple times, all previous contents will be retained.
+func WithMoreExtraText(text string) LoggerOption {
+	return func(extra *loggerOptions) {
+		extra.text += text // no trim
+	}
+}
+
 // WithExtraFields creates a LoggerOption to specify logging with extra fields. Note that if you use this multiple times, only the last one will be retained.
 func WithExtraFields(fields map[string]interface{}) LoggerOption {
 	return func(extra *loggerOptions) {
-		extra.fields = fields
+		if fields != nil {
+			extra.fields = fields
+		}
+	}
+}
+
+// WithMoreExtraFields creates a LoggerOption to specify logging with extra fields. Note that if you use this multiple times, all previous contents will be retained.
+func WithMoreExtraFields(fields map[string]interface{}) LoggerOption {
+	return func(extra *loggerOptions) {
+		for k, v := range fields {
+			extra.fields[k] = v
+		}
 	}
 }
 
@@ -42,17 +60,24 @@ func WithExtraFieldsV(fields ...interface{}) LoggerOption {
 	}
 }
 
+// WithMoreExtraFieldsV creates a LoggerOption to specify logging with extra fields in variadic. Note that if you use this multiple times, all previous contents will be retained.
+func WithMoreExtraFieldsV(fields ...interface{}) LoggerOption {
+	return func(extra *loggerOptions) {
+		for k, v := range xstring.SliceToStringMap(fields) {
+			extra.fields[k] = v
+		}
+	}
+}
+
 // buildLoggerOptions creates a loggerOptions with given LoggerOption-s.
 func buildLoggerOptions(options []LoggerOption) *loggerOptions {
-	opt := &loggerOptions{}
+	opt := &loggerOptions{fields: make(map[string]interface{})}
 	for _, o := range options {
 		if o != nil {
 			o(opt)
 		}
 	}
-	if opt.fields == nil {
-		opt.fields = make(map[string]interface{})
-	}
+	// opt.fields is never nil, is unnecessary to check and create new one
 	return opt
 }
 

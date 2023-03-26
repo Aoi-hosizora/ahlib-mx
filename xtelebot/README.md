@@ -58,8 +58,11 @@
 + `func NewBotData() *BotData`
 + `func NewBotWrapper(bot *telebot.Bot) *BotWrapper`
 + `func WithExtraText(text string) LoggerOption`
++ `func WithMoreExtraText(text string) LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) LoggerOption`
++ `func WithMoreExtraFields(fields map[string]interface{}) LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) LoggerOption`
++ `func WithMoreExtraFieldsV(fields ...interface{}) LoggerOption`
 + `func LogReceiveToLogrus(logger *logrus.Logger, endpoint interface{}, received *telebot.Message, options ...LoggerOption)`
 + `func LogReceiveToLogger(logger logrus.StdLogger, endpoint interface{}, received *telebot.Message, options ...LoggerOption)`
 + `func LogRespondToLogrus(logger *logrus.Logger, typ RespondEventType, ev *RespondEvent, options ...LoggerOption)`

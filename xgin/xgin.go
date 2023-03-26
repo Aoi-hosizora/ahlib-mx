@@ -3,6 +3,7 @@ package xgin
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xcolor"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
@@ -39,7 +40,7 @@ func init() {
 	fn()
 }
 
-// newEngineOptions is a type of New's option, each field can be set by NewEngineOption function type.
+// newEngineOptions is a type of NewEngine's option, each field can be set by NewEngineOption function type.
 type newEngineOptions struct {
 	mode                string
 	debugPrintRouteFunc DebugPrintRouteFuncType
@@ -65,7 +66,7 @@ type newEngineOptions struct {
 	trustedProxies   []string
 }
 
-// NewEngineOption represents an option type for New's option, can be created by WithXXX functions.
+// NewEngineOption represents an option type for NewEngine's option, can be created by WithXXX functions.
 type NewEngineOption func(o *newEngineOptions)
 
 // WithMode creates a NewEngineOption to specify gin's global mode, defaults to gin.DebugMode.
@@ -444,9 +445,9 @@ func DumpHttpRequest(req *http.Request, options ...DumpRequestOption) []string {
 	return result
 }
 
-// ========================
-// mass functions and types
-// ========================
+// ===================
+// handler and wrapper
+// ===================
 
 // RedirectHandler creates a gin.HandlerFunc that behaviors a redirection with given code (such as http.StatusMovedPermanently or http.StatusTemporaryRedirect)
 // and redirect target location.
@@ -504,8 +505,139 @@ const (
 	panicNilSwaggerDocGetter = "xgin: using nil swaggerDocGetter function"
 )
 
+// TODO test
+
+// SwaggerOptions is a type of WrapSwagger's option, each field can be set by SwaggerOption function type.
+type SwaggerOptions struct {
+	IndexHtmlRouteName  string `json:"-"`
+	DocJsonRouteName    string `json:"-"`
+	ConfigJsonRouteName string `json:"-"`
+
+	DeepLinking              *bool   `json:"deepLinking,omitempty"`
+	DisplayOperationId       *bool   `json:"displayOperationId,omitempty"`
+	DefaultModelsExpandDepth *int    `json:"defaultModelsExpandDepth,omitempty"`
+	DefaultModelExpandDepth  *int    `json:"defaultModelExpandDepth,omitempty"`
+	DefaultModelRendering    *string `json:"defaultModelRendering,omitempty"`
+	DisplayRequestDuration   *bool   `json:"displayRequestDuration,omitempty"`
+	DocExpansion             *string `json:"docExpansion,omitempty"`
+	MaxDisplayedTags         *int    `json:"maxDisplayedTags,omitempty"`
+	OperationsSorter         *string `json:"operationsSorter,omitempty"`
+	ShowExtensions           *bool   `json:"showExtensions,omitempty"`
+	ShowCommonExtensions     *bool   `json:"showCommonExtensions,omitempty"`
+	TagsSorter               *string `json:"tagsSorter,omitempty"`
+}
+
+// SwaggerOption represents an option type for WrapSwagger's option, can be created by WithXXX functions.
+type SwaggerOption func(o *SwaggerOptions)
+
+// WithSwaggerIndexHtmlRouteName creates a SwaggerOption to specify swagger index.html route name, defaults to "index.html".
+func WithSwaggerIndexHtmlRouteName(indexHtmlRouteName string) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.IndexHtmlRouteName = indexHtmlRouteName
+	}
+}
+
+// WithSwaggerDocJsonRouteName creates a SwaggerOption to specify swagger doc.json route name, defaults to "doc.json".
+func WithSwaggerDocJsonRouteName(docJsonRouteName string) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DocJsonRouteName = docJsonRouteName
+	}
+}
+
+// WithSwaggerConfigJsonRouteName creates a SwaggerOption to specify swagger config.json route name, defaults to "config.json".
+func WithSwaggerConfigJsonRouteName(configJsonRouteName string) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.ConfigJsonRouteName = configJsonRouteName
+	}
+}
+
+// WithSwaggerDeepLinking creates a SwaggerOption to specify swagger deepLinking, defaults to true.
+func WithSwaggerDeepLinking(deepLinking bool) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DeepLinking = &deepLinking
+	}
+}
+
+// WithSwaggerDisplayOperationId creates a SwaggerOption to specify swagger displayOperationId, defaults to false.
+func WithSwaggerDisplayOperationId(displayOperationId bool) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DisplayOperationId = &displayOperationId
+	}
+}
+
+// WithSwaggerDefaultModelsExpandDepth creates a SwaggerOption to specify swagger defaultModelsExpandDepth, defaults to 1.
+func WithSwaggerDefaultModelsExpandDepth(defaultModelsExpandDepth int) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DefaultModelsExpandDepth = &defaultModelsExpandDepth
+	}
+}
+
+// WithSwaggerDefaultModelExpandDepth creates a SwaggerOption to specify swagger defaultModelExpandDepth, defaults to 1.
+func WithSwaggerDefaultModelExpandDepth(defaultModelExpandDepth int) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DefaultModelExpandDepth = &defaultModelExpandDepth
+	}
+}
+
+// WithSwaggerDefaultModelRendering creates a SwaggerOption to specify swagger defaultModelRendering, defaults to example.
+func WithSwaggerDefaultModelRendering(defaultModelRendering string) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DefaultModelRendering = &defaultModelRendering
+	}
+}
+
+// WithSwaggerDisplayRequestDuration creates a SwaggerOption to specify swagger displayRequestDuration, defaults to false.
+func WithSwaggerDisplayRequestDuration(displayRequestDuration bool) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DisplayRequestDuration = &displayRequestDuration
+	}
+}
+
+// WithSwaggerDocExpansion creates a SwaggerOption to specify swagger docExpansion, defaults to list.
+func WithSwaggerDocExpansion(docExpansion string) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.DocExpansion = &docExpansion
+	}
+}
+
+// WithSwaggerMaxDisplayedTags creates a SwaggerOption to specify swagger maxDisplayedTags, defaults to show all operations.
+func WithSwaggerMaxDisplayedTags(maxDisplayedTags int) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.MaxDisplayedTags = &maxDisplayedTags
+	}
+}
+
+// WithSwaggerOperationsSorter creates a SwaggerOption to specify swagger operationsSorter, defaults to no sort.
+func WithSwaggerOperationsSorter(operationsSorter string) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.OperationsSorter = &operationsSorter
+	}
+}
+
+// WithSwaggerShowExtensions creates a SwaggerOption to specify swagger showExtensions, defaults to false.
+func WithSwaggerShowExtensions(showExtensions bool) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.ShowExtensions = &showExtensions
+	}
+}
+
+// WithSwaggerShowCommonExtensions creates a SwaggerOption to specify swagger showCommonExtensions, defaults to false.
+func WithSwaggerShowCommonExtensions(showCommonExtensions bool) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.ShowCommonExtensions = &showCommonExtensions
+	}
+}
+
+// WithSwaggerTagsSorter creates a SwaggerOption to specify swagger tagsSorter, defaults to no sort.
+func WithSwaggerTagsSorter(tagsSorter string) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.TagsSorter = &tagsSorter
+	}
+}
+
 // WrapSwagger registers swagger related routes to gin router, the documentation page will be served in `index.html` or the root of given router.
-// Note: this function is not allowed to be used on gin.Engine directly or any other gin.GroupEngine which has empty relativePath.
+// Visit https://github.com/swagger-api/swagger-ui/blob/v3.17.2/docs/usage/configuration.md for SwaggerOptions' details. Note: this function is
+// not allowed to be used on gin.Engine directly or any other gin.GroupEngine which has empty relativePath.
 //
 // Example:
 // 	func ReadSwaggerDoc() []byte {
@@ -513,7 +645,7 @@ const (
 // 		return bs
 // 	}
 // 	xgin.WrapSwagger(engine.Group("/v1/swagger"), ReadSwaggerDoc) // => /v1/swagger/index.html
-func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte) {
+func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOptions ...SwaggerOption) {
 	if _, ok := router.(*gin.Engine); ok {
 		panic(panicWrapSwaggerToEngine)
 	}
@@ -521,8 +653,28 @@ func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte) {
 		panic(panicNilSwaggerDocGetter)
 	}
 
+	opt := &SwaggerOptions{}
+	for _, o := range swaggerOptions {
+		if o != nil {
+			o(opt)
+		}
+	}
+	indexHtmlName := strings.TrimSpace(opt.IndexHtmlRouteName)
+	if indexHtmlName == "" {
+		indexHtmlName = fmt.Sprintf("index.html")
+	}
+	docJsonName := strings.TrimSpace(opt.DocJsonRouteName)
+	if docJsonName == "" {
+		docJsonName = fmt.Sprintf("doc.json")
+	}
+	configJsonName := strings.TrimSpace(opt.ConfigJsonRouteName)
+	if configJsonName == "" {
+		configJsonName = fmt.Sprintf("config.json")
+	}
+
 	contentTypeMap := map[string]string{
 		".json": "application/json",
+		".yaml": "application/yaml",
 		".png":  "image/png",
 		".html": "text/html; charset=utf-8",
 		".css":  "text/css; charset=utf-8",
@@ -530,7 +682,7 @@ func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte) {
 	}
 
 	router.GET("", func(c *gin.Context) {
-		indexUrl := c.FullPath() + "/index.html" // => ".../swagger/index.html"
+		indexUrl := c.FullPath() + "/" + indexHtmlName // => ".../swagger/index.html"
 		c.Redirect(http.StatusMovedPermanently, indexUrl)
 	})
 
@@ -547,17 +699,26 @@ func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte) {
 		pureUrl := strings.TrimSuffix(c.FullPath(), "/*file")
 		file := strings.TrimSpace(strings.TrimPrefix(c.Param("file"), "/"))
 		if file == "" {
-			indexUrl := pureUrl + "/index.html" // => ".../swagger/index.html"
+			indexUrl := pureUrl + "/" + indexHtmlName // => ".../swagger/index.html"
 			c.Redirect(http.StatusMovedPermanently, indexUrl)
 			return
 		}
 
 		switch file {
-		case "doc.json": // <<<
+		case docJsonName: // <<<
 			data = swaggerDocGetter()
-		case "index.html": // <<<
-			docUrl := pureUrl + "/doc.json" // => ".../swagger/doc.json"
+		case configJsonName:
+			data = []byte("{}")
+			if d, _ := json.Marshal(opt); d != nil {
+				data = d
+			}
+		case indexHtmlName: // <<<
+			docUrl := pureUrl + "/" + docJsonName       // => ".../swagger/doc.json"
+			configUrl := pureUrl + "/" + configJsonName // => ".../swagger/config.json"
 			data = bytes.Replace(_embedded_index_html, []byte("$$URL"), []byte(docUrl), 1)
+			data = bytes.Replace(data, []byte("$$CONFIG_URL"), []byte(configUrl), 1)
+
+		// static resources
 		case "favicon-16x16.png":
 			data = _embedded_favicon_16x16_png
 		case "favicon-32x32.png":
@@ -583,9 +744,9 @@ func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte) {
 }
 
 // WrapSwaggerSilently registers swagger related routes to gin router without any debug logging.
-func WrapSwaggerSilently(router gin.IRouter, swaggerDocGetter func() []byte) {
+func WrapSwaggerSilently(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOptions ...SwaggerOption) {
 	restore := HideDebugPrintRoute()
-	WrapSwagger(router, swaggerDocGetter)
+	WrapSwagger(router, swaggerDocGetter, swaggerOptions...)
 	restore()
 }
 
@@ -608,6 +769,10 @@ var (
 	//go:embed swaggerDist/swagger-ui-standalone-preset.js
 	_embedded_swagger_ui_standalone_preset_js []byte
 )
+
+// ========================
+// mass functions and types
+// ========================
 
 // GetTrustedProxies returns trusted proxies string slice from given gin.Engine, returns nil if given nil engine.
 func GetTrustedProxies(engine *gin.Engine) []string {

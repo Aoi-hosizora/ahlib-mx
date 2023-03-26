@@ -35,7 +35,7 @@
 + `func WithMode(mode string) NewEngineOption`
 + `func WithDebugPrintRouteFunc(debugPrintRouteFunc DebugPrintRouteFuncType) NewEngineOption`
 + `func WithDefaultWriter(defaultWriter io.Writer) NewEngineOption`
-+ `func WithErrorDefaultWriter(defaultErrorWriter io.Writer) NewEngineOption`
++ `func WithDefaultErrorWriter(defaultErrorWriter io.Writer) NewEngineOption`
 + `func WithRedirectTrailingSlash(redirectTrailingSlash bool) NewEngineOption`
 + `func WithRedirectFixedPath(redirectFixedPath bool) NewEngineOption`
 + `func WithHandleMethodNotAllowed(handleMethodNotAllowed bool) NewEngineOption`
@@ -64,8 +64,25 @@
 + `func RedirectHandler(code int, location string) gin.HandlerFunc`
 + `func WrapPprof(router gin.IRouter)`
 + `func WrapPprofSilently(router gin.IRouter)`
-+ `func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte)`
-+ `func WrapSwaggerSilently(router gin.IRouter, swaggerDocGetter func() []byte)`
++ `func WithSwaggerIndexHtmlRouteName(indexHtmlRouteName string) SwaggerOption`
++ `func WithSwaggerDocJsonRouteName(docJsonRouteName string) SwaggerOption`
++ `func WithSwaggerConfigJsonRouteName(configJsonRouteName string) SwaggerOption`
++ `func WithSwaggerDeepLinking(deepLinking bool) SwaggerOption`
++ `func WithSwaggerDisplayOperationId(displayOperationId bool) SwaggerOption`
++ `func WithSwaggerDefaultModelsExpandDepth(defaultModelsExpandDepth int) SwaggerOption`
++ `func WithSwaggerDefaultModelExpandDepth(defaultModelExpandDepth int) SwaggerOption`
++ `func WithSwaggerDefaultModelRendering(defaultModelRendering string) SwaggerOption`
++ `func WithSwaggerDisplayRequestDuration(displayRequestDuration bool) SwaggerOption`
++ `func WithSwaggerDocExpansion(docExpansion string) SwaggerOption`
++ `func WithSwaggerMaxDisplayedTags(maxDisplayedTags int) SwaggerOption`
++ `func WithSwaggerOperationsSorter(operationsSorter string) SwaggerOption`
++ `func WithSwaggerShowExtensions(showExtensions bool) SwaggerOption`
++ `func WithSwaggerShowCommonExtensions(showCommonExtensions bool) SwaggerOption`
++ `func WithSwaggerTagsSorter(tagsSorter string) SwaggerOption`
++ `func ReadSwaggerDoc() []byte`
++ `func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOptions ...SwaggerOption)`
++ `func WrapSwaggerSilently(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOptions ...SwaggerOption)`
++ `func GetTrustedProxies(engine *gin.Engine) []string`
 + `func HideDebugLogging() (restoreFn func())`
 + `func HideDebugPrintRoute() (restoreFn func())`
 + `func SilentPrintRouteFunc(_, _, _ string, _ int)`
@@ -99,8 +116,11 @@
 + `func WithExtraErrorsTranslate(fn func(error) (result map[string]string, need4xx bool)) TranslateOption`
 + `func TranslateBindingError(err error, options ...TranslateOption) (result map[string]string, need4xx bool)`
 + `func WithExtraText(text string) LoggerOption`
++ `func WithMoreExtraText(text string) LoggerOption`
 + `func WithExtraFields(fields map[string]interface{}) LoggerOption`
++ `func WithMoreExtraFields(fields map[string]interface{}) LoggerOption`
 + `func WithExtraFieldsV(fields ...interface{}) LoggerOption`
++ `func WithMoreExtraFieldsV(fields ...interface{}) LoggerOption`
 + `func LogResponseToLogrus(logger *logrus.Logger, c *gin.Context, start, end time.Time, options ...LoggerOption)`
 + `func LogResponseToLogger(logger logrus.StdLogger, c *gin.Context, start, end time.Time, options ...LoggerOption)`
 + `func LogRecoveryToLogrus(logger *logrus.Logger, v interface{}, stack xruntime.TraceStack, options ...LoggerOption)`
