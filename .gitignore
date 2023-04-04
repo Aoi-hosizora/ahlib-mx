@@ -14,3 +14,4 @@ _generate/
 *.sql
 *.sql-journal
 *.cypher
+*.temp

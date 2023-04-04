@@ -243,6 +243,29 @@ func MergeMapToError(result map[string]string) error {
 // MessagedValidator related
 // =========================
 
+// messagedValidatorOptions is a type of NewMessagedValidator's option, each field can be set by MessagedValidatorOption function type.
+type messagedValidatorOptions struct {
+	validateTagName string
+	messageTagName  string
+}
+
+// MessagedValidatorOption represents an option type for NewMessagedValidator's option, can be created by WithXXX functions.
+type MessagedValidatorOption func(o *messagedValidatorOptions)
+
+// WithValidateTagName creates a MessagedValidatorOption to specify default validate tag name, defaults to "validate".
+func WithValidateTagName(name string) MessagedValidatorOption {
+	return func(o *messagedValidatorOptions) {
+		o.validateTagName = name
+	}
+}
+
+// WithMessageTagName creates a MessagedValidatorOption to specify default validate message tag name, defaults to "validate_message".
+func WithMessageTagName(name string) MessagedValidatorOption {
+	return func(o *messagedValidatorOptions) {
+		o.messageTagName = name
+	}
+}
+
 // MessagedValidator represents a messaged validator.Validate, which allows some fields to specify their custom error message, and you can set this to
 // gin's binding.Validator as a binding.StructValidator.
 //
@@ -250,20 +273,38 @@ func MergeMapToError(result map[string]string) error {
 // 	type User struct {
 //		Id   uint64  `json:"id"   form:"id"   validate:"required,gt=1"          validate_message:"required|id is required|gt|id must larger than one"`
 //		Name string  `json:"name" form:"name" validate:"required,gt=4,lt=20"    validate_message:"*|name is invalid"`
-//		Bio  *string `json:"bio"  form:"bio"  validate:"required,gte=0,lte=255" validate_message:"xxx"`
+//		Bio  *string `json:"bio"  form:"bio"  validate:"required,gte=0,lte=255" validate_message:"..."`
 // 	}
 type MessagedValidator struct {
-	validate   *validator.Validate
-	messageTag string
+	validate *validator.Validate
+	options  *messagedValidatorOptions
 }
 
+const (
+	_defaultValidateTagName = "validate"
+	_defaultMessageTagName  = "validate_message"
+)
+
 // NewMessagedValidator creates a new NewMessagedValidator, with `validate` validator tag name and `validate_message` message tag name.
-func NewMessagedValidator() *MessagedValidator {
-	m := &MessagedValidator{
-		validate:   validator.New(),
-		messageTag: "validate_message",
+func NewMessagedValidator(options ...MessagedValidatorOption) *MessagedValidator {
+	opt := &messagedValidatorOptions{}
+	for _, o := range options {
+		if o != nil {
+			o(opt)
+		}
 	}
-	m.validate.SetTagName("validate")
+	if opt.validateTagName = strings.TrimSpace(opt.validateTagName); opt.validateTagName == "" {
+		opt.validateTagName = _defaultValidateTagName
+	}
+	if opt.messageTagName = strings.TrimSpace(opt.messageTagName); opt.messageTagName == "" {
+		opt.messageTagName = _defaultMessageTagName
+	}
+
+	m := &MessagedValidator{
+		validate: validator.New(),
+		options:  opt,
+	}
+	m.validate.SetTagName(opt.validateTagName)
 	return m
 }
 
@@ -279,12 +320,19 @@ func (m *MessagedValidator) ValidateEngine() *validator.Validate {
 
 // SetValidateTagName sets validate tag name for MessagedValidator, defaults to `validate`.
 func (m *MessagedValidator) SetValidateTagName(name string) {
-	m.validate.SetTagName(name)
+	if name = strings.TrimSpace(name); name == "" {
+		name = _defaultValidateTagName
+	}
+	m.options.validateTagName = name // just stored
+	m.validate.SetTagName(name) // set to validate
 }
 
 // SetMessageTagName sets message tag name for MessagedValidator, defaults to `validate_message`.
 func (m *MessagedValidator) SetMessageTagName(name string) {
-	m.messageTag = name
+	if name = strings.TrimSpace(name); name == "" {
+		name = _defaultMessageTagName
+	}
+	m.options.messageTagName = name
 }
 
 // UseTagAsFieldName sets a specific struct tag as field's alternate name, see UseTagAsFieldName for more details.
@@ -295,14 +343,12 @@ func (m *MessagedValidator) UseTagAsFieldName(name ...string) {
 // ValidateStruct validates given struct (and pointer of struct) and returns the validation error, mostly in xvalidator.MultiFieldsError type,
 // and this implements binding.StructValidator interface.
 func (m *MessagedValidator) ValidateStruct(obj interface{}) error {
-	itf, ok := m.extractToStruct(obj) // only accept struct value and pointer of struct value
+	item, ok := m.extractToStruct(obj) // only accept struct value and pointer of struct value
 	if !ok {
 		return &validator.InvalidValidationError{Type: reflect.TypeOf(obj)}
 	}
 
-	// TODO allow array and slice value ?
-
-	err := m.validate.Struct(itf)
+	err := m.validate.Struct(item)
 	if err == nil {
 		return nil
 	}
@@ -311,7 +357,7 @@ func (m *MessagedValidator) ValidateStruct(obj interface{}) error {
 		return err // unreachable
 	}
 
-	typ := reflect.TypeOf(itf)
+	typ := reflect.TypeOf(item)
 	errs := make([]error, 0, len(ve))
 	for _, fe := range ve {
 		if m, found := m.applyCustomMessage(typ, fe.StructField(), fe.Tag()); found {
@@ -321,7 +367,7 @@ func (m *MessagedValidator) ValidateStruct(obj interface{}) error {
 			errs = append(errs, fe) // validator.FieldError
 		}
 	}
-	return &MultiFieldsError{fields: errs} // MultiFieldsError
+	return &MultiFieldsError{fields: errs} // MultiFieldsError (WrappedFieldError-s or validator.FieldError-s)
 }
 
 // extractToStruct checks and extracts given interface to struct type.
@@ -349,7 +395,7 @@ func (m *MessagedValidator) applyCustomMessage(typ reflect.Type, fieldName, vali
 	if !ok {
 		return "", false // unreachable
 	}
-	msg := sf.Tag.Get(m.messageTag)
+	msg := sf.Tag.Get(m.options.messageTagName)
 	if msg == "" {
 		return "", false // no msg
 	}

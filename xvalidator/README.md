@@ -16,6 +16,7 @@
 + `type TranslationRegisterHandler func`
 + `type WrappedFieldError struct`
 + `type MultiFieldsError struct`
++ `type MessagedValidatorOption func`
 + `type MessagedStructValidator struct`
 
 ### Variables
@@ -35,25 +36,25 @@
 + `func ApplyEnglishTranslator(validator *validator.Validate) (UtTranslator, error)`
 + `func DefaultRegistrationFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc`
 + `func DefaultTranslateFunc() validator.TranslationFunc`
-+ `func EnLocaleTranslator() locales.Translator`
-+ `func EsLocaleTranslator() locales.Translator`
-+ `func FrLocaleTranslator() locales.Translator`
-+ `func IdLocaleTranslator() locales.Translator`
++ `func EnLocaleTranslator() LocaleTranslator`
++ `func EsLocaleTranslator() LocaleTranslator`
++ `func FrLocaleTranslator() LocaleTranslator`
++ `func IdLocaleTranslator() LocaleTranslator`
 + `func ItLocaleTranslator() LocaleTranslator`
-+ `func JaLocaleTranslator() locales.Translator`
-+ `func NlLocaleTranslator() locales.Translator`
-+ `func PtLocaleTranslator() locales.Translator`
-+ `func PtBrLocaleTranslator() locales.Translator`
-+ `func RuLocaleTranslator() locales.Translator`
-+ `func TrLocaleTranslator() locales.Translator`
++ `func JaLocaleTranslator() LocaleTranslator`
++ `func NlLocaleTranslator() LocaleTranslator`
++ `func PtLocaleTranslator() LocaleTranslator`
++ `func PtBrLocaleTranslator() LocaleTranslator`
++ `func RuLocaleTranslator() LocaleTranslator`
++ `func TrLocaleTranslator() LocaleTranslator`
 + `func ViLocaleTranslator() LocaleTranslator`
-+ `func ZhLocaleTranslator() locales.Translator`
-+ `func ZhHantLocaleTranslator() locales.Translator`
++ `func ZhLocaleTranslator() LocaleTranslator`
++ `func ZhHantLocaleTranslator() LocaleTranslator`
 + `func EnTranslationRegisterFunc() TranslationRegisterHandler`
 + `func EsTranslationRegisterFunc() TranslationRegisterHandler`
 + `func FrTranslationRegisterFunc() TranslationRegisterHandler`
 + `func IdTranslationRegisterFunc() TranslationRegisterHandler`
-+ `ItTranslationRegisterFunc`
++ `func ItTranslationRegisterFunc() TranslationRegisterHandler`
 + `func JaTranslationRegisterFunc() TranslationRegisterHandler`
 + `func NlTranslationRegisterFunc() TranslationRegisterHandler`
 + `func PtTranslationRegisterFunc() TranslationRegisterHandler`
@@ -66,7 +67,9 @@
 + `func TranslateValidationErrors(err validator.ValidationErrors, ut UtTranslator, useNamespace bool) map[string]string`
 + `func FlattenValidationErrors(err validator.ValidationErrors, useNamespace bool) map[string]string`
 + `func MergeMapToError(result map[string]string) error`
-+ `func NewCustomStructValidator() *CustomStructValidator`
++ `func WithValidateTagName(name string) MessagedValidatorOption`
++ `func WithValidateMessageTagName(name string) MessagedValidatorOption`
++ `func NewMessagedValidator(options ...MessagedValidatorOption) *MessagedValidator`
 + `func ParamRegexpValidator() validator.Func`
 + `func RegexpValidator(re *regexp.Regexp) validator.Func`
 + `func DateTimeValidator(layout string) validator.Func`

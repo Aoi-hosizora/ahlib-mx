@@ -3,6 +3,7 @@ package xvalidator
 import (
 	"errors"
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
 	"github.com/go-playground/validator/v10"
 	"reflect"
@@ -111,10 +112,42 @@ func TestTranslateAndFlatten(t *testing.T) {
 	xtesting.Equal(t, ferr.Error(), "Int field must be set and can not be zero; Field validation for 'str' failed on the 'required' tag")
 }
 
+func TestMessagedValidatorOptions(t *testing.T) {
+	mv := NewMessagedValidator()
+	xtesting.Equal(t, mv.options.validateTagName, "validate")
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(mv.validate, "tagName")).Interface().(string), "validate")
+	xtesting.Equal(t, mv.options.messageTagName, "validate_message")
+
+	mv.SetValidateTagName(" binding")
+	mv.SetMessageTagName("message ")
+	xtesting.Equal(t, mv.options.validateTagName, "binding")
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(mv.validate, "tagName")).Interface().(string), "binding")
+	xtesting.Equal(t, mv.options.messageTagName, "message")
+
+	mv.SetValidateTagName("")
+	mv.SetMessageTagName("")
+	xtesting.Equal(t, mv.options.validateTagName, "validate")
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(mv.validate, "tagName")).Interface().(string), "validate")
+	xtesting.Equal(t, mv.options.messageTagName, "validate_message")
+
+	mv = NewMessagedValidator(WithValidateTagName(""), WithMessageTagName(" message "))
+	xtesting.Equal(t, mv.options.validateTagName, "validate")
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(mv.validate, "tagName")).Interface().(string), "validate")
+	mv.validate.SetTagName("binding")
+	xtesting.Equal(t, mv.options.validateTagName, "validate") // not changed
+	xtesting.Equal(t, xreflect.GetUnexportedField(xreflect.FieldValueOf(mv.validate, "tagName")).Interface().(string), "binding")
+	xtesting.Equal(t, mv.options.messageTagName, "message")
+}
+
 func TestMessagedValidator(t *testing.T) {
 	mv := NewMessagedValidator()
-	mv.SetValidateTagName("binding")
-	mv.SetMessageTagName("message")
+	xtesting.NotNil(t, mv.ValidateStruct([]struct{}{}))
+	xtesting.NotNil(t, mv.ValidateStruct([2]struct{}{}))
+
+	mv = NewMessagedValidator(
+		WithValidateTagName("binding"),
+		WithMessageTagName("message"),
+	)
 	mv.UseTagAsFieldName("json", "yaml", "form")
 	tr, _ := ApplyEnglishTranslator(mv.ValidateEngine())
 	xtesting.Equal(t, mv.Engine(), mv.ValidateEngine())
@@ -124,7 +157,7 @@ func TestMessagedValidator(t *testing.T) {
 
 	type s struct {
 		Str   string  `binding:"required,gt=2,lt=10" json:"_str" message:"required|str must be set and can not be empty|gt|str length must be larger than 2|lt|str length must be less than 10"`
-		Int   int32   `binding:"required,gte=4,ne=5" json:"_int" message:"required|int must be set and can not be zero|gte|int value must be larger than or equal to 4"`
+		Int   int32   `binding:"required,lt=2|gte=4,ne=5" json:"_int" message:"required|int must be set and can not be zero|lt=2\\|gte=4|int value must be less then 2 or larger than or equal to 4"`
 		Float float32 `binding:"required,lte=0"`
 	}
 	for _, tc := range []struct {
@@ -155,8 +188,8 @@ func TestMessagedValidator(t *testing.T) {
 			[]string{"Key: 's._int' Error:int must be set and can not be zero"},
 			map[string]string{"_int": "int must be set and can not be zero"}},
 		{&s{"333", 3, -0.5}, false, true,
-			[]string{"Key: 's._int' Error:int value must be larger than or equal to 4"},
-			map[string]string{"_int": "int value must be larger than or equal to 4"}},
+			[]string{"Key: 's._int' Error:int value must be less then 2 or larger than or equal to 4"},
+			map[string]string{"_int": "int value must be less then 2 or larger than or equal to 4"}},
 		{&s{"333", 5, -0.5}, false, true,
 			[]string{"Key: 's._int' Error:Field validation for '_int' failed on the 'ne' tag"},
 			map[string]string{"_int": "_int should not be equal to 5"}},
@@ -167,8 +200,8 @@ func TestMessagedValidator(t *testing.T) {
 			[]string{"Key: 's.Float' Error:Field validation for 'Float' failed on the 'lte' tag"},
 			map[string]string{"Float": "Float must be 0 or less"}},
 		{&s{"11111111111", -1, -0.5}, false, true,
-			[]string{"Key: 's._str' Error:str length must be less than 10", "Key: 's._int' Error:int value must be larger than or equal to 4"},
-			map[string]string{"_str": "str length must be less than 10", "_int": "int value must be larger than or equal to 4"}},
+			[]string{"Key: 's._str' Error:str length must be less than 10"},
+			map[string]string{"_str": "str length must be less than 10"}},
 		{&s{"", 5, 11.5}, false, true,
 			[]string{"Key: 's._str' Error:str must be set and can not be empty", "Key: 's._int' Error:Field validation for '_int' failed on the 'ne' tag", "Key: 's.Float' Error:Field validation for 'Float' failed on the 'lte' tag"},
 			map[string]string{"_str": "str must be set and can not be empty", "_int": "_int should not be equal to 5", "Float": "Float must be 0 or less"}},
@@ -179,10 +212,10 @@ func TestMessagedValidator(t *testing.T) {
 			xtesting.Equal(t, ok, tc.wantInvalidErr)
 			ve, ok := err.(*MultiFieldsError)
 			xtesting.Equal(t, ok, tc.wantValidateErr)
-			if ok && len(tc.wantFieldErrors) > 0 {
+			if ok {
 				xtesting.Equal(t, ve.Error(), strings.Join(tc.wantFieldErrors, "; "))
 			}
-			if ok && len(tc.wantTranslations) > 0 {
+			if ok {
 				xtesting.Equal(t, ve.Translate(tr, false), tc.wantTranslations)
 			}
 		})
@@ -193,11 +226,11 @@ func TestApplyCustomMessage(t *testing.T) {
 	v := NewMessagedValidator()
 	type s struct {
 		F1 string `validate_message:"required|required_1|gt|gt\\|1|lt|\\|lt\\|\\|_\\|\\|1\\|\\|\\|"`
-		//                                                  ;gt  |1;lt;  |lt  |  |_  |  |1  |  |  |
+		//                                                 ;gt  |1;lt;  |lt  |  |_  |  |1  |  |  |
 		F2 string `validate_message:"x| |y| _|z|_ |w|_ _|lte|\\|_|gte|_\\|"`
-		//                                               ;lte;  |_;gte;_  |
+		//                                              ;lte;  |_;gte;_  |
 		F3 string `validate_message:"\\|eq|\\|_\\||_|\\||\\||_|\\|\\||\\|_\\|\\|_\\|"`
-		//                              |eq;  |_  |;_;  |;  |;_;  |  |;  |_  |  |_  |
+		//                             |eq;  |_  |;_;  |;  |;_;  |  |;  |_  |  |_  |
 		F4 string `validate_message:""`
 		F5 string
 		F6 string `validate_message:"ne|ne_6|x"`

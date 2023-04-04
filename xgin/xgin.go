@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xcolor"
+	"github.com/Aoi-hosizora/ahlib/xpointer"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/Aoi-hosizora/ahlib/xstring"
 	"github.com/gin-gonic/gin"
@@ -505,13 +506,12 @@ const (
 	panicNilSwaggerDocGetter = "xgin: using nil swaggerDocGetter function"
 )
 
-// TODO test
-
 // SwaggerOptions is a type of WrapSwagger's option, each field can be set by SwaggerOption function type.
 type SwaggerOptions struct {
 	IndexHtmlRouteName  string `json:"-"`
 	DocJsonRouteName    string `json:"-"`
 	ConfigJsonRouteName string `json:"-"`
+	EnableRedirect      *bool  `json:"-"`
 
 	DeepLinking              *bool   `json:"deepLinking,omitempty"`
 	DisplayOperationId       *bool   `json:"displayOperationId,omitempty"`
@@ -551,6 +551,13 @@ func WithSwaggerConfigJsonRouteName(configJsonRouteName string) SwaggerOption {
 	}
 }
 
+// WithSwaggerEnableRedirect creates a SwaggerOption to specify whether to enable redirect route, defaults to true.
+func WithSwaggerEnableRedirect(enableRedirect bool) SwaggerOption {
+	return func(o *SwaggerOptions) {
+		o.EnableRedirect = &enableRedirect
+	}
+}
+
 // WithSwaggerDeepLinking creates a SwaggerOption to specify swagger deepLinking, defaults to true.
 func WithSwaggerDeepLinking(deepLinking bool) SwaggerOption {
 	return func(o *SwaggerOptions) {
@@ -565,7 +572,7 @@ func WithSwaggerDisplayOperationId(displayOperationId bool) SwaggerOption {
 	}
 }
 
-// WithSwaggerDefaultModelsExpandDepth creates a SwaggerOption to specify swagger defaultModelsExpandDepth, defaults to 1.
+// WithSwaggerDefaultModelsExpandDepth creates a SwaggerOption to specify swagger defaultModelsExpandDepth, set to -1 completely hide the models, defaults to 1.
 func WithSwaggerDefaultModelsExpandDepth(defaultModelsExpandDepth int) SwaggerOption {
 	return func(o *SwaggerOptions) {
 		o.DefaultModelsExpandDepth = &defaultModelsExpandDepth
@@ -579,7 +586,7 @@ func WithSwaggerDefaultModelExpandDepth(defaultModelExpandDepth int) SwaggerOpti
 	}
 }
 
-// WithSwaggerDefaultModelRendering creates a SwaggerOption to specify swagger defaultModelRendering, defaults to example.
+// WithSwaggerDefaultModelRendering creates a SwaggerOption to specify swagger defaultModelRendering, "example" and "model" are valid, defaults to "example".
 func WithSwaggerDefaultModelRendering(defaultModelRendering string) SwaggerOption {
 	return func(o *SwaggerOptions) {
 		o.DefaultModelRendering = &defaultModelRendering
@@ -593,7 +600,7 @@ func WithSwaggerDisplayRequestDuration(displayRequestDuration bool) SwaggerOptio
 	}
 }
 
-// WithSwaggerDocExpansion creates a SwaggerOption to specify swagger docExpansion, defaults to list.
+// WithSwaggerDocExpansion creates a SwaggerOption to specify swagger docExpansion, "list" and "full" and "none" are valid, defaults to "list".
 func WithSwaggerDocExpansion(docExpansion string) SwaggerOption {
 	return func(o *SwaggerOptions) {
 		o.DocExpansion = &docExpansion
@@ -607,7 +614,7 @@ func WithSwaggerMaxDisplayedTags(maxDisplayedTags int) SwaggerOption {
 	}
 }
 
-// WithSwaggerOperationsSorter creates a SwaggerOption to specify swagger operationsSorter, defaults to no sort.
+// WithSwaggerOperationsSorter creates a SwaggerOption to specify swagger operationsSorter, "" and "alpha" and "method" are valid, defaults to "" which means not to sort.
 func WithSwaggerOperationsSorter(operationsSorter string) SwaggerOption {
 	return func(o *SwaggerOptions) {
 		o.OperationsSorter = &operationsSorter
@@ -621,14 +628,14 @@ func WithSwaggerShowExtensions(showExtensions bool) SwaggerOption {
 	}
 }
 
-// WithSwaggerShowCommonExtensions creates a SwaggerOption to specify swagger showCommonExtensions, defaults to false.
+// WithSwaggerShowCommonExtensions creates a SwaggerOption to specify swagger showCommonExtensions (pattern, maxLength, minLength, maximum, minimum), defaults to false.
 func WithSwaggerShowCommonExtensions(showCommonExtensions bool) SwaggerOption {
 	return func(o *SwaggerOptions) {
 		o.ShowCommonExtensions = &showCommonExtensions
 	}
 }
 
-// WithSwaggerTagsSorter creates a SwaggerOption to specify swagger tagsSorter, defaults to no sort.
+// WithSwaggerTagsSorter creates a SwaggerOption to specify swagger tagsSorter, "" and "alpha" is valid, default to "" which means not to sort.
 func WithSwaggerTagsSorter(tagsSorter string) SwaggerOption {
 	return func(o *SwaggerOptions) {
 		o.TagsSorter = &tagsSorter
@@ -653,7 +660,7 @@ func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOpti
 		panic(panicNilSwaggerDocGetter)
 	}
 
-	opt := &SwaggerOptions{}
+	opt := &SwaggerOptions{EnableRedirect: xpointer.BoolPtr(true)}
 	for _, o := range swaggerOptions {
 		if o != nil {
 			o(opt)
@@ -681,10 +688,12 @@ func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOpti
 		".js":   "application/javascript",
 	}
 
-	router.GET("", func(c *gin.Context) {
-		indexUrl := c.FullPath() + "/" + indexHtmlName // => ".../swagger/index.html"
-		c.Redirect(http.StatusMovedPermanently, indexUrl)
-	})
+	if *opt.EnableRedirect {
+		router.GET("", func(c *gin.Context) {
+			indexUrl := c.FullPath() + "/" + indexHtmlName // => ".../swagger/index.html"
+			c.Redirect(http.StatusMovedPermanently, indexUrl)
+		})
+	}
 
 	router.GET("*file", func(c *gin.Context) {
 		var data []byte
@@ -698,7 +707,7 @@ func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOpti
 
 		pureUrl := strings.TrimSuffix(c.FullPath(), "/*file")
 		file := strings.TrimSpace(strings.TrimPrefix(c.Param("file"), "/"))
-		if file == "" {
+		if file == "" && *opt.EnableRedirect {
 			indexUrl := pureUrl + "/" + indexHtmlName // => ".../swagger/index.html"
 			c.Redirect(http.StatusMovedPermanently, indexUrl)
 			return

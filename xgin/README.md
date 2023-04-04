@@ -11,7 +11,11 @@
 
 ### Types
 
++ `type NewEngineOption func`
 + `type DumpRequestOption func`
++ `type SwaggerOptions struct`
++ `type SwaggerOption func`
++ `type DebugPrintRouteFuncType func`
 + `type RouterDecodeError struct`
 + `type TranslatableError interface`
 + `type TranslateOption func`
@@ -67,6 +71,7 @@
 + `func WithSwaggerIndexHtmlRouteName(indexHtmlRouteName string) SwaggerOption`
 + `func WithSwaggerDocJsonRouteName(docJsonRouteName string) SwaggerOption`
 + `func WithSwaggerConfigJsonRouteName(configJsonRouteName string) SwaggerOption`
++ `func WithSwaggerEnableRedirect(enableRedirect bool) SwaggerOption`
 + `func WithSwaggerDeepLinking(deepLinking bool) SwaggerOption`
 + `func WithSwaggerDisplayOperationId(displayOperationId bool) SwaggerOption`
 + `func WithSwaggerDefaultModelsExpandDepth(defaultModelsExpandDepth int) SwaggerOption`

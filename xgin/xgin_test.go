@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xnumber"
+	"github.com/Aoi-hosizora/ahlib/xpointer"
 	"github.com/Aoi-hosizora/ahlib/xreflect"
 	"github.com/Aoi-hosizora/ahlib/xruntime"
 	"github.com/Aoi-hosizora/ahlib/xtesting"
@@ -341,6 +342,113 @@ func TestWrapPprof(t *testing.T) {
 }
 
 func TestWrapSwagger(t *testing.T) {
+	for i, tc := range []struct {
+		give []SwaggerOption
+		want *SwaggerOptions
+	}{
+		{[]SwaggerOption{}, &SwaggerOptions{}},
+		{[]SwaggerOption{
+			WithSwaggerDefaultModelRendering("model"),
+			WithSwaggerDefaultModelRendering(""), // (invalid)
+			WithSwaggerDocExpansion("full"),
+			WithSwaggerDocExpansion(""), // (invalid)
+			WithSwaggerOperationsSorter(""),
+			WithSwaggerTagsSorter(""),
+		}, &SwaggerOptions{
+			DefaultModelRendering: xpointer.StringPtr(""),
+			DocExpansion:          xpointer.StringPtr(""),
+			OperationsSorter:      xpointer.StringPtr(""),
+			TagsSorter:            xpointer.StringPtr(""),
+		}},
+		{[]SwaggerOption{
+			WithSwaggerDeepLinking(false),
+			WithSwaggerDisplayOperationId(true),
+			WithSwaggerDefaultModelsExpandDepth(-1),
+			WithSwaggerDefaultModelExpandDepth(999),
+			WithSwaggerDefaultModelRendering("model"),
+			WithSwaggerDisplayRequestDuration(true),
+			WithSwaggerDocExpansion("full"),
+			WithSwaggerMaxDisplayedTags(2),
+			WithSwaggerOperationsSorter("method"),
+			WithSwaggerShowExtensions(true),
+			WithSwaggerShowCommonExtensions(true),
+			WithSwaggerTagsSorter("alpha"),
+		}, &SwaggerOptions{
+			IndexHtmlRouteName:       "",
+			DocJsonRouteName:         "",
+			ConfigJsonRouteName:      "",
+			DeepLinking:              xpointer.BoolPtr(false),
+			DisplayOperationId:       xpointer.BoolPtr(true),
+			DefaultModelsExpandDepth: xpointer.IntPtr(-1),
+			DefaultModelExpandDepth:  xpointer.IntPtr(999),
+			DefaultModelRendering:    xpointer.StringPtr("model"),
+			DisplayRequestDuration:   xpointer.BoolPtr(true),
+			DocExpansion:             xpointer.StringPtr("full"),
+			MaxDisplayedTags:         xpointer.IntPtr(2),
+			OperationsSorter:         xpointer.StringPtr("method"),
+			ShowExtensions:           xpointer.BoolPtr(true),
+			ShowCommonExtensions:     xpointer.BoolPtr(true),
+			TagsSorter:               xpointer.StringPtr("alpha"),
+		}},
+		{[]SwaggerOption{
+			WithSwaggerDeepLinking(true),
+			WithSwaggerDisplayOperationId(false),
+			WithSwaggerDefaultModelsExpandDepth(1),
+			WithSwaggerDefaultModelExpandDepth(1),
+			WithSwaggerDefaultModelRendering("example"),
+			WithSwaggerDisplayRequestDuration(false),
+			WithSwaggerDocExpansion("list"),
+			WithSwaggerMaxDisplayedTags(0),
+			WithSwaggerOperationsSorter(""),
+			WithSwaggerShowExtensions(false),
+			WithSwaggerShowCommonExtensions(false),
+			WithSwaggerTagsSorter(""),
+		}, &SwaggerOptions{
+			IndexHtmlRouteName:       "",
+			DocJsonRouteName:         "",
+			ConfigJsonRouteName:      "",
+			DeepLinking:              xpointer.BoolPtr(true),
+			DisplayOperationId:       xpointer.BoolPtr(false),
+			DefaultModelsExpandDepth: xpointer.IntPtr(1),
+			DefaultModelExpandDepth:  xpointer.IntPtr(1),
+			DefaultModelRendering:    xpointer.StringPtr("example"),
+			DisplayRequestDuration:   xpointer.BoolPtr(false),
+			DocExpansion:             xpointer.StringPtr("list"),
+			MaxDisplayedTags:         xpointer.IntPtr(0),
+			OperationsSorter:         xpointer.StringPtr(""),
+			ShowExtensions:           xpointer.BoolPtr(false),
+			ShowCommonExtensions:     xpointer.BoolPtr(false),
+			TagsSorter:               xpointer.StringPtr(""),
+		}},
+	} {
+		t.Run(fmt.Sprintf("SwaggerOptions-%d", i), func(t *testing.T) {
+			app := NewEngineSilently()
+			WrapSwaggerSilently(app.Group("swagger"), func() []byte { return nil }, tc.give...)
+			server := &http.Server{Addr: ":12345", Handler: app}
+			go server.ListenAndServe()
+			defer server.Shutdown(context.Background())
+
+			req, _ := http.NewRequest("GET", "http://localhost:12345/swagger/config.json", nil)
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			xtesting.Nil(t, err)
+
+			bs, err := ioutil.ReadAll(resp.Body)
+			xtesting.Nil(t, err)
+			defer resp.Body.Close()
+			xtesting.Equal(t, resp.StatusCode, 200)
+
+			gotMap := make(map[string]interface{})
+			_ = json.Unmarshal(bs, &gotMap)
+			got, _ := json.Marshal(gotMap)
+			want, _ := json.Marshal(tc.want)
+			wantMap := make(map[string]interface{})
+			_ = json.Unmarshal(want, &wantMap)
+			want, _ = json.Marshal(wantMap)
+			xtesting.Equal(t, string(got), string(want))
+		})
+	}
+
 	bs := &bytes.Buffer{}
 	gin.DefaultWriter = bs
 	gin.DefaultErrorWriter = bs
@@ -359,9 +467,14 @@ func TestWrapSwagger(t *testing.T) {
 	app.NoMethod(func(c *gin.Context) {
 		c.Data(405, "text/html", []byte("<h1>Method not allowed</h1>"))
 	})
-	WrapSwagger(app.Group("/swagger"), func() []byte {
-		return []byte(`{"swagger": "2.0"}`)
-	})
+	WrapSwagger(
+		app.Group("swagger"),
+		func() []byte { return []byte(`{"swagger": "2.0"}`) },
+		WithSwaggerEnableRedirect(true), // default
+		WithSwaggerIndexHtmlRouteName(""),
+		WithSwaggerDocJsonRouteName(""),
+		WithSwaggerConfigJsonRouteName(""),
+	)
 	// [Gin] GET    /swagger                  --> github.com/Aoi-hosizora/ahlib-mx/xgin.WrapSwagger.func1 (1 handlers)
 	// [Gin] GET    /swagger/*file            --> github.com/Aoi-hosizora/ahlib-mx/xgin.WrapSwagger.func2 (1 handlers)
 
@@ -369,7 +482,6 @@ func TestWrapSwagger(t *testing.T) {
 	go server.ListenAndServe()
 	defer server.Shutdown(context.Background())
 
-	correct301Location := "/swagger/index.html"
 	for _, tc := range []struct {
 		giveMethod      string
 		giveUrl         string
@@ -422,6 +534,7 @@ func TestWrapSwagger(t *testing.T) {
 			xtesting.Equal(t, resp.Header.Get("Content-Type"), tc.wantContentType)
 
 			if tc.wantStatusCode == 301 {
+				const correct301Location = "/swagger/index.html"
 				xtesting.Equal(t, resp.Header.Get("Location"), correct301Location)
 			}
 		})

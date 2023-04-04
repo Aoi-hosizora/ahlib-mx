@@ -1,6 +1,6 @@
 # ahlib-mx
 
-[![Build Status](https://travis-ci.com/Aoi-hosizora/ahlib-mx.svg?branch=master)](https://travis-ci.com/Aoi-hosizora/ahlib-mx)
+[![Build Status](https://app.travis-ci.com/Aoi-hosizora/ahlib-mx.svg?branch=master)](https://app.travis-ci.com/github/Aoi-hosizora/ahlib-mx)
 [![Codecov](https://codecov.io/gh/Aoi-hosizora/ahlib-mx/branch/master/graph/badge.svg)](https://codecov.io/gh/Aoi-hosizora/ahlib-mx)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Aoi-hosizora/ahlib-mx)](https://goreportcard.com/report/github.com/Aoi-hosizora/ahlib-mx)
 [![License](http://img.shields.io/badge/license-mit-blue.svg)](./LICENSE)
