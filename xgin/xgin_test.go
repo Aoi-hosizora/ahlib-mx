@@ -17,9 +17,11 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -563,6 +565,82 @@ func TestRouterDecodeError(t *testing.T) {
 	xtesting.True(t, errors.Is(rerr, err))
 
 	xtesting.Panic(t, func() { _ = NewRouterDecodeError("", "", nil, "") })
+}
+
+func TestListenAndServeWithReuse(t *testing.T) {
+	t.Run("failed to listen", func(t *testing.T) {
+		server := &http.Server{Addr: "fake_ip"}
+		err := ListenAndServeWithReuse(context.Background(), server)
+		xtesting.NotNil(t, err)
+
+		server = &http.Server{Addr: "127.0.0.0:1234"}
+		err = ListenAndServeWithReuse(context.Background(), server)
+		xtesting.NotNil(t, err)
+	})
+
+	t.Run("single server", func(t *testing.T) {
+		server := &http.Server{Addr: ""}
+		go func() {
+			time.Sleep(time.Second)
+			xtesting.Nil(t, server.Close())
+		}()
+		err := ListenAndServeWithReuse(context.Background(), server)
+		xtesting.True(t, err == nil || err == http.ErrServerClosed)
+	})
+
+	t.Run("multiple servers", func(t *testing.T) {
+		server1 := &http.Server{Addr: "127.0.0.1:12345"}
+		server2 := &http.Server{Addr: "127.0.0.1:12345"}
+		wg := sync.WaitGroup{}
+		wg.Add(3)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Second)
+			xtesting.Nil(t, server1.Close())
+			xtesting.Nil(t, server2.Close())
+		}()
+		go func() {
+			defer wg.Done()
+			err := ListenAndServeWithReuse(context.Background(), server1)
+			xtesting.True(t, err == nil || err == http.ErrServerClosed)
+		}()
+		go func() {
+			defer wg.Done()
+			err := ListenAndServeWithReuse(context.Background(), server2)
+			xtesting.True(t, err == nil || err == http.ErrServerClosed)
+		}()
+		wg.Wait()
+	})
+}
+
+func TestReuseListenControl(t *testing.T) {
+	// This unit test refers from https://github.com/libp2p/go-reuseport/blob/master/reuse_test.go.
+	const addr = "0.0.0.0:12345"
+
+	t.Run("no reuse", func(t *testing.T) {
+		lc := net.ListenConfig{}
+		lis1, err := lc.Listen(context.Background(), "tcp", addr)
+		xtesting.Nil(t, err)
+		defer lis1.Close()
+		lis2, err := lc.Listen(context.Background(), "tcp", addr)
+		xtesting.NotNil(t, err) // bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+		_ = lis2
+	})
+
+	t.Run("enable reuse", func(t *testing.T) {
+		lc := net.ListenConfig{Control: ReuseListenControl}
+		lis1, err := lc.Listen(context.Background(), "tcp", addr)
+		xtesting.Nil(t, err)
+		defer lis1.Close()
+		lis2, err := lc.Listen(context.Background(), "tcp", addr)
+		xtesting.Nil(t, err)
+		defer lis2.Close()
+
+		d := net.Dialer{LocalAddr: lis1.Addr(), Control: ReuseListenControl}
+		c, err := d.Dial("tcp", lis2.Addr().String())
+		xtesting.Nil(t, err)
+		_ = c.Close()
+	})
 }
 
 // ATTENTION: loggerOptions related code and unit tests in xgin package and xtelebot package should keep the same as each other.

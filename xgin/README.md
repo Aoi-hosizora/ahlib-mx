@@ -6,6 +6,7 @@
 + github.com/gin-gonic/gin (Note: DO NOT update to v1.9.0)
 + github.com/go-playground/validator/v10
 + github.com/sirupsen/logrus
++ golang.org/x/sys
 
 ## Documents
 
@@ -94,6 +95,8 @@
 + `func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
 + `func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int)`
 + `func NewRouterDecodeError(field string, input string, err error, message string) *RouterDecodeError`
++ `func ListenAndServeWithReuse(ctx context.Context, server *http.Server) error`
++ `func ReuseListenControl(_, _ string, c syscall.RawConn) error`
 + `func GetValidatorEngine() (*validator.Validate, error)`
 + `func GetValidatorTranslator(locale xvalidator.LocaleTranslator, registerFn xvalidator.TranslationRegisterHandler) (xvalidator.UtTranslator, error)`
 + `func GetValidatorEnglishTranslator() (xvalidator.UtTranslator, error)`

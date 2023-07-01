@@ -43,6 +43,7 @@
 + `github.com/gin-gonic/gin v1.8.2`
 + `github.com/go-playground/validator/v10 v10.11.1`
 + `github.com/sirupsen/logrus v1.9.0`
++ `golang.org/x/sys v0.3.0`
 
 #### xtelebot
 

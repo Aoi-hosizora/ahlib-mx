@@ -2,6 +2,7 @@ package xgin
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/Aoi-hosizora/ahlib/xstring"
 	"github.com/gin-gonic/gin"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/http/pprof"
@@ -647,11 +649,12 @@ func WithSwaggerTagsSorter(tagsSorter string) SwaggerOption {
 // not allowed to be used on gin.Engine directly or any other gin.GroupEngine which has empty relativePath.
 //
 // Example:
-// 	func ReadSwaggerDoc() []byte {
-// 		bs, _ := os.ReadFile("./api/spec.json")
-// 		return bs
-// 	}
-// 	xgin.WrapSwagger(engine.Group("/v1/swagger"), ReadSwaggerDoc) // => /v1/swagger/index.html
+//
+//	func ReadSwaggerDoc() []byte {
+//		bs, _ := os.ReadFile("./api/spec.json")
+//		return bs
+//	}
+//	xgin.WrapSwagger(engine.Group("/v1/swagger"), ReadSwaggerDoc) // => /v1/swagger/index.html
 func WrapSwagger(router gin.IRouter, swaggerDocGetter func() []byte, swaggerOptions ...SwaggerOption) {
 	if _, ok := router.(*gin.Engine); ok {
 		panic(panicWrapSwaggerToEngine)
@@ -827,11 +830,12 @@ func SilentPrintRouteFunc(_, _, _ string, _ int) {
 // DefaultPrintRouteFunc is the default gin.DebugPrintRouteFunc, can be modified by overwriting value to gin.DebugPrintRouteFunc.
 //
 // The default format logs like (just like gin.DebugPrintRouteFunc except [Gin] prefix):
-// 	[Gin] GET    /debug/pprof/             --> ... (1 handlers)
-// 	[Gin] GET    /debug/pprof/threadcreate --> ... (1 handlers)
-// 	[Gin] POST   /debug/pprof/symbol       --> ... (1 handlers)
-// 	     |------|-------------------------|   |---|
-// 	        6               25                 ...
+//
+//	[Gin] GET    /debug/pprof/             --> ... (1 handlers)
+//	[Gin] GET    /debug/pprof/threadcreate --> ... (1 handlers)
+//	[Gin] POST   /debug/pprof/symbol       --> ... (1 handlers)
+//	     |------|-------------------------|   |---|
+//	        6               25                 ...
 func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int) {
 	fmt.Printf("[Gin] %-6s %-25s --> %s (%d handlers)\n", httpMethod, absolutePath, handlerName, numHandlers)
 }
@@ -839,11 +843,12 @@ func DefaultPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHand
 // DefaultColorizedPrintRouteFunc is the colorized version of DefaultPrintRouteFunc.
 //
 // The default format logs like (just like gin.DebugPrintRouteFunc except [Gin] prefix):
-// 	[Gin] GET    /debug/pprof/             --> ... (1 handlers)
-// 	[Gin] GET    /debug/pprof/threadcreate --> ... (1 handlers)
-// 	[Gin] POST   /debug/pprof/symbol       --> ... (1 handlers)
-// 	     |------|-------------------------|   |---|
-// 	     6 (blue)       25 (blue)              ...
+//
+//	[Gin] GET    /debug/pprof/             --> ... (1 handlers)
+//	[Gin] GET    /debug/pprof/threadcreate --> ... (1 handlers)
+//	[Gin] POST   /debug/pprof/symbol       --> ... (1 handlers)
+//	     |------|-------------------------|   |---|
+//	     6 (blue)       25 (blue)              ...
 func DefaultColorizedPrintRouteFunc(httpMethod, absolutePath, handlerName string, numHandlers int) {
 	fmt.Printf("[Gin] %s --> %s (%d handlers)\n", xcolor.Blue.Sprintf("%-6s %-25s", httpMethod, absolutePath), handlerName, numHandlers)
 }
@@ -880,4 +885,20 @@ func (r *RouterDecodeError) Error() string {
 // Unwrap returns the wrapped error from RouterDecodeError.
 func (r *RouterDecodeError) Unwrap() error {
 	return r.Err
+}
+
+// ListenAndServeWithReuse listens given http.Server with ReuseListenControl first, and then call Serve on given http.Server, this
+// function just behave the same as http.Server.ListenAndServe but for ReuseListenControl.
+func ListenAndServeWithReuse(ctx context.Context, server *http.Server) error {
+	addr := server.Addr
+	if addr == "" {
+		addr = ":http"
+	}
+
+	lc := net.ListenConfig{Control: ReuseListenControl}
+	lis, err := lc.Listen(ctx, "tcp", addr)
+	if err != nil {
+		return err
+	}
+	return server.Serve(lis)
 }
