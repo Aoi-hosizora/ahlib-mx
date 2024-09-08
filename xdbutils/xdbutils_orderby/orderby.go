@@ -41,10 +41,11 @@ func NewPropertyValue(reverse bool, destinations ...string) *PropertyValue {
 
 // orderByOptions is a type of GenerateOrderByExpr's option, each field can be set by OrderByOption function type.
 type orderByOptions struct {
-	sourceSeparator string
-	targetSeparator string
-	sourceProcessor func(source string) (field string, asc bool)
-	targetProcessor func(destination string, asc bool) (target string)
+	sourceSeparator   string
+	targetSeparator   string
+	sourceProcessor   func(source string) (field string, asc bool)
+	targetProcessor   func(destination string, asc bool) (target string)
+	defaultExpression string
 }
 
 // OrderByOption represents an option type for GenerateOrderByExpr's option, can be created by WithXXX functions.
@@ -77,6 +78,14 @@ func WithSourceProcessor(processor func(source string) (field string, asc bool))
 func WithTargetProcessor(processor func(destination string, asc bool) (target string)) OrderByOption {
 	return func(o *orderByOptions) {
 		o.targetProcessor = processor
+	}
+}
+
+// WithDefaultExpression creates an OrderByOption to specify the default order expression when generated result is empty,
+// defaults to empty.
+func WithDefaultExpression(defaultExpression string) OrderByOption {
+	return func(o *orderByOptions) {
+		o.defaultExpression = defaultExpression
 	}
 }
 
@@ -114,6 +123,9 @@ func buildOrderByOptions(options []OrderByOption) *orderByOptions {
 	}
 	if opt.targetProcessor == nil {
 		opt.targetProcessor = defaultTargetProcessor
+	}
+	if opt.defaultExpression != "" {
+		opt.defaultExpression = strings.TrimSpace(opt.defaultExpression)
 	}
 	return opt
 }
@@ -170,5 +182,9 @@ func GenerateOrderByExpr(querySource string, dict PropertyDict, options ...Order
 		}
 	}
 
-	return strings.Join(targets, opt.targetSeparator)
+	result := strings.Join(targets, opt.targetSeparator)
+	if result == "" {
+		result = opt.defaultExpression
+	}
+	return result
 }

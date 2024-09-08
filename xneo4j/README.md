@@ -67,6 +67,7 @@
 + `func WithOrderByTargetSeparator(separator string) OrderByOption`
 + `func WithOrderBySourceProcessor(processor func(source string) (field string, asc bool)) OrderByOption`
 + `func WithOrderByTargetProcessor(processor func(destination string, asc bool) (target string)) OrderByOption`
++ `func WithDefaultExpression(defaultExpression string) OrderByOption`
 + `func GenerateOrderByExpr(querySource string, dict PropertyDict, options ...OrderByOption) string`
 + `func NewPool(driver neo4j.Driver, dial DialHandler) *Pool`
 + `func WithLogErr(log bool) LoggerOption`

@@ -198,6 +198,12 @@ func WithOrderByTargetProcessor(processor func(destination string, asc bool) (ta
 	return xdbutils_orderby.WithTargetProcessor(processor)
 }
 
+// WithDefaultExpression creates an OrderByOption to specify the default order expression when generated result is empty,
+// defaults to empty.
+func WithDefaultExpression(defaultExpression string) OrderByOption {
+	return xdbutils_orderby.WithDefaultExpression(defaultExpression)
+}
+
 // NewPropertyValue creates a PropertyValue by given reverse and destinations, is used to describe database single entity's property mapping rule.
 //
 // Here:

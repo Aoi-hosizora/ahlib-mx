@@ -73,6 +73,7 @@
 + `func WithOrderByTargetSeparator(separator string) OrderByOption`
 + `func WithOrderBySourceProcessor(processor func(source string) (field string, asc bool)) OrderByOption`
 + `func WithOrderByTargetProcessor(processor func(destination string, asc bool) (target string)) OrderByOption`
++ `func WithDefaultExpression(defaultExpression string) OrderByOption`
 + `func GenerateOrderByExpr(querySource string, dict PropertyDict, options ...OrderByOption) string`
 + `func HookDeletedAt(db *gorm.DB, defaultTimestamp string)`
 + `func WithLogInfo(log bool) LoggerOption`

@@ -140,6 +140,7 @@ func TestAddBindingAndAddTranslator(t *testing.T) {
 	xtesting.Nil(t, EnableRFC3339DateBindingTranslator(trans))
 	xtesting.Nil(t, EnableRFC3339DateTimeBinding())
 	xtesting.Nil(t, EnableRFC3339DateTimeBindingTranslator(trans))
+	xtesting.Nil(t, EnableXginBindingFeatures(trans))
 	xtesting.Nil(t, AddBinding("re_number", xvalidator.RegexpValidator(regexp.MustCompile(`^[0-9]+$`))))
 	xtesting.Nil(t, AddTranslation(trans, "re_number", "{0} should be a number string", true))
 	xtesting.Nil(t, AddBinding("range_name", xvalidator.LengthInRangeValidator(3, 10)))

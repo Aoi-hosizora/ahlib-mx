@@ -27,6 +27,7 @@
 + `func WithTargetSeparator(separator string) OrderByOption`
 + `func WithSourceProcessor(processor func(source string) (field string, asc bool)) OrderByOption`
 + `func WithTargetProcessor(processor func(destination string, asc bool) (target string)) OrderByOption`
++ `func WithDefaultExpression(defaultExpression string) OrderByOption`
 + `func GenerateOrderByExpr(querySource string, dict PropertyDict, options ...OrderByOption) string`
 
 ### Methods

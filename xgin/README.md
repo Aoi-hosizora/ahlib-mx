@@ -110,6 +110,7 @@
 + `func EnableRFC3339DateBindingTranslator(translator ut.Translator) error`
 + `func EnableRFC3339DateTimeBinding() error`
 + `func EnableRFC3339DateTimeBindingTranslator(translator ut.Translator) error`
++ `func EnableXginBindingFeatures(translator xvalidator.UtTranslator) error`
 + `func WithUtTranslator(translator xvalidator.UtTranslator) TranslateOption`
 + `func WithJsonInvalidUnmarshalError(fn func(*json.InvalidUnmarshalError) (result map[string]string, need4xx bool)) TranslateOption`
 + `func WithJsonUnmarshalTypeError(fn func(*json.UnmarshalTypeError) (result map[string]string, need4xx bool)) TranslateOption`

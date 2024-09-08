@@ -183,6 +183,7 @@ func testHelper(t *testing.T, giveDialect, giveParam string) {
 	nilOptions := []OrderByOption{
 		WithOrderBySourceSeparator(""), WithOrderByTargetSeparator(""),
 		WithOrderBySourceProcessor(nil), WithOrderByTargetProcessor(nil),
+		WithDefaultExpression(""),
 	}
 	for _, tc := range []struct {
 		giveSource string

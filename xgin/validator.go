@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib-mx/xvalidator"
+	"github.com/Aoi-hosizora/ahlib/xerror"
 	"github.com/Aoi-hosizora/ahlib/xtime"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -129,6 +130,19 @@ func EnableRFC3339DateTimeBinding() error {
 // EnableRFC3339DateTimeBindingTranslator enables rfc3339 datetime validator `datetime`'s translation using given xvalidator.UtTranslator.
 func EnableRFC3339DateTimeBindingTranslator(translator xvalidator.UtTranslator) error {
 	return AddTranslation(translator, "datetime", "{0} should be an RFC3339 datetime", true)
+}
+
+// EnableXginBindingFeatures enables xgin package all binding and translator features.
+func EnableXginBindingFeatures(translator xvalidator.UtTranslator) error {
+	errs := []error{
+		EnableParamRegexpBinding(),
+		EnableParamRegexpBindingTranslator(translator),
+		EnableRFC3339DateBinding(),
+		EnableRFC3339DateBindingTranslator(translator),
+		EnableRFC3339DateTimeBinding(),
+		EnableRFC3339DateTimeBindingTranslator(translator),
+	}
+	return xerror.Combine(errs...)
 }
 
 // This make sure that xvalidator.MessagedValidator implements binding.StructValidator interface.

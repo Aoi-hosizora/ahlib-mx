@@ -49,6 +49,12 @@ func TestOptions(t *testing.T) {
 		}),
 	)
 	internal.XtestingEqual(t, generated4, "aa DESCENDING,,bb1 DESCENDING,,bb2 DESCENDING")
+
+	generated5 := GenerateOrderByExpr(
+		"c", dict,
+		WithDefaultExpression("xxx  "),
+	)
+	internal.XtestingEqual(t, generated5, "xxx")
 }
 
 func TestGenerateOrderByExpr(t *testing.T) {

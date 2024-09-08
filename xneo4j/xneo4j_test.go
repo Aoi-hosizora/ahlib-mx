@@ -116,6 +116,7 @@ func TestHelper(t *testing.T) {
 		nilOptions := []OrderByOption{
 			WithOrderBySourceSeparator(""), WithOrderByTargetSeparator(""),
 			WithOrderBySourceProcessor(nil), WithOrderByTargetProcessor(nil),
+			WithDefaultExpression(""),
 		}
 		for _, tc := range []struct {
 			giveSource string
