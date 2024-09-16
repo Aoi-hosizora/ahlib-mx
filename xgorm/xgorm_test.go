@@ -32,6 +32,17 @@ func TestMass1(t *testing.T) {
 	xtesting.True(t, IsMySQLDuplicateEntryError(&mysql.MySQLError{Number: MySQLDuplicateEntryErrno}))
 	xtesting.True(t, IsPostgreSQLUniqueViolationError(pq.Error{Code: PostgreSQLUniqueViolationErrno}))
 	xtesting.True(t, IsPostgreSQLUniqueViolationError(&pq.Error{Code: PostgreSQLUniqueViolationErrno}))
+
+	xtesting.NotPanic(t, func() { WithExtensions(nil) })
+	xtesting.NotPanic(t, func() { WithAggregatorRegisterer("", nil, false) })
+	xtesting.NotPanic(t, func() { WithAuthorizerRegisterer(nil) })
+	xtesting.NotPanic(t, func() { WithCollationRegisterer("", nil) })
+	xtesting.NotPanic(t, func() { WithCommitHookRegisterer(nil) })
+	xtesting.NotPanic(t, func() { WithFuncRegisterer("", nil, false) })
+	xtesting.NotPanic(t, func() { WithPreUpdateHookRegister(nil) })
+	xtesting.NotPanic(t, func() { WithRollbackHookRegisterer(nil) })
+	xtesting.NotPanic(t, func() { WithUpdateHookRegisterer(nil) })
+	xtesting.NotPanic(t, func() { WithSQLiteConnectionHooker(nil) })
 }
 
 var (

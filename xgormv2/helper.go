@@ -13,6 +13,7 @@ import (
 	"github.com/VividCortex/mysqlerr"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
+	_ "unsafe"
 )
 
 // ========
@@ -43,21 +44,6 @@ func IsSQLite(db *gorm.DB) bool {
 // IsPostgreSQL checks whether the dialect of given gorm.DB is "postgres".
 func IsPostgreSQL(db *gorm.DB) bool {
 	return db.Dialector.Name() == Postgres
-}
-
-// GetSQLDriver gets registered driver.Driver by given name, returns nil if unregistered.
-func GetSQLDriver(name string) driver.Driver {
-	return xdbutils_driver.GetSQLDriver(name)
-}
-
-// ForceRegisterSQLDriver registers given driver.Driver just like sql.Register, but will replace the same-name-registered driver.Driver.
-func ForceRegisterSQLDriver(name string, driver driver.Driver) {
-	xdbutils_driver.ForceRegisterSQLDriver(name, driver)
-}
-
-// ForceUnregisterSQLDriver unregisters driver.Driver with given name.
-func ForceUnregisterSQLDriver(name string) {
-	xdbutils_driver.ForceUnregisterSQLDriver(name)
 }
 
 // MySQLConfig is a configuration for MySQL, can be used to generate DSN by FormatDSN method.
@@ -249,4 +235,99 @@ func NewPropertyValue(reverse bool, destinations ...string) *PropertyValue {
 //	_ = GenerateOrderByExpr(`age, username desc`, dict) // => birthday DESC, firstname DESC, lastname DESC
 func GenerateOrderByExpr(querySource string, dict PropertyDict, options ...OrderByOption) string {
 	return xdbutils_orderby.GenerateOrderByExpr(querySource, dict, options...)
+}
+
+// =======
+// drivers
+// =======
+
+// GetSQLDriver gets registered driver.Driver by given name, returns nil if unregistered.
+func GetSQLDriver(name string) driver.Driver {
+	return xdbutils_driver.GetSQLDriver(name)
+}
+
+// ForceRegisterSQLDriver registers given driver.Driver just like sql.Register, but will replace the same-name-registered driver.Driver.
+func ForceRegisterSQLDriver(name string, driver driver.Driver) {
+	xdbutils_driver.ForceRegisterSQLDriver(name, driver)
+}
+
+// ForceUnregisterSQLDriver unregisters driver.Driver with given name.
+func ForceUnregisterSQLDriver(name string) {
+	xdbutils_driver.ForceUnregisterSQLDriver(name)
+}
+
+// SQLiteDriverOption represents an option type for NewSQLiteDriver's option, can be created by WithXXX functions.
+type SQLiteDriverOption = xdbutils_sqlite.SQLiteDriverOption
+
+//go:linkname buildSQLiteDriverOptions github.com/Aoi-hosizora/ahlib-mx/xdbutils/xdbutils_sqlite.buildSQLiteDriverOptions
+//goland:noinspection GoUnusedParameter
+func buildSQLiteDriverOptions(options []SQLiteDriverOption) interface{}
+
+//go:linkname getSQLiteDriverOptionExtensions github.com/Aoi-hosizora/ahlib-mx/xdbutils/xdbutils_sqlite.getSQLiteDriverOptionExtensions
+//goland:noinspection GoUnusedParameter
+func getSQLiteDriverOptionExtensions(v interface{}) []string
+
+//go:linkname applySQLiteDriverOptionRegisterers github.com/Aoi-hosizora/ahlib-mx/xdbutils/xdbutils_sqlite.applySQLiteDriverOptionRegisterers
+//goland:noinspection GoUnusedParameter
+func applySQLiteDriverOptionRegisterers(
+	v interface{},
+	aggregatorRegisterer func(name string, impl interface{}, pure bool) error,
+	authorizerRegisterer func(callback func(int, string, string, string) int),
+	collationRegisterer func(name string, cmp func(string, string) int) error,
+	commitHookRegisterer func(callback func() int),
+	funcRegisterer func(name string, impl interface{}, pure bool) error,
+	preUpdateHookRegisterer func(callback func(interface{})),
+	rollbackHookRegisterer func(callback func()),
+	updateHookRegisterer func(callback func(int, string, string, int64)),
+	sqliteConnectionHooker func(callback func(interface{}) error) error,
+) error
+
+// WithExtensions creates an SQLiteDriverOption to specify the extensions for sqlite driver.
+func WithExtensions(extensions []string) SQLiteDriverOption {
+	return xdbutils_sqlite.WithExtensions(extensions)
+}
+
+// WithAggregatorRegisterer creates an SQLiteDriverOption to specify the aggregator registerer for sqlite driver.
+func WithAggregatorRegisterer(name string, impl interface{}, pure bool) SQLiteDriverOption {
+	return xdbutils_sqlite.WithAggregatorRegisterer(name, impl, pure)
+}
+
+// WithAuthorizerRegisterer creates an SQLiteDriverOption to specify the authorizer registerer for sqlite driver.
+func WithAuthorizerRegisterer(callback func(int, string, string, string) int) SQLiteDriverOption {
+	return xdbutils_sqlite.WithAuthorizerRegisterer(callback)
+}
+
+// WithCollationRegisterer creates an SQLiteDriverOption to specify the collation registerer for sqlite driver.
+func WithCollationRegisterer(name string, cmp func(string, string) int) SQLiteDriverOption {
+	return xdbutils_sqlite.WithCollationRegisterer(name, cmp)
+}
+
+// WithCommitHookRegisterer creates an SQLiteDriverOption to specify the commit hook registerer for sqlite driver.
+func WithCommitHookRegisterer(callback func() int) SQLiteDriverOption {
+	return xdbutils_sqlite.WithCommitHookRegisterer(callback)
+}
+
+// WithFuncRegisterer creates an SQLiteDriverOption to specify the func registerer for sqlite driver.
+func WithFuncRegisterer(name string, impl interface{}, pure bool) SQLiteDriverOption {
+	return xdbutils_sqlite.WithFuncRegisterer(name, impl, pure)
+}
+
+// WithPreUpdateHookRegister creates an SQLiteDriverOption to specify the pre-update hook registerer for sqlite driver.
+func WithPreUpdateHookRegister(callback func(interface{})) SQLiteDriverOption {
+	return xdbutils_sqlite.WithPreUpdateHookRegister(callback)
+}
+
+// WithRollbackHookRegisterer creates an SQLiteDriverOption to specify the rollback hook registerer for sqlite driver.
+func WithRollbackHookRegisterer(callback func()) SQLiteDriverOption {
+	return xdbutils_sqlite.WithRollbackHookRegisterer(callback)
+}
+
+// WithUpdateHookRegisterer creates an SQLiteDriverOption to specify the update hook registerer for sqlite driver.
+func WithUpdateHookRegisterer(callback func(int, string, string, int64)) SQLiteDriverOption {
+	return xdbutils_sqlite.WithUpdateHookRegisterer(callback)
+}
+
+// WithSQLiteConnectionHooker creates an SQLiteDriverOption to specify the sqlite connection hooker for sqlite driver.
+func WithSQLiteConnectionHooker(hooker func(interface{}) error) SQLiteDriverOption {
+	return xdbutils_sqlite.WithSQLiteConnectionHooker(hooker)
 }

@@ -132,3 +132,100 @@ func TestErrNo(t *testing.T) {
 		internal.XtestingEqual(t, int(tc.giveExtend), int(tc.wantErrNo.Extend(tc.wantBy)))
 	}
 }
+
+func TestSQLiteDriverOption(t *testing.T) {
+	internal.XtestingPanic(t, false, func() { buildSQLiteDriverOptions([]SQLiteDriverOption{}) })
+	internal.XtestingPanic(t, false, func() { buildSQLiteDriverOptions(nil) })
+
+	internal.XtestingEqual(t, getSQLiteDriverOptionExtensions(buildSQLiteDriverOptions(nil)), []string(nil))
+	internal.XtestingEqual(t, getSQLiteDriverOptionExtensions(buildSQLiteDriverOptions(
+		[]SQLiteDriverOption{WithExtensions([]string{"1", "2"})})), []string{"1", "2"})
+	internal.XtestingEqual(t, getSQLiteDriverOptionExtensions(buildSQLiteDriverOptions(
+		[]SQLiteDriverOption{WithExtensions([]string{"1", "2"}), WithExtensions([]string{})})), []string{})
+
+	internal.XtestingEqual(t, applySQLiteDriverOptionRegisterers(buildSQLiteDriverOptions(nil),
+		nil, nil, nil, nil, nil, nil,
+		nil, nil, nil), error(nil))
+
+	callback := 0
+	opt := buildSQLiteDriverOptions(
+		[]SQLiteDriverOption{
+			WithAggregatorRegisterer("name", "impl", true),
+			WithAggregatorRegisterer("name2", "impl2", false),
+			WithAuthorizerRegisterer(func(i int, s string, s2 string, s3 string) int { callback += 1; return i + 1 }),
+			WithAuthorizerRegisterer(func(i int, s string, s2 string, s3 string) int { callback += 1; return i + 2 }),
+			WithCollationRegisterer("name", func(s string, s2 string) int { callback += 1; return len(s) + 3 }),
+			WithCollationRegisterer("name2", func(s string, s2 string) int { callback += 1; return len(s) + 4 }),
+			WithCommitHookRegisterer(func() int { callback += 1; return 5 }),
+			WithCommitHookRegisterer(func() int { callback += 1; return 6 }),
+			WithFuncRegisterer("name", "impl", true),
+			WithFuncRegisterer("name2", "impl2", false),
+			WithPreUpdateHookRegister(func(i interface{}) { callback += 1; *i.(*int) = 7 }),
+			WithPreUpdateHookRegister(func(i interface{}) { callback += 1; *i.(*int) = 8 }),
+			WithRollbackHookRegisterer(func() { callback += 1 }),
+			WithRollbackHookRegisterer(func() { callback += 1 }),
+			WithUpdateHookRegisterer(func(i int, s string, s2 string, i2 int64) { callback += 1 }),
+			WithUpdateHookRegisterer(func(i int, s string, s2 string, i2 int64) { callback += 1 }),
+			WithSQLiteConnectionHooker(func(i interface{}) error { callback += 1; *i.(*int) = 9; return nil }),
+			WithSQLiteConnectionHooker(func(i interface{}) error { callback += 1; *i.(*int) = 10; return nil }),
+		})
+	for _, tc := range []struct {
+		name    string
+		err1    error
+		err2    error
+		err3    error
+		err4    error
+		wantErr bool
+		wantCnt int
+	}{
+		{"normal", nil, nil, nil, nil, false, 14},
+		{"err1", errors.New("err1"), nil, nil, nil, true, 0},
+		{"err2", nil, errors.New("err2"), nil, nil, true, 3},
+		{"err3", nil, nil, errors.New("err3"), nil, true, 6},
+		{"err4", nil, nil, nil, errors.New("err4"), true, 13},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			callback = 0
+			err := applySQLiteDriverOptionRegisterers(
+				opt,
+				func(name string, impl interface{}, pure bool) error {
+					internal.XtestingEqual(t, (name == "name" && impl == "impl" && pure) || (name == "name2" && impl == "impl2" && !pure), true)
+					return tc.err1
+				},
+				func(callback func(int, string, string, string) int) {
+					res := callback(1, "", "", "")
+					internal.XtestingEqual(t, res == 2 || res == 3, true)
+				},
+				func(name string, cmp func(string, string) int) error {
+					internal.XtestingEqual(t, name == "name" || name == "name2", true)
+					res := cmp(name, name)
+					internal.XtestingEqual(t, res == 7 || res == 9, true)
+					return tc.err2
+				},
+				func(callback func() int) {
+					res := callback()
+					internal.XtestingEqual(t, res == 5 || res == 6, true)
+				},
+				func(name string, impl interface{}, pure bool) error {
+					internal.XtestingEqual(t, (name == "name" && impl == "impl" && pure) || (name == "name2" && impl == "impl2" && !pure), true)
+					return tc.err3
+				},
+				func(callback func(interface{})) {
+					ptr := new(int)
+					callback(ptr)
+					internal.XtestingEqual(t, *ptr == 7 || *ptr == 8, true)
+				},
+				func(callback func()) { callback() },
+				func(callback func(int, string, string, int64)) { callback(0, "", "", 0) },
+				func(callback func(interface{}) error) error {
+					ptr := new(int)
+					internal.XtestingEqual(t, callback(ptr), error(nil))
+					internal.XtestingEqual(t, *ptr == 9 || *ptr == 10, true)
+					return tc.err4
+				},
+			)
+			internal.XtestingEqual(t, err != nil, tc.wantErr)
+			internal.XtestingEqual(t, callback, tc.wantCnt)
+		})
+	}
+}

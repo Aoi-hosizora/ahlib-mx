@@ -15,6 +15,7 @@
 
 ### Types
 
++ `type SQLiteDriverOptions struct`
 + `type MySQLConfig struct`
 + `type MySQLExtraConfig struct`
 + `type SQLiteConfig struct`
@@ -56,9 +57,6 @@
 + `func IsMySQL(db *gorm.DB) bool`
 + `func IsSQLite(db *gorm.DB) bool`
 + `func IsPostgreSQL(db *gorm.DB) bool`
-+ `func GetSQLDriver(name string) driver.Driver`
-+ `func ForceRegisterSQLDriver(name string, driver driver.Driver)`
-+ `func ForceUnregisterSQLDriver(name string)`
 + `func MySQLDefaultDsn(username, password, address, database string) string`
 + `func SQLiteDefaultDsn(file string) string`
 + `func PostgreSQLDefaultDsn(username, password, host string, port int, database string) string`
@@ -76,6 +74,20 @@
 + `func WithOrderByTargetProcessor(processor func(destination string, asc bool) (target string)) OrderByOption`
 + `func WithDefaultExpression(defaultExpression string) OrderByOption`
 + `func GenerateOrderByExpr(querySource string, dict PropertyDict, options ...OrderByOption) string`
++ `func GetSQLDriver(name string) driver.Driver`
++ `func ForceRegisterSQLDriver(name string, driver driver.Driver)`
++ `func ForceUnregisterSQLDriver(name string)`
++ `func WithExtensions(extensions []string) SQLiteDriverOption`
++ `func WithAggregatorRegisterer(name string, impl interface{}, pure bool) SQLiteDriverOption`
++ `func WithAuthorizerRegisterer(callback func(int, string, string, string) int) SQLiteDriverOption`
++ `func WithCollationRegisterer(name string, cmp func(string, string) int) SQLiteDriverOption`
++ `func WithCommitHookRegisterer(callback func() int) SQLiteDriverOption`
++ `func WithFuncRegisterer(name string, impl interface{}, pure bool) SQLiteDriverOption`
++ `func WithPreUpdateHookRegister(callback func(interface{})) SQLiteDriverOption`
++ `func WithRollbackHookRegisterer(callback func()) SQLiteDriverOption`
++ `func WithUpdateHookRegisterer(callback func(int, string, string, int64)) SQLiteDriverOption`
++ `func WithSQLiteConnectionHooker(hooker func(interface{}) error) SQLiteDriverOption`
++ `func NewSqliteDriver(extensions []string, connectHook func(*sqlite3.SQLiteConn) error) *sqlite3.SQLiteDriver`
 + `func HookDeletedAt(db *gorm.DB, defaultTimestamp string)`
 + `func WithLogInfo(log bool) LoggerOption`
 + `func WithLogSQL(log bool) LoggerOption`
