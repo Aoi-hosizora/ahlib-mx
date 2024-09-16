@@ -1,6 +1,7 @@
 package xgormv2
 
 import (
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"github.com/Aoi-hosizora/ahlib/xstatus"
@@ -20,6 +21,13 @@ func TestMass1(t *testing.T) {
 	xtesting.Equal(t, SQLiteDefaultDsn("test.sql"), "test.sql")
 	xtesting.Equal(t, PostgreSQLDefaultDsn("postgres", "123", "localhost", 5432, "db_test"),
 		"host=localhost port=5432 user=postgres password=123 dbname=db_test")
+
+	var mocked driver.Driver = mysql.MySQLDriver{}
+	xtesting.Nil(t, GetSQLDriver("---"))
+	xtesting.NotPanic(t, func() { ForceRegisterSQLDriver("---", mocked) })
+	xtesting.NotNil(t, GetSQLDriver("---"))
+	xtesting.NotPanic(t, func() { ForceUnregisterSQLDriver("---") })
+	xtesting.Nil(t, GetSQLDriver("---"))
 
 	xtesting.True(t, IsMySQLDuplicateEntryError(&mysql.MySQLError{Number: MySQLDuplicateEntryErrno}))
 	IsPostgreSQLUniqueViolationError = func(err error) bool {

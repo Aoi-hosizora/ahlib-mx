@@ -1,8 +1,10 @@
 package xgormv2
 
 import (
+	"database/sql/driver"
 	"errors"
 	"fmt"
+	"github.com/Aoi-hosizora/ahlib-mx/xdbutils/xdbutils_driver"
 	"github.com/Aoi-hosizora/ahlib-mx/xdbutils/xdbutils_mysql"
 	"github.com/Aoi-hosizora/ahlib-mx/xdbutils/xdbutils_orderby"
 	"github.com/Aoi-hosizora/ahlib-mx/xdbutils/xdbutils_postgres"
@@ -41,6 +43,21 @@ func IsSQLite(db *gorm.DB) bool {
 // IsPostgreSQL checks whether the dialect of given gorm.DB is "postgres".
 func IsPostgreSQL(db *gorm.DB) bool {
 	return db.Dialector.Name() == Postgres
+}
+
+// GetSQLDriver gets registered driver.Driver by given name, returns nil if unregistered.
+func GetSQLDriver(name string) driver.Driver {
+	return xdbutils_driver.GetSQLDriver(name)
+}
+
+// ForceRegisterSQLDriver registers given driver.Driver just like sql.Register, but will replace the same-name-registered driver.Driver.
+func ForceRegisterSQLDriver(name string, driver driver.Driver) {
+	xdbutils_driver.ForceRegisterSQLDriver(name, driver)
+}
+
+// ForceUnregisterSQLDriver unregisters driver.Driver with given name.
+func ForceUnregisterSQLDriver(name string) {
+	xdbutils_driver.ForceUnregisterSQLDriver(name)
 }
 
 // MySQLConfig is a configuration for MySQL, can be used to generate DSN by FormatDSN method.
@@ -106,10 +123,11 @@ func IsMySQLDuplicateEntryError(err error) bool {
 // IsPostgreSQLUniqueViolationError is a variable that used to check whether err is PostgreSQL's unique_violation error, whose error code is PostgreSQLUniqueViolationErrno.
 //
 // You have to import "github.com/jackc/pgconn" and set this variable manually in order to make it be usable in CreateErr and UpdateErr.
-// 	xgormv2.IsPostgreSQLUniqueViolationError = func(err error) bool {
-// 		perr, ok := err.(*pgconn.PgError)
-// 		return ok && perr.Code == xgormv2.PostgreSQLUniqueViolationErrno
-// 	}
+//
+//	xgormv2.IsPostgreSQLUniqueViolationError = func(err error) bool {
+//		perr, ok := err.(*pgconn.PgError)
+//		return ok && perr.Code == xgormv2.PostgreSQLUniqueViolationErrno
+//	}
 var IsPostgreSQLUniqueViolationError func(err error) bool
 
 // ===============
@@ -221,13 +239,14 @@ func NewPropertyValue(reverse bool, destinations ...string) *PropertyValue {
 // with some OrderByOption-s. The generated expression will be in mysql-sql (such as "xxx ASC") or neo4j-cypher style (such as "xxx.yyy DESC").
 //
 // Example:
-// 	dict := PropertyDict{
-// 		"uid":  NewPropertyValue(false, "uid"),
-// 		"name": NewPropertyValue(false, "firstname", "lastname"),
-// 		"age":  NewPropertyValue(true, "birthday"),
-// 	}
-// 	_ = GenerateOrderByExpr(`uid, age desc`, dict) // => uid ASC, birthday ASC
-// 	_ = GenerateOrderByExpr(`age, username desc`, dict) // => birthday DESC, firstname DESC, lastname DESC
+//
+//	dict := PropertyDict{
+//		"uid":  NewPropertyValue(false, "uid"),
+//		"name": NewPropertyValue(false, "firstname", "lastname"),
+//		"age":  NewPropertyValue(true, "birthday"),
+//	}
+//	_ = GenerateOrderByExpr(`uid, age desc`, dict) // => uid ASC, birthday ASC
+//	_ = GenerateOrderByExpr(`age, username desc`, dict) // => birthday DESC, firstname DESC, lastname DESC
 func GenerateOrderByExpr(querySource string, dict PropertyDict, options ...OrderByOption) string {
 	return xdbutils_orderby.GenerateOrderByExpr(querySource, dict, options...)
 }

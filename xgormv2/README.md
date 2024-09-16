@@ -58,6 +58,9 @@
 + `func IsMySQL(db *gorm.DB) bool`
 + `func IsSQLite(db *gorm.DB) bool`
 + `func IsPostgreSQL(db *gorm.DB) bool`
++ `func GetSQLDriver(name string) driver.Driver`
++ `func ForceRegisterSQLDriver(name string, driver driver.Driver)`
++ `func ForceUnregisterSQLDriver(name string)`
 + `func MySQLDefaultDsn(username, password, address, database string) string`
 + `func SQLiteDefaultDsn(file string) string`
 + `func PostgreSQLDefaultDsn(username, password, host string, port int, database string) string`
